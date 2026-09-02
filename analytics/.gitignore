@@ -1,0 +1,17 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# Cache
+.cache/
+
+# Database
+*.duckdb
+
+sprint_04_analytics_etl.egg-info
