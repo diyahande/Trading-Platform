@@ -1,3 +1,4 @@
+//Checks if an account is behaving correctly 
 package com.capstone.domain;
 
 import com.capstone.entity.Account;

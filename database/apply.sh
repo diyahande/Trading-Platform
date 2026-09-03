@@ -37,9 +37,7 @@ run_sql_files() {
     local directory="$1"
     local description="$2"
 
-    echo "======================================"
     echo "$description"
-    echo "======================================"
 
     local found=false
 
@@ -76,6 +74,4 @@ run_sql_files "migrations" "Running database migrations"
 # Load seed data after migrations
 run_sql_files "seed" "Loading seed data"
 
-echo "======================================"
 echo "Database setup completed successfully"
-echo "======================================"

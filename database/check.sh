@@ -4,9 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# --------------------------------------------------
 # Load repository .env
-# --------------------------------------------------
 
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
     set -a
@@ -15,13 +13,9 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
     set +a
 fi
 
-echo "======================================"
 echo " Sprint 3 Trade Database Check"
-echo "======================================"
 
-# --------------------------------------------------
 # 1. Check required files
-# --------------------------------------------------
 
 echo
 echo "[1/7] Checking required files..."
@@ -43,9 +37,7 @@ done
 echo "PASS: Required files exist."
 
 
-# --------------------------------------------------
 # 2. Load manifest
-# --------------------------------------------------
 
 echo
 echo "[2/7] Reading manifest.env..."
@@ -76,9 +68,7 @@ done
 echo "PASS: manifest.env contains required variables."
 
 
-# --------------------------------------------------
 # 3. Check apply command
-# --------------------------------------------------
 
 echo
 echo "[3/7] Checking apply command..."
@@ -91,9 +81,7 @@ fi
 echo "PASS: apply.sh exists."
 
 
-# --------------------------------------------------
 # 4. Check migrations
-# --------------------------------------------------
 
 echo
 echo "[4/7] Checking migrations..."
@@ -121,9 +109,7 @@ fi
 echo "PASS: Found $migration_count migration file(s)."
 
 
-# --------------------------------------------------
 # 5. Check database connection and account states
-# --------------------------------------------------
 
 echo
 echo "[5/7] Checking account states..."
@@ -179,9 +165,8 @@ fi
 
 echo "PASS: All three account states exist."
 
-# --------------------------------------------------
+
 # 6. Duplicate idempotency-key probe
-# --------------------------------------------------
 
 echo
 echo "[6/7] Testing duplicate idempotency key..."
@@ -212,9 +197,9 @@ else
 fi
 
 
-# --------------------------------------------------
+
 # 7. Orphan foreign-key probe
-# --------------------------------------------------
+
 
 echo
 echo "[7/7] Testing orphan foreign key..."
@@ -243,11 +228,6 @@ else
 fi
 
 
-# --------------------------------------------------
 # Finished
-# --------------------------------------------------
 
-echo
-echo "======================================"
 echo " ALL CHECKS PASSED"
-echo "======================================"

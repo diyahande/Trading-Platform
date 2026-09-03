@@ -1,3 +1,4 @@
+//Checks if trading engine follows all buisness rules
 package com.capstone.domain;
 
 import com.capstone.entity.*;

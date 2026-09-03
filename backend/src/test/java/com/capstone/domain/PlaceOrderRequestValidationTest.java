@@ -1,3 +1,4 @@
+//Checks if incoming order request has valid data
 package com.capstone.domain;
 
 import com.capstone.dto.PlaceOrderRequest;
