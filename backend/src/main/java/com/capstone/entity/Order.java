@@ -1,0 +1,129 @@
+package com.capstone.entity;
+
+import com.capstone.enums.OrderSide;
+import com.capstone.enums.OrderStatus;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+
+public class Order {
+
+    private final Long orderId;
+    private final Long accountId;
+    private final String accountReference;
+    private final Long instrumentId;
+    private final OrderSide side;
+    private final Integer quantity;
+
+    // Customer-submitted limit price.
+    private final BigDecimal limitPrice;
+
+    private OrderStatus status;
+
+    private final String idempotencyKey;
+    private final Instant createdAt;
+
+    public Order(
+            Long orderId,
+            Long accountId,
+            String accountReference,
+            Long instrumentId,
+            OrderSide side,
+            Integer quantity,
+            BigDecimal limitPrice,
+            OrderStatus status,
+            String idempotencyKey,
+            Instant createdAt) {
+
+        this.orderId = orderId;
+        this.accountId = accountId;
+        this.accountReference = accountReference;
+        this.instrumentId = instrumentId;
+        this.side = side;
+        this.quantity = quantity;
+        this.limitPrice = limitPrice;
+        this.status = status;
+        this.idempotencyKey = idempotencyKey;
+        this.createdAt = createdAt;
+    }
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public Long getAccountId() {
+        return accountId;
+    }
+
+    public String getAccountReference() {
+        return accountReference;
+    }
+
+    public Long getInstrumentId() {
+        return instrumentId;
+    }
+
+    public OrderSide getSide() {
+        return side;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public BigDecimal getLimitPrice() {
+        return limitPrice;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public BigDecimal getOrderValue() {
+        return limitPrice.multiply(
+                BigDecimal.valueOf(quantity));
+    }
+
+    public boolean isBuy() {
+        return side == OrderSide.BUY;
+    }
+
+    public boolean isSell() {
+        return side == OrderSide.SELL;
+    }
+
+    public void markFilled() {
+        ensureNew();
+
+        status = OrderStatus.FILLED;
+    }
+
+    public void reject() {
+        ensureNew();
+
+        status = OrderStatus.REJECTED;
+    }
+
+    public void cancel() {
+        ensureNew();
+
+        status = OrderStatus.CANCELLED;
+    }
+
+    private void ensureNew() {
+
+        if (status != OrderStatus.NEW) {
+            throw new IllegalStateException(
+                    "Order cannot transition from "
+                            + status);
+        }
+    }
+}

@@ -34,8 +34,6 @@ public class PlaceOrderRequest {
     @Size(min = 8, max = 100)
     private String idempotencyKey;
 
-    public PlaceOrderRequest() {
-    }
 
     public PlaceOrderRequest(
             Long accountId,
