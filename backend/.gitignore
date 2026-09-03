@@ -5,7 +5,14 @@ target/
 
 ### IntelliJ IDEA ###
 .idea/
+.idea/*
+.idea/.gitignore
 .idea/libraries/
+.idea/misc.xml
+.idea/chennai-capstone-SE5-team4.iml
+.idea/modules.xml
+.idea/vcs.xml
+
 *.iws
 *.iml
 *.ipr
