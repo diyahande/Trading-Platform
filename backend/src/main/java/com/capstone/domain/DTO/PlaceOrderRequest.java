@@ -1,4 +1,5 @@
 package com.capstone.domain.DTO;
+import com.capstone.enums.*;
 
 import java.math.BigDecimal;
 

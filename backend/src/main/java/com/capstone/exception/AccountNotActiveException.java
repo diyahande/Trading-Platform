@@ -1,5 +1,5 @@
 package com.capstone.exception;
-
+import com.capstone.enums.*;
 public final class AccountNotActiveException extends DomainException {
 
     private final long accountId;
