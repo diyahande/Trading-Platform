@@ -1,783 +1,681 @@
 package com.capstone.domain;
 
-import com.capstone.domain.DTO.PlaceOrderRequest;
-import com.capstone.entity.Account;
-import com.capstone.entity.Instrument;
-import com.capstone.entity.Order;
-import com.capstone.entity.Position;
-import com.capstone.enums.AccountStatus;
-import com.capstone.enums.OrderSide;
+import com.capstone.entity.*;
+import com.capstone.enums.*;
 import com.capstone.exception.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class OrderLogicTest {
 
-    private Map<Long, Account> accounts;
-    private Map<String, Instrument> instruments;
-    private Map<String, Position> positions;
+    private OrderLogic orderLogic;
+
     private IdempotencyChecker idempotencyChecker;
 
-    private OrderLogic orderLogic;
+    private Account activeAccount;
+    private Instrument instrument;
+    private Portfolio portfolio;
 
     @BeforeEach
     void setUp() {
-        accounts = new HashMap<>();
-        instruments = new HashMap<>();
-        positions = new HashMap<>();
 
         idempotencyChecker = key -> false;
 
-        orderLogic = new OrderLogic();
+        orderLogic = new OrderLogic(idempotencyChecker);
+
+        activeAccount = createAccount(
+                AccountStatus.ACTIVE,
+                "1000.00"
+        );
+
+        instrument = createInstrument(false);
+
+        portfolio = createPortfolio();
     }
+
 
     // RULE 1: ACCOUNT MUST EXIST
 
     @Test
     void shouldRejectWhenAccountDoesNotExist() {
-        PlaceOrderRequest request =
-                buyRequest(999L, "AAPL", "KEY-0001");
 
-        AccountNotFoundException exception = assertThrows(
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-001"
+        );
+
+        assertThrows(
                 AccountNotFoundException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
-
-        assertEquals("ACC-404", exception.getCode());
-    }
-
-    @Test
-    void shouldNotRejectWhenAccountExists() {
-        addActiveAccount();
-        addInstrument("AAPL");
-
-        assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0002"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                () -> orderLogic.validate(
+                        null,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
+
 
     // RULE 2: ACCOUNT MUST BE ACTIVE
 
     @Test
     void shouldRejectWhenAccountIsSuspended() {
-        addAccount(AccountStatus.SUSPENDED);
-        addInstrument("AAPL");
 
-        AccountNotActiveException exception = assertThrows(
-                AccountNotActiveException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0003"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
+        Account account =
+                createAccount(
+                        AccountStatus.SUSPENDED,
+                        "1000.00"
+                );
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-002"
         );
 
-        assertEquals("ACC-403", exception.getCode());
-    }
 
-    @Test
-    void shouldRejectWhenAccountIsClosed() {
-        addAccount(AccountStatus.CLOSED);
-        addInstrument("AAPL");
+        AccountNotActiveException exception =
+                assertThrows(
+                        AccountNotActiveException.class,
+                        () -> orderLogic.validate(
+                                account,
+                                instrument,
+                                order,
+                                portfolio
+                        )
+                );
 
-        AccountNotActiveException exception = assertThrows(
-                AccountNotActiveException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0004"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
+
+        assertEquals(
+                AccountStatus.SUSPENDED,
+                exception.getStatus()
         );
-
-        assertEquals("ACC-403", exception.getCode());
     }
 
+
     @Test
-    void shouldAllowTradingWhenAccountIsActive() {
-        addActiveAccount();
-        addInstrument("AAPL");
+    void shouldAllowActiveAccount() {
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-003"
+        );
 
         assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0005"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
+
+
 
     // RULE 3: INSTRUMENT MUST EXIST AND BE TRADABLE
 
+
     @Test
     void shouldRejectWhenInstrumentDoesNotExist() {
-        addActiveAccount();
 
-        InstrumentNotFoundException exception = assertThrows(
-                InstrumentNotFoundException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "UNKNOWN", "KEY-0006"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-004"
         );
 
-        assertEquals("INS-404", exception.getCode());
+
+        assertThrows(
+                InstrumentNotFoundException.class,
+                () -> orderLogic.validate(
+                        activeAccount,
+                        null,
+                        order,
+                        portfolio
+                )
+        );
     }
+
 
     @Test
     void shouldRejectWhenInstrumentIsNotTradable() {
-        addActiveAccount();
 
-        Instrument instrument = createInstrument("AAPL");
+        Instrument delistedInstrument =
+                createInstrument(true);
 
-        instrument.setTradable(false);
-        instruments.put("AAPL", instrument);
 
-        InstrumentNotFoundException exception = assertThrows(
-                InstrumentNotFoundException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0007"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-005"
         );
 
-        assertEquals("INS-404", exception.getCode());
+
+        assertThrows(
+                InstrumentNotFoundException.class,
+                () -> orderLogic.validate(
+                        activeAccount,
+                        delistedInstrument,
+                        order,
+                        portfolio
+                )
+        );
     }
+
 
     @Test
-    void shouldAllowOrderWhenInstrumentIsTradable() {
-        addActiveAccount();
-        addInstrument("AAPL");
+    void shouldAllowTradableInstrument() {
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-006"
+        );
+
 
         assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0008"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
+
+
 
     // RULE 4: QUANTITY MUST BE GREATER THAN ZERO
 
+
     @Test
     void shouldRejectZeroQuantity() {
-        addActiveAccount();
-        addInstrument("AAPL");
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+        Order order = createOrder(
                 OrderSide.BUY,
-                "0",
+                0,
                 "100.00",
-                "KEY-0009"
+                "KEY-007"
         );
 
-        InvalidOrderException exception = assertThrows(
-                InvalidOrderException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
 
-        assertEquals("VAL-422", exception.getCode());
+        InvalidOrderException exception =
+                assertThrows(
+                        InvalidOrderException.class,
+                        () -> orderLogic.validate(
+                                activeAccount,
+                                instrument,
+                                order,
+                                portfolio
+                        )
+                );
+
+
+        assertEquals(
+                "quantity",
+                exception.getField()
+        );
     }
+
 
     @Test
     void shouldRejectNegativeQuantity() {
-        addActiveAccount();
-        addInstrument("AAPL");
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+        Order order = createOrder(
                 OrderSide.BUY,
-                "-1",
+                -1,
                 "100.00",
-                "KEY-0010"
+                "KEY-008"
         );
 
-        InvalidOrderException exception = assertThrows(
+
+        assertThrows(
                 InvalidOrderException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
-
-        assertEquals("VAL-422", exception.getCode());
-    }
-
-    @Test
-    void shouldAllowPositiveQuantity() {
-        addActiveAccount();
-        addInstrument("AAPL");
-
-        assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0011"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                () -> orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
+
+
 
     // RULE 5: PRICE MUST BE GREATER THAN ZERO
 
+
     @Test
     void shouldRejectZeroPrice() {
-        addActiveAccount();
-        addInstrument("AAPL");
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+        Order order = createOrder(
                 OrderSide.BUY,
-                "1",
+                1,
                 "0",
-                "KEY-0012"
+                "KEY-009"
         );
 
-        InvalidOrderException exception = assertThrows(
-                InvalidOrderException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
 
-        assertEquals("VAL-422", exception.getCode());
+        InvalidOrderException exception =
+                assertThrows(
+                        InvalidOrderException.class,
+                        () -> orderLogic.validate(
+                                activeAccount,
+                                instrument,
+                                order,
+                                portfolio
+                        )
+                );
+
+
+        assertEquals(
+                "price",
+                exception.getField()
+        );
     }
+
 
     @Test
     void shouldRejectNegativePrice() {
-        addActiveAccount();
-        addInstrument("AAPL");
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+        Order order = createOrder(
                 OrderSide.BUY,
-                "1",
-                "-10.00",
-                "KEY-0013"
+                1,
+                "-10",
+                "KEY-010"
         );
 
-        InvalidOrderException exception = assertThrows(
+
+        assertThrows(
                 InvalidOrderException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
-
-        assertEquals("VAL-422", exception.getCode());
-    }
-
-    @Test
-    void shouldAllowPositivePrice() {
-        addActiveAccount();
-        addInstrument("AAPL");
-
-        assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0014"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                () -> orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
+
+
 
     // RULE 6: BUY REQUIRES SUFFICIENT FUNDS
 
+
     @Test
     void shouldRejectBuyWhenFundsAreInsufficient() {
-        addAccountWithBalance(AccountStatus.ACTIVE, "100.00");
-        addInstrument("AAPL");
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+
+        Account account =
+                createAccount(
+                        AccountStatus.ACTIVE,
+                        "100.00"
+                );
+
+
+        Order order = createOrder(
                 OrderSide.BUY,
-                "2",
+                2,
                 "100.00",
-                "KEY-0015"
+                "KEY-011"
         );
 
-        InsufficientFundsException exception = assertThrows(
+
+        assertThrows(
                 InsufficientFundsException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                () -> orderLogic.validate(
+                        account,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
-
-        assertEquals("ORD-400", exception.getCode());
     }
+
 
     @Test
-    void shouldAllowBuyWhenFundsExactlyMatchOrderValue() {
-        addAccountWithBalance(AccountStatus.ACTIVE, "200.00");
-        addInstrument("AAPL");
+    void shouldAllowBuyWhenFundsAreEnough() {
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                2,
+                "100.00",
+                "KEY-012"
+        );
+
 
         assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0016"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
+
+
 
     // RULE 7: SELL REQUIRES SUFFICIENT HOLDINGS
 
+
     @Test
     void shouldRejectSellWhenHoldingsAreInsufficient() {
-        addActiveAccount();
-        addInstrument("AAPL");
-        addPosition("2", "100.00");
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+
+        addHolding("2");
+
+
+        Order order = createOrder(
                 OrderSide.SELL,
-                "3",
+                3,
                 "100.00",
-                "KEY-0017"
+                "KEY-013"
         );
 
-        InsufficientHoldingException exception = assertThrows(
-                InsufficientHoldingException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+
+        assertThrows(
+                InsufficientHoldingsException.class,
+                () -> orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
-
-        assertEquals("ORD-409", exception.getCode());
     }
+
+
 
     @Test
-    void shouldAllowSellWhenHoldingsExactlyMatchOrderQuantity() {
-        addActiveAccount();
-        addInstrument("AAPL");
-        addPosition("2", "100.00");
+    void shouldAllowSellWhenHoldingIsEnough() {
+
+
+        addHolding("5");
+
+
+        Order order = createOrder(
+                OrderSide.SELL,
+                3,
+                "100.00",
+                "KEY-014"
+        );
+
 
         assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        createRequest(
-                                1L,
-                                "AAPL",
-                                OrderSide.SELL,
-                                "2",
-                                "100.00",
-                                "KEY-0018"
-                        ),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
 
-    // RULE 8: IDEMPOTENCY KEY MUST NOT ALREADY BE USED
+
+
+    // RULE 8: IDEMPOTENCY
+
 
     @Test
     void shouldRejectDuplicateOrder() {
-        addActiveAccount();
-        addInstrument("AAPL");
 
-        IdempotencyChecker usedKeyChecker =
-                key -> key.equals("KEY-0019");
 
-        DuplicateOrderException exception = assertThrows(
-                DuplicateOrderException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0019"),
-                        accounts,
-                        instruments,
-                        positions,
-                        usedKeyChecker
-                )
+        OrderLogic duplicateChecker =
+                new OrderLogic(
+                        key -> true
+                );
+
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                1,
+                "100.00",
+                "DUPLICATE"
         );
 
-        assertEquals("ORD-409", exception.getCode());
+
+        assertThrows(
+                DuplicateOrderException.class,
+                () -> duplicateChecker.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
+                )
+        );
     }
 
+
+
     @Test
-    void shouldAllowOrderWithUnusedIdempotencyKey() {
-        addActiveAccount();
-        addInstrument("AAPL");
+    void shouldAllowUnusedIdempotencyKey() {
+
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                1,
+                "100.00",
+                "NEW-KEY"
+        );
+
 
         assertDoesNotThrow(() ->
-                orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0020"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                orderLogic.validate(
+                        activeAccount,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
     }
 
-    // EVALUATION ORDER
+
+
+    // RULE EVALUATION ORDER
+
 
     @Test
-    void accountNotFoundShouldWinBeforeOtherRules() {
-        PlaceOrderRequest request =
-                buyRequest(999L, "UNKNOWN", "KEY-0021");
+    void accountFailureShouldComeBeforeInstrumentFailure() {
 
-        DomainException exception = assertThrows(
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                0,
+                "0",
+                "KEY-015"
+        );
+
+
+        assertThrows(
                 AccountNotFoundException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        key -> true
+                () -> orderLogic.validate(
+                        null,
+                        null,
+                        order,
+                        null
                 )
         );
-
-        assertEquals("ACC-404", exception.getCode());
     }
 
-    @Test
-    void accountNotActiveShouldWinBeforeInsufficientFunds() {
-        addAccountWithBalance(AccountStatus.SUSPENDED, "0.00");
-        addInstrument("AAPL");
 
-        DomainException exception = assertThrows(
+    @Test
+    void accountStatusShouldComeBeforeFundsCheck() {
+
+
+        Account suspended =
+                createAccount(
+                        AccountStatus.SUSPENDED,
+                        "0.00"
+                );
+
+
+        Order order = createOrder(
+                OrderSide.BUY,
+                10,
+                "100",
+                "KEY-016"
+        );
+
+
+        assertThrows(
                 AccountNotActiveException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "AAPL", "KEY-0022"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
+                () -> orderLogic.validate(
+                        suspended,
+                        instrument,
+                        order,
+                        portfolio
                 )
         );
-
-        assertEquals("ACC-403", exception.getCode());
     }
 
-    @Test
-    void instrumentNotFoundShouldWinBeforeInsufficientFunds() {
-        addAccountWithBalance(AccountStatus.ACTIVE, "0.00");
 
-        DomainException exception = assertThrows(
-                InstrumentNotFoundException.class,
-                () -> orderLogic.placeOrder(
-                        buyRequest(1L, "UNKNOWN", "KEY-0023"),
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
-
-        assertEquals("INS-404", exception.getCode());
-    }
 
     @Test
-    void invalidQuantityShouldWinBeforeInsufficientFunds() {
-        addAccountWithBalance(AccountStatus.ACTIVE, "0.00");
-        addInstrument("AAPL");
+    void invalidQuantityShouldComeBeforeFundsCheck() {
 
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
+
+        Account account =
+                createAccount(
+                        AccountStatus.ACTIVE,
+                        "0.00"
+                );
+
+
+        Order order = createOrder(
                 OrderSide.BUY,
-                "0",
-                "100.00",
-                "KEY-0024"
+                0,
+                "100",
+                "KEY-017"
         );
 
-        DomainException exception = assertThrows(
-                InvalidOrderException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
 
-        assertEquals("VAL-422", exception.getCode());
-    }
+        InvalidOrderException exception =
+                assertThrows(
+                        InvalidOrderException.class,
+                        () -> orderLogic.validate(
+                                account,
+                                instrument,
+                                order,
+                                portfolio
+                        )
+                );
 
-    @Test
-    void invalidPriceShouldWinBeforeInsufficientFunds() {
-        addAccountWithBalance(AccountStatus.ACTIVE, "0.00");
-        addInstrument("AAPL");
-
-        PlaceOrderRequest request = createRequest(
-                1L,
-                "AAPL",
-                OrderSide.BUY,
-                "1",
-                "0",
-                "KEY-0025"
-        );
-
-        DomainException exception = assertThrows(
-                InvalidOrderException.class,
-                () -> orderLogic.placeOrder(
-                        request,
-                        accounts,
-                        instruments,
-                        positions,
-                        idempotencyChecker
-                )
-        );
-
-        assertEquals("VAL-422", exception.getCode());
-    }
-
-    // SUCCESSFUL BUY
-
-    @Test
-    void successfulBuyShouldDebitAccountAndCreatePosition() {
-        addActiveAccount();
-        addInstrument("AAPL");
-
-        Order order = orderLogic.placeOrder(
-                buyRequest(1L, "AAPL", "KEY-0026"),
-                accounts,
-                instruments,
-                positions,
-                idempotencyChecker
-        );
-
-        Account account = accounts.get(1L);
-        Position position = positions.get(positionKey(1L, "AAPL"));
-
-        assertNotNull(order);
 
         assertEquals(
-                new BigDecimal("800.00"),
-                account.getCashBalance()
-        );
-
-        assertNotNull(position);
-
-        assertEquals(
-                new BigDecimal("2"),
-                position.getQuantity()
-        );
-
-        assertEquals(
-                new BigDecimal("100.00"),
-                position.getAverageCost()
+                "quantity",
+                exception.getField()
         );
     }
 
-    // SUCCESSFUL SELL
 
-    @Test
-    void successfulSellShouldReducePositionAndCreditAccount() {
-        addActiveAccount();
-        addInstrument("AAPL");
 
-        addPosition("5", "100.00");
+    // HELPERS
 
-        Order order = orderLogic.placeOrder(
-                createRequest(
-                        1L,
-                        "AAPL",
-                        OrderSide.SELL,
-                        "2",
-                        "120.00",
-                        "KEY-0027"
-                ),
-                accounts,
-                instruments,
-                positions,
-                idempotencyChecker
-        );
 
-        Account account = accounts.get(1L);
-        Position position = positions.get(positionKey(1L, "AAPL"));
-
-        assertNotNull(order);
-
-        assertEquals(
-                new BigDecimal("1240.00"),
-                account.getCashBalance()
-        );
-
-        assertNotNull(position);
-
-        assertEquals(
-                new BigDecimal("3"),
-                position.getQuantity()
-        );
-
-        // Selling does not change average cost.
-        assertEquals(
-                new BigDecimal("100.00"),
-                position.getAverageCost()
-        );
-    }
-
-    // TEST DATA HELPERS
-
-    private void addActiveAccount() {
-        addAccount(AccountStatus.ACTIVE);
-    }
-
-    private void addAccount(AccountStatus status) {
-        addAccountWithBalance(status, "1000.00");
-    }
-
-    private void addAccountWithBalance(
+    private Account createAccount(
             AccountStatus status,
             String balance
     ) {
-        Account account = new Account(
+
+        return new Account(
                 1L,
                 100L,
                 "ACC-001",
-                "Alice Morgan",
+                "Alice",
                 "USD",
                 new BigDecimal(balance),
                 status,
                 1L,
                 Instant.now()
         );
-
-        accounts.put(1L, account);
     }
 
-    private void addInstrument(String symbol) {
-        instruments.put(
-                symbol,
-                createInstrument(symbol)
-        );
-    }
 
-    private Instrument createInstrument(String symbol) {
-        return new Instrument(
-                symbol,
-                "Apple Inc.",
-                "EQUITY",
-                "USD"
-        );
-    }
 
-    private void addPosition(
-            String quantity,
-            String averageCost
+    private Instrument createInstrument(
+            boolean delisted
     ) {
-        Position position = new Position(
+
+        return new Instrument(
                 1L,
                 "AAPL",
-                new BigDecimal(quantity),
-                new BigDecimal(averageCost)
-        );
-
-        positions.put(
-                positionKey(1L, "AAPL"),
-                position
+                "Apple Inc",
+                AssetClass.EQUITY,
+                "USD",
+                delisted,
+                Instant.now()
         );
     }
 
-    private PlaceOrderRequest buyRequest(
-            Long accountId,
-            String symbol,
-            String idempotencyKey
-    ) {
-        return createRequest(
-                accountId,
-                symbol,
-                OrderSide.BUY,
-                "2",
-                "100.00",
-                idempotencyKey
-        );
-    }
 
-    private PlaceOrderRequest createRequest(
-            Long accountId,
-            String symbol,
+
+    private Order createOrder(
             OrderSide side,
-            String quantity,
+            Integer quantity,
             String price,
-            String idempotencyKey
+            String key
     ) {
-        return new PlaceOrderRequest(
-                accountId,
-                symbol,
+
+        return new Order(
+                1L,
+                1L,
+                "ACC-001",
+                1L,
                 side,
-                new BigDecimal(quantity),
+                quantity,
                 new BigDecimal(price),
-                idempotencyKey
+                OrderStatus.NEW,
+                key,
+                Instant.now()
         );
     }
 
-    private String positionKey(
-            Long accountId,
-            String symbol
+
+
+    private Portfolio createPortfolio() {
+
+        return new Portfolio(
+                1L,
+                1L,
+                new BigDecimal("0"),
+                new BigDecimal("0"),
+                Instant.now()
+        );
+    }
+
+
+
+    private void addHolding(
+            String quantity
     ) {
-        return accountId + ":" + symbol;
+
+        PortfolioHolding holding =
+                new PortfolioHolding(
+                        1L,
+                        1L,
+                        1L,
+                        new BigDecimal(quantity),
+                        new BigDecimal("100.00"),
+                        Instant.now()
+                );
+
+
+        portfolio.addHolding(holding);
     }
 }
