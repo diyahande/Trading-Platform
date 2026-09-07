@@ -9,7 +9,6 @@ if [ -f ".env" ]; then
 fi
 
 set -a
-# source .env
 set +a
 
 # Check required variables
