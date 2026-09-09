@@ -25,40 +25,45 @@ public class OrderService {
 
     private final OrderMapper orderMapper;
     private final AccountService accountService;
+    private final InstrumentService instrumentService;
 
     /**
      * Place a new order with comprehensive validation.
      * Validation rules (in order):
      * 1. Account must exist (ACC-404)
      * 2. Account must be active (ACC-403)
-     * 3. Quantity must be positive (VAL-422)
-     * 4. Price must be positive (VAL-422)
-     * 5. Sufficient cash balance for buy orders (ORD-400)
-     * 6. Sufficient holdings for sell orders (ORD-409)
-     * 7. Idempotency key must be unique (ORD-409)
+     * 3. Instrument must exist and be tradable (INS-404)
+     * 4. Quantity must be positive (VAL-422)
+     * 5. Price must be positive (VAL-422)
+     * 6. Sufficient cash balance for buy orders (ORD-400)
+     * 7. Sufficient holdings for sell orders (ORD-409)
+     * 8. Idempotency key must be unique (ORD-409)
      */
     public Order placeOrder(PlaceOrderRequest request, String idempotencyKey) {
         // Validate account exists and is active (rules 1-2)
         Account account = accountService.getAccountByIdStrict(request.getAccountId());
 
-        // Validate order parameters (rules 3-4)
+        // Validate instrument exists and is tradable (rule 3)
+        com.capstone.entity.Instrument instrument = instrumentService.validateAndGetInstrument(request.getSymbol());
+
+        // Validate order parameters (rules 4-5)
         validateOrderParameters(request);
 
-        // Validate sufficient funds/holdings (rules 5-6)
+        // Validate sufficient funds/holdings (rules 6-7)
         validateAndReserveFunds(request, account);
 
         // Generate order ID from UUID
         Long orderId = UUID.randomUUID().getMostSignificantBits();
 
         // Create Order entity using immutable constructor
-        // Side is already OrderSide enum from request
+        // Convert quantity from Integer to BigDecimal for schema compatibility
         Order order = new Order(
                 orderId,
                 request.getAccountId(),
                 account.getAccountReference(),
-                0L,
+                instrument.getInstrumentId(),  // Use actual instrument ID from database
                 request.getSide(),  // Already OrderSide enum
-                request.getQuantity(),
+                new BigDecimal(request.getQuantity()),
                 request.getPrice(),
                 OrderStatus.NEW,
                 idempotencyKey,
@@ -111,7 +116,8 @@ public class OrderService {
         }
     }
 
-    /**\n     * Validate and reserve funds for the order.
+    /**
+     * Validate and reserve funds for the order.
      * For BUY orders: check sufficient cash balance and deduct funds.
      * For SELL orders: check sufficient holdings (TODO: full implementation).
      */

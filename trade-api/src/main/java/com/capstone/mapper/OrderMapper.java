@@ -11,16 +11,16 @@ import java.util.Optional;
 public interface OrderMapper {
 
     @Insert("""
-            INSERT INTO orders (
-                account_id, account_reference, instrument_id, side, quantity,
-                price, status, idempotency_key, created_at
-            ) VALUES (
-                #{order.accountId}, #{order.accountReference}, #{order.instrumentId},
-                #{order.side}, #{order.quantity}, #{order.price}, #{order.status},
-                #{order.idempotencyKey}, #{order.createdAt}
-            )
-            """)
-    int insertOrder(Order order);
+    INSERT INTO orders (
+        account_id, account_reference, instrument_id, side, quantity,
+        price, status, idempotency_key, created_at
+    ) VALUES (
+        #{accountId}, #{accountReference}, #{instrumentId},
+        #{side}, #{quantity}, #{price}, #{status},
+        #{idempotencyKey}, #{createdAt}
+    )
+    """)
+        int insertOrder(Order order);
 
     @Select("""
             SELECT order_id, account_id, account_reference, instrument_id, side,
