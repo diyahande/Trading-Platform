@@ -1,5 +1,6 @@
 openapi: 3.1.0
 
+
 info:
   title: Trade REST API
   version: 1.0.0
