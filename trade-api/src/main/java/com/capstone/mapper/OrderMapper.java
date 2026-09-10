@@ -63,6 +63,18 @@ public interface OrderMapper {
 
     @Update("""
             UPDATE orders
+            SET status = #{newStatus}
+            WHERE order_id = #{orderId}
+            AND status = #{expectedStatus}
+            """)
+    int updateOrderStatusConditional(
+            @Param("orderId") Long orderId,
+            @Param("expectedStatus") OrderStatus expectedStatus,
+            @Param("newStatus") OrderStatus newStatus
+    );
+
+    @Update("""
+            UPDATE orders
             SET status = #{status}
             WHERE order_id = #{orderId}
             """)

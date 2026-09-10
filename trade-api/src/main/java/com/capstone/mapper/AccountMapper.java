@@ -60,14 +60,77 @@ public interface AccountMapper {
     );
 
 
+    /**
+     * Find account by reference (username from JWT token's subject claim).
+     * Used to resolve token's account key to internal account ID.
+     */
+    @Select("""
+            SELECT 
+                account_id,
+                user_id,
+                account_reference,
+                holder_name,
+                currency,
+                cash_balance,
+                status,
+                version,
+                created_at
+            FROM accounts
+            WHERE account_reference = #{accountReference}
+            """)
+    @Results(id = "accountMapByRef", value = {
+            @Result(property = "accountId",
+                    column = "account_id",
+                    id = true),
+
+            @Result(property = "userId",
+                    column = "user_id"),
+
+            @Result(property = "accountReference",
+                    column = "account_reference"),
+
+            @Result(property = "holderName",
+                    column = "holder_name"),
+
+            @Result(property = "currency",
+                    column = "currency"),
+
+            @Result(property = "cashBalance",
+                    column = "cash_balance"),
+
+            @Result(property = "status",
+                    column = "status",
+                    typeHandler = org.apache.ibatis.type.EnumTypeHandler.class),
+
+            @Result(property = "version",
+                    column = "version"),
+
+            @Result(property = "createdAt",
+                    column = "created_at")
+    })
+    Optional<Account> findAccountByReference(
+            @Param("accountReference") String accountReference
+    );
+
+
+    /**
+     * Update cash balance with optimistic locking.
+     * Reads the current version, increments it, and updates only if version matches.
+     * Returns the number of rows affected.
+     * - 1: Update succeeded, no concurrent modification
+     * - 0: Version mismatch, concurrent modification detected
+     */
     @Update("""
             UPDATE accounts
-            SET cash_balance = #{cashBalance}
+            SET cash_balance = #{cashBalance},
+                version = version + 1
             WHERE account_id = #{accountId}
+            AND version = #{version}
             """)
-    int updateCashBalance(
+    int updateCashBalanceWithVersion(
             @Param("accountId") Long accountId,
-            @Param("cashBalance") BigDecimal cashBalance
+            @Param("cashBalance") BigDecimal cashBalance,
+            @Param("version") Long version
     );
 
 

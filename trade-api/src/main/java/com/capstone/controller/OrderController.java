@@ -6,6 +6,8 @@ import com.capstone.dto.PlaceOrderRequest;
 import com.capstone.dto.ErrorResponse;
 import com.capstone.entity.Order;
 import com.capstone.service.OrderService;
+import com.capstone.service.AccountService;
+import com.capstone.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -13,50 +15,55 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import jakarta.annotation.security.PermitAll;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * OrderController handles all HTTP endpoints for order operations.
  * Implements the trade-api.yaml contract exactly.
  *
- * Security: Temporarily disabled for Sprint 6 testing.
- * TODO: Enable JWT authentication once auth service is integrated.
+ * Security: JWT authentication validates all /api/* requests.
+ * Account authorization verified before each operation.
  */
 @RestController
 @RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
+    private final AccountService accountService;
 
     /**
      * POST /api/v1/orders
      * Place a new order with comprehensive validation.
      *
      * Business rules enforced (in order):
-     * 1. Account must exist (ACC-404)
-     * 2. Account must be active (ACC-403)
-     * 3. Instrument must exist and be tradable (INS-404)
-     * 4. Quantity must be greater than zero (VAL-422)
-     * 5. Price must be greater than zero (VAL-422)
-     * 6. BUY: sufficient cash balance (ORD-400)
-     * 7. SELL: sufficient holdings (ORD-409)
-     * 8. Idempotency key must be unique (ORD-409)
+     * 1. Token's account key must match request account ID (ACC-403)
+     * 2. Account must exist (ACC-404)
+     * 3. Account must be active (ACC-403)
+     * 4. Instrument must exist and be tradable (INS-404)
+     * 5. Quantity must be greater than zero (VAL-422)
+     * 6. Price must be greater than zero (VAL-422)
+     * 7. BUY: sufficient cash balance (ORD-400)
+     * 8. SELL: sufficient holdings (ORD-409)
+     * 9. Idempotency key must be unique (ORD-409)
      *
      * @param request PlaceOrderRequest containing order details
+     * @param httpRequest HttpServletRequest to extract JWT account key
      * @return OrderResponse with placed order details and status
-     * @throws IllegalArgumentException for validation failures with error codes
      */
-    @PermitAll
     @PostMapping("/api/v1/orders")
     public ResponseEntity<OrderResponse> placeOrder(
-            @Valid @RequestBody PlaceOrderRequest request) {
+            @Valid @RequestBody PlaceOrderRequest request,
+            HttpServletRequest httpRequest) {
+        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(httpRequest);
+        accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
+
         String idempotencyKey = request.getIdempotencyKey();
         Order order = orderService.placeOrder(request, idempotencyKey);
+
         OrderResponse response = mapOrderToResponse(order, request.getSymbol());
         return ResponseEntity.ok(response);
     }
@@ -70,32 +77,26 @@ public class OrderController {
      * races with the Trade Executor.
      *
      * @param id Order identifier (Long)
+     * @param httpRequest HttpServletRequest to extract JWT account key
      * @return OrderResponse with cancelled order details
      */
-    @PermitAll
     @DeleteMapping("/api/v1/orders/{id}")
     public ResponseEntity<?> cancelOrder(
-            @PathVariable Long id) {
-        // Retrieve the order
+            @PathVariable Long id,
+            HttpServletRequest httpRequest) {
         Optional<Order> orderOpt = orderService.getOrderById(id);
         if (orderOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(createErrorResponse("ORD-404", "No order exists with that identifier"));
+                    .body(new ErrorResponse("ORD-404", "No order exists with that identifier"));
         }
 
         Order order = orderOpt.get();
 
-        // Check if order can be cancelled (must be NEW)
-        if (!order.getStatus().toString().equals("NEW")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(createErrorResponse("ORD-409",
-                            "The order is not in a cancellable state"));
-        }
+        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(httpRequest);
+        accountService.verifyAuthorizedAccount(order.getAccountId(), accountKey);
 
-        // Cancel the order (updates status to CANCELLED)
         orderService.cancelOrder(id);
 
-        // Retrieve updated order and return
         Order cancelledOrder = orderService.getOrderById(id)
                 .orElseThrow(() -> new IllegalStateException("Order disappeared after cancellation"));
 
@@ -114,9 +115,9 @@ public class OrderController {
      * @param status Optional filter by order status
      * @param from Optional start date for filtering
      * @param to Optional end date for filtering
+     * @param httpRequest HttpServletRequest to extract JWT account key
      * @return List of OrderHistoryEntry sorted by creation date (newest first)
      */
-    @PermitAll
     @GetMapping("/api/v1/accounts/{id}/orders")
     public ResponseEntity<List<OrderHistoryEntry>> getOrders(
             @PathVariable Long id,
@@ -124,33 +125,34 @@ public class OrderController {
             @RequestParam(required = false) 
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) 
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            HttpServletRequest httpRequest) {
 
-        // Retrieve all orders for the account
+        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(httpRequest);
+        accountService.verifyAuthorizedAccount(id, accountKey);
+
         List<Order> orders = orderService.getOrdersByAccountId(id);
 
-        // Map to OrderHistoryEntry DTOs
         List<OrderHistoryEntry> historyEntries = orders.stream()
                 .map(this::mapOrderToHistoryEntry)
-                .collect(Collectors.toList());
+                .toList();
 
-        // Apply optional filters
         if (status != null && !status.isEmpty()) {
             historyEntries = historyEntries.stream()
                     .filter(entry -> entry.getStatus().equals(status))
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         if (from != null) {
             historyEntries = historyEntries.stream()
                     .filter(entry -> entry.getCreatedOn().isAfter(from))
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         if (to != null) {
             historyEntries = historyEntries.stream()
                     .filter(entry -> entry.getCreatedOn().isBefore(to))
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         return ResponseEntity.ok(historyEntries);
@@ -196,14 +198,6 @@ public class OrderController {
         entry.setCreatedOn(createdOn);
 
         return entry;
-    }
-
-    /**
-     * Create an error response DTO.
-     * For consistency with ErrorResponse schema.
-     */
-    private ErrorResponse createErrorResponse(String errorCode, String message) {
-        return new ErrorResponse(errorCode, message);
     }
 
 }
