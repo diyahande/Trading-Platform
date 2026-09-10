@@ -13,7 +13,7 @@ public class Order {
     private final String accountReference;
     private final Long instrumentId;
     private final OrderSide side;
-    private final Integer quantity;
+    private final BigDecimal quantity;
 
     // Customer-submitted limit price.
     private final BigDecimal price;
@@ -29,7 +29,7 @@ public class Order {
             String accountReference,
             Long instrumentId,
             OrderSide side,
-            Integer quantity,
+            BigDecimal quantity,
             BigDecimal price,
             OrderStatus status,
             String idempotencyKey,
@@ -67,7 +67,7 @@ public class Order {
         return side;
     }
 
-    public Integer getQuantity() {
+    public BigDecimal getQuantity() {
         return quantity;
     }
 
@@ -88,8 +88,7 @@ public class Order {
     }
 
     public BigDecimal getOrderValue() {
-        return price.multiply(
-                BigDecimal.valueOf(quantity));
+        return price.multiply(quantity);
     }
 
     public boolean isBuy() {

@@ -121,9 +121,9 @@ public class Account {
                     "Amount cannot be negative");
         }
 
-        if (amount.scale() > 2) {
+        if (amount.scale() > 4) {
             throw new IllegalArgumentException(
-                    "Money must have at most two decimal places");
+                    "Money must have at most four decimal places");
         }
     }
 
@@ -138,11 +138,11 @@ public class Account {
                     "Cash balance cannot be negative");
         }
 
-        if (amount.scale() > 2) {
+        if (amount.scale() > 4) {
             throw new IllegalArgumentException(
-                    "Money must have at most two decimal places");
+                    "Money must have at most four decimal places");
         }
 
-        return amount.setScale(2, RoundingMode.HALF_UP);
+        return amount.setScale(4, RoundingMode.HALF_UP);
     }
 }
