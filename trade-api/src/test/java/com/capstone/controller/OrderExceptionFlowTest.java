@@ -7,6 +7,7 @@ import com.capstone.exception.DomainException;
 import com.capstone.exception.DuplicateOrderException;
 import com.capstone.exception.InsufficientFundsException;
 import com.capstone.exception.InstrumentNotFoundException;
+import com.capstone.service.AccountService;
 import com.capstone.service.OrderService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,20 +34,24 @@ class OrderExceptionFlowTest {
 
     private MockMvc mockMvc;
     private OrderService orderService;
+    private AccountService accountService;
     private LocalValidatorFactoryBean validator;
 
     @BeforeEach
     void setUp() {
         orderService = mock(OrderService.class);
+        accountService = mock(AccountService.class);
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        OrderController controller = new OrderController(orderService);
+        OrderController controller = new OrderController(orderService, accountService);
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setValidator(validator)
                 .build();
+
+        when(accountService.verifyAuthorizedAccount(anyLong(), anyString())).thenReturn(null);
     }
 
     @AfterEach
@@ -59,6 +65,7 @@ class OrderExceptionFlowTest {
         when(orderService.placeOrder(any(), anyString())).thenThrow(ex);
 
         mockMvc.perform(post("/api/v1/orders")
+                        .requestAttr("accountKey", "ACC-101")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequestJson()))
                 .andExpect(status().is(expectedStatus))
@@ -70,6 +77,7 @@ class OrderExceptionFlowTest {
     @MethodSource("invalidInputCases")
     void placeOrder_invalidInput_mapsToVal422(String invalidRequestBody) throws Exception {
         mockMvc.perform(post("/api/v1/orders")
+                        .requestAttr("accountKey", "ACC-101")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidRequestBody))
                                 .andExpect(status().is(422))
