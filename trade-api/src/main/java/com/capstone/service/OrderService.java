@@ -5,6 +5,9 @@ import com.capstone.entity.Account;
 import com.capstone.entity.Order;
 import com.capstone.enums.OrderSide;
 import com.capstone.enums.OrderStatus;
+import com.capstone.exception.DuplicateOrderException;
+import com.capstone.exception.InsufficientFundsException;
+import com.capstone.exception.InvalidOrderException;
 import com.capstone.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,11 @@ public class OrderService {
      * 8. Idempotency key must be unique (ORD-409)
      */
     public Order placeOrder(PlaceOrderRequest request, String idempotencyKey) {
+        // Rule 8: idempotency key must be unique
+        if (orderMapper.findOrderByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new DuplicateOrderException(idempotencyKey);
+        }
+
         // Validate account exists and is active (rules 1-2)
         Account account = accountService.getAccountByIdStrict(request.getAccountId());
 
@@ -108,11 +116,11 @@ public class OrderService {
      */
     private void validateOrderParameters(PlaceOrderRequest request) {
         if (request.getQuantity() == null || request.getQuantity() <= 0) {
-            throw new IllegalArgumentException("VAL-422: Quantity must be positive");
+            throw new InvalidOrderException("quantity");
         }
 
         if (request.getPrice() == null || request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("VAL-422: Price must be positive");
+            throw new InvalidOrderException("price");
         }
     }
 
@@ -130,7 +138,11 @@ public class OrderService {
                     .multiply(request.getPrice());
 
             if (account.getCashBalance().compareTo(requiredCash) < 0) {
-                throw new IllegalArgumentException("ORD-400: Insufficient funds");
+                throw new InsufficientFundsException(
+                        request.getAccountId(),
+                        requiredCash,
+                        account.getCashBalance()
+                );
             }
 
             // Reserve cash by deducting from account balance

@@ -1,6 +1,7 @@
 package com.capstone.service;
 
 import com.capstone.entity.Instrument;
+import com.capstone.exception.InstrumentNotFoundException;
 import com.capstone.mapper.InstrumentMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,13 +54,13 @@ public class InstrumentService {
         Optional<Instrument> instrumentOpt = getInstrumentBySymbol(symbol);
 
         if (instrumentOpt.isEmpty()) {
-            throw new IllegalArgumentException("INS-404: Instrument does not exist");
+            throw new InstrumentNotFoundException(symbol);
         }
 
         Instrument instrument = instrumentOpt.get();
 
         if (!instrument.isTradable()) {
-            throw new IllegalArgumentException("INS-404: Instrument is not tradable");
+            throw new InstrumentNotFoundException(symbol);
         }
 
         return instrument;

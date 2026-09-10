@@ -3,6 +3,7 @@ package com.capstone.controller;
 import com.capstone.dto.OrderHistoryEntry;
 import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
+import com.capstone.dto.ErrorResponse;
 import com.capstone.entity.Order;
 import com.capstone.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import jakarta.annotation.security.PermitAll;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -55,30 +55,10 @@ public class OrderController {
     @PostMapping("/api/v1/orders")
     public ResponseEntity<OrderResponse> placeOrder(
             @Valid @RequestBody PlaceOrderRequest request) {
-
-        try {
-            // Generate idempotency key - in production, this comes from the request
-            String idempotencyKey = request.getIdempotencyKey();
-
-            // Check for duplicate order using idempotency key
-            Optional<Order> existingOrder = orderService.getOrderByIdempotencyKey(idempotencyKey);
-            if (existingOrder.isPresent()) {
-                // ORD-409: Idempotency key already used
-                throw new IllegalArgumentException("ORD-409: Idempotency key has been used");
-            }
-
-            // Place the order (validates all business rules 1-7)
-            Order order = orderService.placeOrder(request, idempotencyKey);
-
-            // Map Order entity to OrderResponse DTO
-            OrderResponse response = mapOrderToResponse(order, request.getSymbol());
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            // Extract error code from message and return appropriate HTTP status
-            String errorCode = extractErrorCode(e.getMessage());
-            return handleValidationError(errorCode, e.getMessage());
-        }
+        String idempotencyKey = request.getIdempotencyKey();
+        Order order = orderService.placeOrder(request, idempotencyKey);
+        OrderResponse response = mapOrderToResponse(order, request.getSymbol());
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -94,40 +74,33 @@ public class OrderController {
      */
     @PermitAll
     @DeleteMapping("/api/v1/orders/{id}")
-    public ResponseEntity<OrderResponse> cancelOrder(
+    public ResponseEntity<?> cancelOrder(
             @PathVariable Long id) {
-
-        try {
-            // Retrieve the order
-            Optional<Order> orderOpt = orderService.getOrderById(id);
-            if (orderOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("ORD-404", "No order exists with that identifier"));
-            }
-
-            Order order = orderOpt.get();
-
-            // Check if order can be cancelled (must be NEW)
-            if (!order.getStatus().toString().equals("NEW")) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(createErrorResponse("ORD-409", 
-                                "The order is not in a cancellable state"));
-            }
-
-            // Cancel the order (updates status to CANCELLED)
-            orderService.cancelOrder(id);
-
-            // Retrieve updated order and return
-            Order cancelledOrder = orderService.getOrderById(id)
-                    .orElseThrow(() -> new IllegalStateException("Order disappeared after cancellation"));
-
-            OrderResponse response = mapOrderToResponse(cancelledOrder, null);
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            String errorCode = extractErrorCode(e.getMessage());
-            return handleValidationError(errorCode, e.getMessage());
+        // Retrieve the order
+        Optional<Order> orderOpt = orderService.getOrderById(id);
+        if (orderOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(createErrorResponse("ORD-404", "No order exists with that identifier"));
         }
+
+        Order order = orderOpt.get();
+
+        // Check if order can be cancelled (must be NEW)
+        if (!order.getStatus().toString().equals("NEW")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(createErrorResponse("ORD-409",
+                            "The order is not in a cancellable state"));
+        }
+
+        // Cancel the order (updates status to CANCELLED)
+        orderService.cancelOrder(id);
+
+        // Retrieve updated order and return
+        Order cancelledOrder = orderService.getOrderById(id)
+                .orElseThrow(() -> new IllegalStateException("Order disappeared after cancellation"));
+
+        OrderResponse response = mapOrderToResponse(cancelledOrder, null);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -153,41 +126,34 @@ public class OrderController {
             @RequestParam(required = false) 
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
 
-        try {
-            // Retrieve all orders for the account
-            List<Order> orders = orderService.getOrdersByAccountId(id);
+        // Retrieve all orders for the account
+        List<Order> orders = orderService.getOrdersByAccountId(id);
 
-            // Map to OrderHistoryEntry DTOs
-            List<OrderHistoryEntry> historyEntries = orders.stream()
-                    .map(this::mapOrderToHistoryEntry)
+        // Map to OrderHistoryEntry DTOs
+        List<OrderHistoryEntry> historyEntries = orders.stream()
+                .map(this::mapOrderToHistoryEntry)
+                .collect(Collectors.toList());
+
+        // Apply optional filters
+        if (status != null && !status.isEmpty()) {
+            historyEntries = historyEntries.stream()
+                    .filter(entry -> entry.getStatus().equals(status))
                     .collect(Collectors.toList());
-
-            // Apply optional filters
-            if (status != null && !status.isEmpty()) {
-                historyEntries = historyEntries.stream()
-                        .filter(entry -> entry.getStatus().equals(status))
-                        .collect(Collectors.toList());
-            }
-
-            if (from != null) {
-                historyEntries = historyEntries.stream()
-                        .filter(entry -> entry.getCreatedOn().isAfter(from))
-                        .collect(Collectors.toList());
-            }
-
-            if (to != null) {
-                historyEntries = historyEntries.stream()
-                        .filter(entry -> entry.getCreatedOn().isBefore(to))
-                        .collect(Collectors.toList());
-            }
-
-            return ResponseEntity.ok(historyEntries);
-
-        } catch (IllegalArgumentException e) {
-            String errorCode = extractErrorCode(e.getMessage());
-            return ResponseEntity.status(getHttpStatus(errorCode))
-                    .build();
         }
+
+        if (from != null) {
+            historyEntries = historyEntries.stream()
+                    .filter(entry -> entry.getCreatedOn().isAfter(from))
+                    .collect(Collectors.toList());
+        }
+
+        if (to != null) {
+            historyEntries = historyEntries.stream()
+                    .filter(entry -> entry.getCreatedOn().isBefore(to))
+                    .collect(Collectors.toList());
+        }
+
+        return ResponseEntity.ok(historyEntries);
     }
 
     /**
@@ -233,59 +199,11 @@ public class OrderController {
     }
 
     /**
-     * Extract error code from exception message.
-     * Message format: "ERROR-CODE: description"
-     */
-    private String extractErrorCode(String message) {
-        if (message != null && message.contains(":")) {
-            return message.split(":")[0].trim();
-        }
-        return "UNKNOWN";
-    }
-
-    /**
      * Create an error response DTO.
      * For consistency with ErrorResponse schema.
      */
-    private OrderResponse createErrorResponse(String errorCode, String message) {
-        OrderResponse response = new OrderResponse();
-        response.setOrderId(errorCode);
-        response.setStatus("ERROR");
-        response.setMessage(message);
-        return response;
+    private ErrorResponse createErrorResponse(String errorCode, String message) {
+        return new ErrorResponse(errorCode, message);
     }
 
-    /**
-     * Map error code to HTTP status.
-     * Following trade-api.yaml contract.
-     */
-    private HttpStatus getHttpStatus(String errorCode) {
-        return switch (errorCode) {
-            case "ACC-404" -> HttpStatus.NOT_FOUND;
-            case "ACC-403" -> HttpStatus.FORBIDDEN;
-            case "INS-404" -> HttpStatus.NOT_FOUND;
-            case "VAL-422" -> HttpStatus.UNPROCESSABLE_ENTITY;
-            case "ORD-400" -> HttpStatus.BAD_REQUEST;
-            case "ORD-409" -> HttpStatus.CONFLICT;
-            case "AUTH-401" -> HttpStatus.UNAUTHORIZED;
-            case "ORD-404" -> HttpStatus.NOT_FOUND;
-            default -> HttpStatus.INTERNAL_SERVER_ERROR;
-        };
-    }
-
-    /**
-     * Handle validation errors and return appropriate response.
-     */
-    private ResponseEntity<OrderResponse> handleValidationError(
-            String errorCode,
-            String message) {
-
-        HttpStatus status = getHttpStatus(errorCode);
-        OrderResponse errorResponse = new OrderResponse();
-        errorResponse.setOrderId(errorCode);
-        errorResponse.setStatus("ERROR");
-        errorResponse.setMessage(message);
-
-        return ResponseEntity.status(status).body(errorResponse);
-    }
 }

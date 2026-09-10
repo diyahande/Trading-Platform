@@ -2,6 +2,9 @@ package com.capstone.service;
 
 import com.capstone.entity.Account;
 import com.capstone.dto.PositionResponse;
+import com.capstone.exception.AccountNotActiveException;
+import com.capstone.exception.AccountNotFoundException;
+import com.capstone.exception.DomainException;
 import com.capstone.mapper.AccountMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,13 +38,13 @@ public class AccountService {
      */
     public Account getAccountByIdStrict(Long accountId) {
         Account account = accountMapper.findAccountById(accountId)
-            .orElseThrow(() -> new IllegalArgumentException("ACC-404: Account not found"));
+            .orElseThrow(() -> new AccountNotFoundException(accountId));
 
         // Validate account is active
         if (account.getStatus() != null) {
             String statusName = account.getStatus().name();
             if (!statusName.equalsIgnoreCase("ACTIVE")) {
-                throw new IllegalArgumentException("ACC-403: Account is not active");
+                throw new AccountNotActiveException(accountId, account.getStatus());
             }
         }
 
@@ -94,7 +97,7 @@ public class AccountService {
         try {
             getAccountByIdStrict(accountId);
             return true;
-        } catch (IllegalArgumentException e) {
+        } catch (DomainException e) {
             return false;
         }
     }
