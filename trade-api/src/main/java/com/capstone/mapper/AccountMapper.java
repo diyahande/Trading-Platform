@@ -60,14 +60,24 @@ public interface AccountMapper {
     );
 
 
+    /**
+     * Update cash balance with optimistic locking.
+     * Reads the current version, increments it, and updates only if version matches.
+     * Returns the number of rows affected.
+     * - 1: Update succeeded, no concurrent modification
+     * - 0: Version mismatch, concurrent modification detected
+     */
     @Update("""
             UPDATE accounts
-            SET cash_balance = #{cashBalance}
+            SET cash_balance = #{cashBalance},
+                version = version + 1
             WHERE account_id = #{accountId}
+            AND version = #{version}
             """)
-    int updateCashBalance(
+    int updateCashBalanceWithVersion(
             @Param("accountId") Long accountId,
-            @Param("cashBalance") BigDecimal cashBalance
+            @Param("cashBalance") BigDecimal cashBalance,
+            @Param("version") Long version
     );
 
 

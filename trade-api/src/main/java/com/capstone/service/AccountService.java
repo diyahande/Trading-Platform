@@ -57,10 +57,16 @@ public class AccountService {
     }
 
     /**
-     * Update account cash balance.
+     * Update account cash balance with optimistic locking.
+     * Increments the version to detect concurrent modifications.
+     * Throws ConcurrentModificationException if version mismatch is detected.
      */
-    public void updateCashBalance(Long accountId, BigDecimal newBalance) {
-        accountMapper.updateCashBalance(accountId, newBalance);
+    public void updateCashBalance(Long accountId, BigDecimal newBalance, Long version) {
+        int rowsAffected = accountMapper.updateCashBalanceWithVersion(accountId, newBalance, version);
+        
+        if (rowsAffected == 0) {
+            throw new com.capstone.exception.ConcurrentModificationException(accountId, version);
+        }
     }
 
     /**
