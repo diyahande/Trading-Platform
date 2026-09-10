@@ -2,7 +2,11 @@ package com.capstone.service;
 
 import com.capstone.entity.Account;
 import com.capstone.dto.PositionResponse;
+import com.capstone.exception.AccountNotActiveException;
+import com.capstone.exception.AccountNotFoundException;
+import com.capstone.exception.DomainException;
 import com.capstone.mapper.AccountMapper;
+import com.capstone.enums.AccountStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +16,7 @@ import java.util.Optional;
 
 /**
  * AccountService handles all account-related business logic.
- * Provides account queries, balance operations, and position retrieval.
+ * Provides account queries, balance operations, position retrieval, and authorization.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,19 +33,57 @@ public class AccountService {
     }
 
     /**
+     * Resolve account from JWT token's account key (reference/username).
+     * Throws AccountNotFoundException if account doesn't exist (ACC-404).
+     * Throws AccountNotActiveException if account is not active (ACC-403).
+     */
+    public Account resolveAccountFromToken(String accountKey) {
+        Account account = accountMapper.findAccountByReference(accountKey)
+                .orElseThrow(() -> new AccountNotFoundException(-1L));
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new AccountNotActiveException(account.getAccountId(), account.getStatus());
+        }
+
+        return account;
+    }
+
+    /**
+     * Verify the requested account matches the authenticated account key.
+     * Throws AccountNotFoundException if requested account doesn't exist (ACC-404).
+     * Throws AccountNotActiveException if requested account is not active (ACC-403).
+     * Throws AccountNotActiveException if account key doesn't match requested account (ACC-403).
+     */
+    public Account verifyAuthorizedAccount(Long requestedAccountId, String accountKey) {
+        Account requestedAccount = accountMapper.findAccountById(requestedAccountId)
+                .orElseThrow(() -> new AccountNotFoundException(requestedAccountId));
+
+        if (requestedAccount.getStatus() != AccountStatus.ACTIVE) {
+            throw new AccountNotActiveException(requestedAccountId, requestedAccount.getStatus());
+        }
+
+        // Verify account key matches
+        if (!requestedAccount.getAccountReference().equals(accountKey)) {
+            throw new AccountNotActiveException(requestedAccountId, requestedAccount.getStatus());
+        }
+
+        return requestedAccount;
+    }
+
+    /**
      * Retrieve account by ID with strict validation.
      * Throws exception if account doesn't exist or is not active.
      * Used by OrderService for validation.
      */
     public Account getAccountByIdStrict(Long accountId) {
         Account account = accountMapper.findAccountById(accountId)
-            .orElseThrow(() -> new IllegalArgumentException("ACC-404: Account not found"));
+            .orElseThrow(() -> new AccountNotFoundException(accountId));
 
         // Validate account is active
         if (account.getStatus() != null) {
             String statusName = account.getStatus().name();
             if (!statusName.equalsIgnoreCase("ACTIVE")) {
-                throw new IllegalArgumentException("ACC-403: Account is not active");
+                throw new AccountNotActiveException(accountId, account.getStatus());
             }
         }
 
@@ -57,10 +99,16 @@ public class AccountService {
     }
 
     /**
-     * Update account cash balance.
+     * Update account cash balance with optimistic locking.
+     * Increments the version to detect concurrent modifications.
+     * Throws ConcurrentModificationException if version mismatch is detected.
      */
-    public void updateCashBalance(Long accountId, BigDecimal newBalance) {
-        accountMapper.updateCashBalance(accountId, newBalance);
+    public void updateCashBalance(Long accountId, BigDecimal newBalance, Long version) {
+        int rowsAffected = accountMapper.updateCashBalanceWithVersion(accountId, newBalance, version);
+
+        if (rowsAffected == 0) {
+            throw new com.capstone.exception.ConcurrentModificationException(accountId, version);
+        }
     }
 
     /**
@@ -94,7 +142,7 @@ public class AccountService {
         try {
             getAccountByIdStrict(accountId);
             return true;
-        } catch (IllegalArgumentException e) {
+        } catch (DomainException e) {
             return false;
         }
     }

@@ -5,9 +5,14 @@ import com.capstone.entity.Account;
 import com.capstone.entity.Order;
 import com.capstone.enums.OrderSide;
 import com.capstone.enums.OrderStatus;
+import com.capstone.exception.DuplicateOrderException;
+import com.capstone.exception.InsufficientFundsException;
+import com.capstone.exception.InvalidOrderException;
+import com.capstone.exception.OrderNotCancellableException;
 import com.capstone.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -38,8 +43,17 @@ public class OrderService {
      * 6. Sufficient cash balance for buy orders (ORD-400)
      * 7. Sufficient holdings for sell orders (ORD-409)
      * 8. Idempotency key must be unique (ORD-409)
+     *
+     * Transactional: Cash and position move together or neither moves.
+     * Optimistic locking: Version is checked on cash balance update; concurrent modification is ORD-409.
      */
+    @Transactional
     public Order placeOrder(PlaceOrderRequest request, String idempotencyKey) {
+        // Rule 8: idempotency key must be unique
+        if (orderMapper.findOrderByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new DuplicateOrderException(idempotencyKey);
+        }
+
         // Validate account exists and is active (rules 1-2)
         Account account = accountService.getAccountByIdStrict(request.getAccountId());
 
@@ -50,6 +64,7 @@ public class OrderService {
         validateOrderParameters(request);
 
         // Validate sufficient funds/holdings (rules 6-7)
+        // This also reserves funds with optimistic locking on version
         validateAndReserveFunds(request, account);
 
         // Generate order ID from UUID
@@ -91,9 +106,22 @@ public class OrderService {
 
     /**
      * Cancel/delete an order (update status to CANCELLED).
+     * Only succeeds if the order is currently in NEW status.
+     * Conditional in a single statement to prevent race conditions.
+     * 
+     * @throws OrderNotCancellableException (ORD-409) if order is not in NEW status
      */
+    @Transactional
     public void cancelOrder(Long orderId) {
-        orderMapper.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        int rowsAffected = orderMapper.updateOrderStatusConditional(
+            orderId, 
+            OrderStatus.NEW, 
+            OrderStatus.CANCELLED
+        );
+        
+        if (rowsAffected == 0) {
+            throw new OrderNotCancellableException(orderId);
+        }
     }
 
     /**
@@ -108,18 +136,21 @@ public class OrderService {
      */
     private void validateOrderParameters(PlaceOrderRequest request) {
         if (request.getQuantity() == null || request.getQuantity() <= 0) {
-            throw new IllegalArgumentException("VAL-422: Quantity must be positive");
+            throw new InvalidOrderException("quantity");
         }
 
         if (request.getPrice() == null || request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("VAL-422: Price must be positive");
+            throw new InvalidOrderException("price");
         }
     }
 
     /**
      * Validate and reserve funds for the order.
-     * For BUY orders: check sufficient cash balance and deduct funds.
+     * For BUY orders: check sufficient cash balance and deduct funds with optimistic locking.
      * For SELL orders: check sufficient holdings (TODO: full implementation).
+     * 
+     * @throws com.capstone.exception.ConcurrentModificationException if version mismatch
+     * @throws IllegalArgumentException if insufficient funds
      */
     private void validateAndReserveFunds(PlaceOrderRequest request, Account account) {
         OrderSide side = request.getSide();
@@ -130,12 +161,16 @@ public class OrderService {
                     .multiply(request.getPrice());
 
             if (account.getCashBalance().compareTo(requiredCash) < 0) {
-                throw new IllegalArgumentException("ORD-400: Insufficient funds");
+                throw new InsufficientFundsException(
+                        request.getAccountId(),
+                        requiredCash,
+                        account.getCashBalance()
+                );
             }
 
-            // Reserve cash by deducting from account balance
+            // Reserve cash by deducting from account balance with optimistic locking
             BigDecimal newBalance = account.getCashBalance().subtract(requiredCash);
-            accountService.updateCashBalance(request.getAccountId(), newBalance);
+            accountService.updateCashBalance(request.getAccountId(), newBalance, account.getVersion());
         } else if (side == OrderSide.SELL) {
             // Check holdings for sell orders
             // TODO: Implement holdings validation via positions
