@@ -62,8 +62,11 @@ public class AccountService {
             throw new AccountNotActiveException(requestedAccountId, requestedAccount.getStatus());
         }
 
-        // Verify account key matches
-        if (!requestedAccount.getAccountReference().equals(accountKey)) {
+        boolean matchesReference = requestedAccount.getAccountReference().equals(accountKey);
+        boolean matchesNumericId = String.valueOf(requestedAccountId).equals(accountKey);
+
+        // Keep ACC-403 uniform for suspended or unreachable accounts.
+        if (!matchesReference && !matchesNumericId) {
             throw new AccountNotActiveException(requestedAccountId, requestedAccount.getStatus());
         }
 

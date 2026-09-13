@@ -7,14 +7,13 @@ import com.capstone.entity.Order;
 import com.capstone.exception.OrderNotFoundException;
 import com.capstone.service.OrderService;
 import com.capstone.service.AccountService;
-import com.capstone.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -50,14 +49,14 @@ public class OrderController {
      * 9. Idempotency key must be unique (ORD-409)
      *
      * @param request PlaceOrderRequest containing order details
-     * @param httpRequest HttpServletRequest to extract JWT account key
+     * @param authentication resolved authenticated principal from JWT
      * @return OrderResponse with placed order details and status
      */
     @PostMapping("/api/v1/orders")
     public ResponseEntity<OrderResponse> placeOrder(
             @Valid @RequestBody PlaceOrderRequest request,
-            HttpServletRequest httpRequest) {
-        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(httpRequest);
+            Authentication authentication) {
+        String accountKey = authentication.getName();
         accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
 
         String idempotencyKey = request.getIdempotencyKey();
@@ -76,13 +75,13 @@ public class OrderController {
      * races with the Trade Executor.
      *
      * @param id
-     * @param httpRequest
+     * @param authentication
      * @return
      */
     @DeleteMapping("/api/v1/orders/{id}")
         public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable Long id,
-            HttpServletRequest httpRequest) {
+            Authentication authentication) {
         Optional<Order> orderOpt = orderService.getOrderById(id);
         if (orderOpt.isEmpty()) {
             throw new OrderNotFoundException(id);
@@ -90,7 +89,7 @@ public class OrderController {
 
         Order order = orderOpt.get();
 
-        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(httpRequest);
+        String accountKey = authentication.getName();
         accountService.verifyAuthorizedAccount(order.getAccountId(), accountKey);
 
         orderService.cancelOrder(id);
@@ -113,7 +112,7 @@ public class OrderController {
      * @param status Optional filter by order status
      * @param from Optional start date for filtering
      * @param to Optional end date for filtering
-     * @param httpRequest HttpServletRequest to extract JWT account key
+    * @param authentication resolved authenticated principal from JWT
      * @return List of OrderHistoryEntry sorted by creation date (newest first)
      */
     @GetMapping("/api/v1/accounts/{id}/orders")
@@ -124,9 +123,9 @@ public class OrderController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) 
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            HttpServletRequest httpRequest) {
+            Authentication authentication) {
 
-        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(httpRequest);
+        String accountKey = authentication.getName();
         accountService.verifyAuthorizedAccount(id, accountKey);
 
         List<Order> orders = orderService.getOrdersByAccountId(id);

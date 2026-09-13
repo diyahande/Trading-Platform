@@ -5,14 +5,13 @@ import com.capstone.dto.BalanceResponse;
 import com.capstone.dto.PositionResponse;
 import com.capstone.entity.Account;
 import com.capstone.service.AccountService;
-import com.capstone.filter.JwtAuthenticationFilter;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -33,9 +32,9 @@ public class AccountController {
     @GetMapping("/{id}")
         public ResponseEntity<AccountResponse> getAccount(
             @PathVariable Long id,
-            HttpServletRequest request) {
+            Authentication authentication) {
 
-        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(request);
+        String accountKey = authentication.getName();
 
         // Verify authorization: requested account must match token
         accountService.verifyAuthorizedAccount(id, accountKey);
@@ -72,9 +71,9 @@ public class AccountController {
     @GetMapping("/{id}/balance")
     public ResponseEntity<BalanceResponse> getBalance(
             @PathVariable Long id,
-            HttpServletRequest request) {
+            Authentication authentication) {
 
-        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(request);
+        String accountKey = authentication.getName();
 
         // Verify authorization: requested account must match token
         accountService.verifyAuthorizedAccount(id, accountKey);
@@ -100,9 +99,9 @@ public class AccountController {
     @GetMapping("/{id}/positions")
     public ResponseEntity<List<PositionResponse>> getPositions(
             @PathVariable Long id,
-            HttpServletRequest request) {
+            Authentication authentication) {
 
-        String accountKey = JwtAuthenticationFilter.getAccountKeyFromRequest(request);
+        String accountKey = authentication.getName();
 
         // Verify authorization: requested account must match token
         accountService.verifyAuthorizedAccount(id, accountKey);

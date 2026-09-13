@@ -1,205 +1,157 @@
 package com.capstone.filter;
 
+import com.capstone.config.SecurityConfig;
 import com.capstone.controller.AccountController;
-import com.capstone.dto.ErrorResponse;
 import com.capstone.enums.AccountStatus;
 import com.capstone.exception.AccountNotActiveException;
+import com.capstone.exception.GlobalExceptionHandler;
 import com.capstone.service.AccountService;
-import com.capstone.util.JwtTokenProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
-import javax.crypto.SecretKey;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WebMvcTest(controllers = AccountController.class)
+@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@TestPropertySource(properties = {
+        "jwt.secret=mission-control-shared-secret-key-32-bytes-minimum",
+        "jwt.principal-claim=sub"
+})
 class JwtAuthenticationFilterWebMvcTest {
 
-    private static final String JWT_SECRET = "mission-control-shared-secret-key-32-bytes-minimum";
+    private static final byte[] SHARED_SECRET =
+            "mission-control-shared-secret-key-32-bytes-minimum".getBytes(StandardCharsets.UTF_8);
 
-        private final JwtTokenProvider tokenProvider = new JwtTokenProvider(JWT_SECRET);
-        private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private MockMvc mockMvc;
+
+        @MockitoBean
+    private AccountService accountService;
 
     @Test
     @DisplayName("Missing Authorization header returns uniform AUTH-401")
     void missingAuthorizationHeaderReturnsAuth401() throws Exception {
-                FilterExecution result = executeFilter("/api/v1/accounts/1", null);
-
-                assertEquals(HttpServletResponse.SC_UNAUTHORIZED, result.status);
-                assertTrue(result.body.contains("\"errorCode\":\"AUTH-401\""));
-                assertTrue(result.body.contains("\"message\":\"Unauthorized\""));
+        mockMvc.perform(get("/api/v1/accounts/1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("AUTH-401"))
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
     @DisplayName("Wrong Authorization scheme returns uniform AUTH-401")
     void wrongAuthorizationSchemeReturnsAuth401() throws Exception {
-                FilterExecution result = executeFilter("/api/v1/accounts/1", "Basic abc123");
-
-                assertEquals(HttpServletResponse.SC_UNAUTHORIZED, result.status);
-                assertTrue(result.body.contains("\"errorCode\":\"AUTH-401\""));
-                assertTrue(result.body.contains("\"message\":\"Unauthorized\""));
+        mockMvc.perform(get("/api/v1/accounts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Basic abc123"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("AUTH-401"))
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
     @DisplayName("Expired token returns uniform AUTH-401")
     void expiredTokenReturnsAuth401() throws Exception {
-        SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
-        String expiredToken = createToken(
-                "alice",
-                key,
-                SignatureAlgorithm.HS256,
-                Instant.now().minusSeconds(120)
-        );
+        String expiredToken = mintToken("Alice Johnson", JWSAlgorithm.HS256, SHARED_SECRET, Instant.now().minusSeconds(60));
 
-        FilterExecution result = executeFilter("/api/v1/accounts/1", "Bearer " + expiredToken);
-
-        assertEquals(HttpServletResponse.SC_UNAUTHORIZED, result.status);
-        assertTrue(result.body.contains("\"errorCode\":\"AUTH-401\""));
-        assertTrue(result.body.contains("\"message\":\"Unauthorized\""));
+        mockMvc.perform(get("/api/v1/accounts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("AUTH-401"))
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
     @DisplayName("Forged signature token returns uniform AUTH-401")
     void forgedSignatureReturnsAuth401() throws Exception {
-        SecretKey forgedKey = Keys.hmacShaKeyFor("another-shared-secret-key-32bytes!!".getBytes(StandardCharsets.UTF_8));
-        String forgedToken = createToken(
-                "alice",
-                forgedKey,
-                SignatureAlgorithm.HS256,
-                Instant.now().plusSeconds(3600)
-        );
+        byte[] forgedSecret = "another-shared-secret-key-32bytes!!".getBytes(StandardCharsets.UTF_8);
+        String forgedToken = mintToken("Alice Johnson", JWSAlgorithm.HS256, forgedSecret, Instant.now().plusSeconds(3600));
 
-        FilterExecution result = executeFilter("/api/v1/accounts/1", "Bearer " + forgedToken);
-
-        assertEquals(HttpServletResponse.SC_UNAUTHORIZED, result.status);
-        assertTrue(result.body.contains("\"errorCode\":\"AUTH-401\""));
-        assertTrue(result.body.contains("\"message\":\"Unauthorized\""));
+        mockMvc.perform(get("/api/v1/accounts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + forgedToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("AUTH-401"))
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
-    @DisplayName("Unsupported token algorithm returns uniform AUTH-401")
-    void unsupportedAlgorithmReturnsAuth401() throws Exception {
-        SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
-        String hs384Token = createToken(
-                "alice",
-                key,
-                SignatureAlgorithm.HS384,
-                Instant.now().plusSeconds(3600)
-        );
+    @DisplayName("Wrong algorithm token returns uniform AUTH-401")
+    void wrongAlgorithmReturnsAuth401() throws Exception {
+        String hs384Token = mintToken("Alice Johnson", JWSAlgorithm.HS384, SHARED_SECRET, Instant.now().plusSeconds(3600));
 
-        FilterExecution result = executeFilter("/api/v1/accounts/1", "Bearer " + hs384Token);
-
-        assertEquals(HttpServletResponse.SC_UNAUTHORIZED, result.status);
-        assertTrue(result.body.contains("\"errorCode\":\"AUTH-401\""));
-        assertTrue(result.body.contains("\"message\":\"Unauthorized\""));
+        mockMvc.perform(get("/api/v1/accounts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + hs384Token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("AUTH-401"))
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
-    @DisplayName("Token/account mismatch returns ACC-403 with same message")
-    void accountMismatchReturnsAcc403WithUniformMessage() {
-        AccountService accountService = mock(AccountService.class);
-        AccountController controller = new AccountController(accountService);
-        HttpServletRequest request = mock(HttpServletRequest.class);
-
-        when(request.getAttribute("accountKey")).thenReturn("alice");
-        when(accountService.verifyAuthorizedAccount(1L, "alice"))
+    @DisplayName("Token/account mismatch returns ACC-403 with suspended-account message")
+    void accountMismatchReturnsAcc403WithSuspendedMessage() throws Exception {
+        when(accountService.verifyAuthorizedAccount(1L, "Alice Johnson"))
                 .thenThrow(new AccountNotActiveException(1L, AccountStatus.ACTIVE));
 
-        ResponseEntity<?> response = controller.getAccount(1L, request);
-        ErrorResponse body = (ErrorResponse) response.getBody();
+        String validToken = mintToken("Alice Johnson", JWSAlgorithm.HS256, SHARED_SECRET, Instant.now().plusSeconds(3600));
 
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-        assertEquals("ACC-403", body.getErrorCode());
-        assertEquals("Account not accessible", body.getMessage());
+        mockMvc.perform(get("/api/v1/accounts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ACC-403"))
+                .andExpect(jsonPath("$.message").value("Account not active"));
     }
 
     @Test
-    @DisplayName("Suspended account returns ACC-403 with identical message")
-    void suspendedAccountReturnsAcc403WithUniformMessage() {
-        AccountService accountService = mock(AccountService.class);
-        AccountController controller = new AccountController(accountService);
-        HttpServletRequest request = mock(HttpServletRequest.class);
-
-        when(request.getAttribute("accountKey")).thenReturn("alice");
-        when(accountService.verifyAuthorizedAccount(1L, "alice"))
+    @DisplayName("Suspended account returns ACC-403 with same message")
+    void suspendedAccountReturnsAcc403WithSameMessage() throws Exception {
+        when(accountService.verifyAuthorizedAccount(1L, "Alice Johnson"))
                 .thenThrow(new AccountNotActiveException(1L, AccountStatus.SUSPENDED));
 
-        ResponseEntity<?> response = controller.getAccount(1L, request);
-        ErrorResponse body = (ErrorResponse) response.getBody();
+        String validToken = mintToken("Alice Johnson", JWSAlgorithm.HS256, SHARED_SECRET, Instant.now().plusSeconds(3600));
 
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-        assertEquals("ACC-403", body.getErrorCode());
-        assertEquals("Account not accessible", body.getMessage());
+        mockMvc.perform(get("/api/v1/accounts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ACC-403"))
+                .andExpect(jsonPath("$.message").value("Account not active"));
     }
 
-    private String createToken(
-            String subject,
-            SecretKey key,
-            SignatureAlgorithm algorithm,
-            Instant expiry) {
+    private static String mintToken(String subject, JWSAlgorithm algorithm, byte[] secret, Instant expiry)
+            throws JOSEException {
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .subject(subject)
+                .issueTime(new Date())
+                .expirationTime(Date.from(expiry))
+                .build();
 
-        return Jwts.builder()
-                .setSubject(subject)
-                .setIssuedAt(new Date())
-                .setExpiration(Date.from(expiry))
-                .signWith(key, algorithm)
-                .compact();
+        SignedJWT signedJwt = new SignedJWT(
+                new JWSHeader.Builder(algorithm).type(JOSEObjectType.JWT).build(),
+                claims
+        );
+
+        JWSSigner signer = new MACSigner(secret);
+        signedJwt.sign(signer);
+
+        return signedJwt.serialize();
     }
-
-        private FilterExecution executeFilter(String uri, String authorizationHeader)
-                        throws IOException, ServletException {
-                JwtAuthenticationFilter filter = new JwtAuthenticationFilter(tokenProvider, objectMapper);
-                HttpServletRequest request = mock(HttpServletRequest.class);
-                HttpServletResponse response = mock(HttpServletResponse.class);
-                FilterChain filterChain = mock(FilterChain.class);
-
-                StringWriter body = new StringWriter();
-                PrintWriter writer = new PrintWriter(body);
-
-                when(request.getRequestURI()).thenReturn(uri);
-                when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(authorizationHeader);
-                when(response.getWriter()).thenReturn(writer);
-
-                filter.doFilter(request, response, filterChain);
-                writer.flush();
-
-                FilterExecution result = new FilterExecution();
-                result.body = body.toString();
-
-                if (result.body.contains("\"errorCode\":\"AUTH-401\"")) {
-                        result.status = HttpServletResponse.SC_UNAUTHORIZED;
-                } else {
-                        result.status = HttpServletResponse.SC_OK;
-                        verify(filterChain).doFilter(eq(request), eq(response));
-                }
-
-                return result;
-        }
-
-        private static final class FilterExecution {
-                private int status;
-                private String body;
-        }
 }

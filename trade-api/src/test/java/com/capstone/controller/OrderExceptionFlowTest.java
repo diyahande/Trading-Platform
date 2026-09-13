@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -66,7 +67,7 @@ class OrderExceptionFlowTest {
         when(orderService.placeOrder(any(), anyString())).thenThrow(ex);
 
         mockMvc.perform(post("/api/v1/orders")
-                        .requestAttr("accountKey", "ACC-101")
+                .principal(new UsernamePasswordAuthenticationToken("ACC-101", "n/a"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequestJson()))
                 .andExpect(status().is(expectedStatus))
@@ -78,7 +79,7 @@ class OrderExceptionFlowTest {
     @MethodSource("invalidInputCases")
     void placeOrder_invalidInput_mapsToVal422(String invalidRequestBody) throws Exception {
         mockMvc.perform(post("/api/v1/orders")
-                        .requestAttr("accountKey", "ACC-101")
+                .principal(new UsernamePasswordAuthenticationToken("ACC-101", "n/a"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidRequestBody))
                                 .andExpect(status().is(422))
