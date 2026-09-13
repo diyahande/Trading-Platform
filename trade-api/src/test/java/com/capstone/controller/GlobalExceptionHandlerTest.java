@@ -6,6 +6,7 @@ import com.capstone.exception.AccountNotActiveException;
 import com.capstone.exception.AccountNotFoundException;
 import com.capstone.exception.DomainException;
 import com.capstone.exception.DuplicateOrderException;
+import com.capstone.exception.GlobalExceptionHandler;
 import com.capstone.exception.InsufficientFundsException;
 import com.capstone.exception.InstrumentNotFoundException;
 import com.capstone.exception.InvalidOrderException;

@@ -3,14 +3,13 @@ package com.capstone.controller;
 import com.capstone.dto.OrderHistoryEntry;
 import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
-import com.capstone.dto.ErrorResponse;
 import com.capstone.entity.Order;
+import com.capstone.exception.OrderNotFoundException;
 import com.capstone.service.OrderService;
 import com.capstone.service.AccountService;
 import com.capstone.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -76,18 +75,17 @@ public class OrderController {
      * The cancellation is guarded inside a database transaction to prevent
      * races with the Trade Executor.
      *
-     * @param id Order identifier (Long)
-     * @param httpRequest HttpServletRequest to extract JWT account key
-     * @return OrderResponse with cancelled order details
+     * @param id
+     * @param httpRequest
+     * @return
      */
     @DeleteMapping("/api/v1/orders/{id}")
-    public ResponseEntity<?> cancelOrder(
+        public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable Long id,
             HttpServletRequest httpRequest) {
         Optional<Order> orderOpt = orderService.getOrderById(id);
         if (orderOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("ORD-404", "No order exists with that identifier"));
+            throw new OrderNotFoundException(id);
         }
 
         Order order = orderOpt.get();

@@ -150,7 +150,7 @@ public class OrderService {
      * For SELL orders: check sufficient holdings (TODO: full implementation).
      * 
      * @throws com.capstone.exception.ConcurrentModificationException if version mismatch
-     * @throws IllegalArgumentException if insufficient funds
+    * @throws InsufficientFundsException if insufficient funds
      */
     private void validateAndReserveFunds(PlaceOrderRequest request, Account account) {
         OrderSide side = request.getSide();

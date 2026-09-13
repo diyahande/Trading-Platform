@@ -1,7 +1,7 @@
-package com.capstone.controller;
+package com.capstone.exception;
 
 import com.capstone.dto.ErrorResponse;
-import com.capstone.exception.DomainException;
+
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -65,6 +65,7 @@ public class GlobalExceptionHandler {
             case "ACC-404" -> HttpStatus.NOT_FOUND;
             case "ACC-403" -> HttpStatus.FORBIDDEN;
             case "INS-404" -> HttpStatus.NOT_FOUND;
+            case "ORD-404" -> HttpStatus.NOT_FOUND;
             case "ORD-400" -> HttpStatus.BAD_REQUEST;
             case "ORD-409" -> HttpStatus.CONFLICT;
             case "VAL-422" -> HTTP_422;
