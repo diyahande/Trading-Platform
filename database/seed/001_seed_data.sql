@@ -241,6 +241,7 @@ VALUES
 
 -- Filled AAPL BUY
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -253,6 +254,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111001',
     (
         SELECT account_id
         FROM accounts
@@ -275,6 +277,7 @@ VALUES
 
 -- Filled AAPL SELL
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -287,6 +290,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111002',
     (
         SELECT account_id
         FROM accounts
@@ -309,6 +313,7 @@ VALUES
 
 -- Filled MSFT BUY
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -321,6 +326,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111003',
     (
         SELECT account_id
         FROM accounts
@@ -343,6 +349,7 @@ VALUES
 
 -- NEW / working order
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -355,6 +362,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111004',
     (
         SELECT account_id
         FROM accounts
@@ -377,6 +385,7 @@ VALUES
 
 -- CANCELLED order
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -389,6 +398,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111005',
     (
         SELECT account_id
         FROM accounts
@@ -412,6 +422,7 @@ VALUES
 -- REJECTED order:
 -- Account only has $25 but attempts to buy $2,000 worth.
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -424,6 +435,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111006',
     (
         SELECT account_id
         FROM accounts
@@ -446,6 +458,7 @@ VALUES
 
 -- Historical filled order against a now-delisted instrument.
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -458,6 +471,7 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111007',
     (
         SELECT account_id
         FROM accounts

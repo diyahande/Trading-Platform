@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS transactions (
     transaction_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
-    order_id BIGINT NOT NULL,
+    order_id UUID NOT NULL,
 
     instrument_id BIGINT NOT NULL,
 
