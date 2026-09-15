@@ -5,7 +5,15 @@ set -e
 echo "Loading environment variables..."
 
 if [ -f ".env" ]; then
-    export $(grep -v '^#' .env | xargs)
+    while IFS='=' read -r key value; do
+        case "$key" in
+            ''|'#'*) continue ;;
+        esac
+
+        if [ -z "${!key+x}" ]; then
+            export "$key=$value"
+        fi
+    done < .env
 fi
 
 set -a
