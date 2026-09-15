@@ -4,11 +4,12 @@ import com.capstone.enums.TransactionStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 public class Transaction {
 
     private final Long transactionId;
-    private final Long orderId;
+    private final UUID orderId;
     private final Long instrumentId;
     private final BigDecimal quantity;
 
@@ -20,7 +21,7 @@ public class Transaction {
 
     public Transaction(
             Long transactionId,
-            Long orderId,
+            UUID orderId,
             Long instrumentId,
             BigDecimal quantity,
             BigDecimal price,
@@ -40,7 +41,7 @@ public class Transaction {
         return transactionId;
     }
 
-    public Long getOrderId() {
+    public UUID getOrderId() {
         return orderId;
     }
 

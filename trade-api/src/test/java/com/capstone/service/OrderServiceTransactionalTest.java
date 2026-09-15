@@ -245,7 +245,7 @@ class OrderServiceTransactionalTest {
         );
 
         Order placedOrder = orderService.placeOrder(request, request.getIdempotencyKey());
-        Long orderId = placedOrder.getOrderId();
+        UUID orderId = placedOrder.getOrderId();
 
         // Simulate order being filled (by trade executor)
         orderMapper.updateOrderStatusConditional(orderId, OrderStatus.NEW, OrderStatus.FILLED);
@@ -284,7 +284,7 @@ class OrderServiceTransactionalTest {
         );
 
         Order placedOrder = orderService.placeOrder(request, request.getIdempotencyKey());
-        Long orderId = placedOrder.getOrderId();
+        UUID orderId = placedOrder.getOrderId();
 
         // Act
         orderService.cancelOrder(orderId);

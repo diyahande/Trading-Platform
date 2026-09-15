@@ -5,10 +5,11 @@ import com.capstone.enums.OrderStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 public class Order {
 
-    private final Long orderId;
+    private final UUID orderId;
     private final Long accountId;
     private final String accountReference;
     private final Long instrumentId;
@@ -24,7 +25,7 @@ public class Order {
     private final Instant createdAt;
 
     public Order(
-            Long orderId,
+            UUID orderId,
             Long accountId,
             String accountReference,
             Long instrumentId,
@@ -47,7 +48,7 @@ public class Order {
         this.createdAt = createdAt;
     }
 
-    public Long getOrderId() {
+    public UUID getOrderId() {
         return orderId;
     }
 

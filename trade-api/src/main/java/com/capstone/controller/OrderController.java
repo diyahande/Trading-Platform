@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * OrderController handles all HTTP endpoints for order operations.
@@ -80,7 +81,7 @@ public class OrderController {
      */
     @DeleteMapping("/api/v1/orders/{id}")
         public ResponseEntity<OrderResponse> cancelOrder(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             Authentication authentication) {
         Optional<Order> orderOpt = orderService.getOrderById(id);
         if (orderOpt.isEmpty()) {

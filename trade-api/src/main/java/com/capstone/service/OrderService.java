@@ -68,7 +68,7 @@ public class OrderService {
         validateAndReserveFunds(request, account);
 
         // Generate order ID from UUID
-        Long orderId = UUID.randomUUID().getMostSignificantBits();
+        UUID orderId = UUID.randomUUID();
 
         // Create Order entity using immutable constructor
         // Convert quantity from Integer to BigDecimal for schema compatibility
@@ -93,7 +93,7 @@ public class OrderService {
     /**
      * Retrieve order by ID.
      */
-    public Optional<Order> getOrderById(Long orderId) {
+    public Optional<Order> getOrderById(UUID orderId) {
         return orderMapper.findOrderById(orderId);
     }
 
@@ -112,7 +112,7 @@ public class OrderService {
      * @throws OrderNotCancellableException (ORD-409) if order is not in NEW status
      */
     @Transactional
-    public void cancelOrder(Long orderId) {
+    public void cancelOrder(UUID orderId) {
         int rowsAffected = orderMapper.updateOrderStatusConditional(
             orderId, 
             OrderStatus.NEW, 
@@ -180,7 +180,7 @@ public class OrderService {
     /**
      * Update order status (used for order execution/completion).
      */
-    public void updateOrderStatus(Long orderId, OrderStatus status) {
+    public void updateOrderStatus(UUID orderId, OrderStatus status) {
         orderMapper.updateOrderStatus(orderId, status);
     }
 }

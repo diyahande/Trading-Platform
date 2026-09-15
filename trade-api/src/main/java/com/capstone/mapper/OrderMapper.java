@@ -3,19 +3,22 @@ package com.capstone.mapper;
 import com.capstone.entity.Order;
 import com.capstone.enums.OrderStatus;
 import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.type.JdbcType;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Mapper
 public interface OrderMapper {
 
     @Insert("""
     INSERT INTO orders (
-        account_id, account_reference, instrument_id, side, quantity,
+
+        order_id, account_id, account_reference, instrument_id, side, quantity,
         price, status, idempotency_key, created_at
     ) VALUES (
-        #{accountId}, #{accountReference}, #{instrumentId},
+                #{orderId, jdbcType=OTHER, typeHandler=com.capstone.mapper.UuidTypeHandler}, #{accountId}, #{accountReference}, #{instrumentId},
         #{side}, #{quantity}, #{price}, #{status},
         #{idempotencyKey}, #{createdAt}
     )
@@ -26,10 +29,11 @@ public interface OrderMapper {
             SELECT order_id, account_id, account_reference, instrument_id, side,
                    quantity, price, status, idempotency_key, created_at
             FROM orders
-            WHERE order_id = #{orderId}
+                        WHERE order_id = #{orderId, jdbcType=OTHER, typeHandler=com.capstone.mapper.UuidTypeHandler}
             """)
     @Results(id = "orderMap", value = {
-        @Result(property = "orderId", column = "order_id", id = true),
+                @Result(property = "orderId", column = "order_id", id = true,
+                                javaType = UUID.class, jdbcType = JdbcType.OTHER, typeHandler = UuidTypeHandler.class),
         @Result(property = "accountId", column = "account_id"),
         @Result(property = "accountReference", column = "account_reference"),
         @Result(property = "instrumentId", column = "instrument_id"),
@@ -40,7 +44,7 @@ public interface OrderMapper {
         @Result(property = "idempotencyKey", column = "idempotency_key"),
         @Result(property = "createdAt", column = "created_at")
     })
-    Optional<Order> findOrderById(@Param("orderId") Long orderId);
+        Optional<Order> findOrderById(@Param("orderId") UUID orderId);
 
     @Select("""
             SELECT order_id, account_id, account_reference, instrument_id, side,
@@ -64,11 +68,11 @@ public interface OrderMapper {
     @Update("""
             UPDATE orders
             SET status = #{newStatus}
-            WHERE order_id = #{orderId}
+            WHERE order_id = #{orderId, jdbcType=OTHER, typeHandler=com.capstone.mapper.UuidTypeHandler}
             AND status = #{expectedStatus}
             """)
     int updateOrderStatusConditional(
-            @Param("orderId") Long orderId,
+            @Param("orderId") UUID orderId,
             @Param("expectedStatus") OrderStatus expectedStatus,
             @Param("newStatus") OrderStatus newStatus
     );
@@ -76,10 +80,10 @@ public interface OrderMapper {
     @Update("""
             UPDATE orders
             SET status = #{status}
-            WHERE order_id = #{orderId}
+            WHERE order_id = #{orderId, jdbcType=OTHER, typeHandler=com.capstone.mapper.UuidTypeHandler}
             """)
     int updateOrderStatus(
-            @Param("orderId") Long orderId,
+            @Param("orderId") UUID orderId,
             @Param("status") OrderStatus status
     );
 }

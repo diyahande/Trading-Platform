@@ -14,20 +14,15 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * AccountService handles all account-related business logic.
- * Provides account queries, balance operations, position retrieval, and authorization.
- */
+// Account Service handles all account-related business logic.
+
 @Service
 @RequiredArgsConstructor
 public class AccountService {
 
     private final AccountMapper accountMapper;
 
-    /**
-     * Retrieve account by ID without strict validation.
-     * Returns Optional which may be empty if account doesn't exist.
-     */
+    // Retrieve account by ID without strict validation.
     public Optional<Account> getAccountById(Long accountId) {
         return accountMapper.findAccountById(accountId);
     }
