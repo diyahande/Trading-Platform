@@ -23,9 +23,9 @@ public class OrderHistoryEntry {
     private String orderId;
 
     /**
-     * Numeric account key
+     * Account reference UUID
      */
-    private Long accountId;
+    private String accountId;
 
     /**
      * Instrument symbol

@@ -29,9 +29,8 @@ public class AccountService {
     /**
      * Retrieve account details for an authorized caller.
      */
-    public AccountResponse getAccountResponseForAuthorizedAccount(Long accountId, String accountKey) {
-        verifyAuthorizedAccount(accountId, accountKey);
-        Account account = getAccountByIdStrict(accountId);
+    public AccountResponse getAccountResponseForAuthorizedAccount(String accountReference, String accountKey) {
+        Account account = verifyAuthorizedAccount(accountReference, accountKey);
 
         AccountResponse response = new AccountResponse();
         response.setId(account.getAccountId());
@@ -48,12 +47,12 @@ public class AccountService {
     /**
      * Retrieve balance details for an authorized caller.
      */
-    public BalanceResponse getBalanceResponseForAuthorizedAccount(Long accountId, String accountKey) {
-        verifyAuthorizedAccount(accountId, accountKey);
-        BigDecimal balance = getAccountBalance(accountId);
+    public BalanceResponse getBalanceResponseForAuthorizedAccount(String accountReference, String accountKey) {
+        Account account = verifyAuthorizedAccount(accountReference, accountKey);
+        BigDecimal balance = getAccountBalance(account.getAccountId());
 
         BalanceResponse response = new BalanceResponse();
-        response.setAccountId(accountId);
+        response.setAccountId(account.getAccountReference());
         response.setCashBalance(balance);
         response.setCurrency("USD");
         response.setAsOf(LocalDateTime.now());
@@ -64,9 +63,9 @@ public class AccountService {
     /**
      * Retrieve positions for an authorized caller.
      */
-    public List<PositionResponse> getPositionsForAuthorizedAccount(Long accountId, String accountKey) {
-        verifyAuthorizedAccount(accountId, accountKey);
-        return getPositionsByAccountId(accountId);
+    public List<PositionResponse> getPositionsForAuthorizedAccount(String accountReference, String accountKey) {
+        Account account = verifyAuthorizedAccount(accountReference, accountKey);
+        return getPositionsByAccountId(account.getAccountId());
     }
 
     // Retrieve account by ID without strict validation.
@@ -96,23 +95,38 @@ public class AccountService {
      * Throws AccountNotActiveException if requested account is not active (ACC-403).
      * Throws AccountNotActiveException if account key doesn't match requested account (ACC-403).
      */
-    public Account verifyAuthorizedAccount(Long requestedAccountId, String accountKey) {
-        Account requestedAccount = accountMapper.findAccountById(requestedAccountId)
-                .orElseThrow(() -> new AccountNotFoundException(requestedAccountId));
+    public Account verifyAuthorizedAccount(String requestedAccountReference, String accountKey) {
+        Account requestedAccount = accountMapper.findAccountByReference(requestedAccountReference)
+                .orElseThrow(() -> new AccountNotFoundException(-1L));
 
         if (requestedAccount.getStatus() != AccountStatus.ACTIVE) {
-            throw new AccountNotActiveException(requestedAccountId, requestedAccount.getStatus());
+            throw new AccountNotActiveException(requestedAccount.getAccountId(), requestedAccount.getStatus());
         }
 
-        boolean matchesReference = requestedAccount.getAccountReference().equals(accountKey);
-        boolean matchesNumericId = String.valueOf(requestedAccountId).equals(accountKey);
-
         // Keep ACC-403 uniform for suspended or unreachable accounts.
-        if (!matchesReference && !matchesNumericId) {
-            throw new AccountNotActiveException(requestedAccountId, requestedAccount.getStatus());
+        if (!requestedAccount.getAccountReference().equals(accountKey)) {
+            throw new AccountNotActiveException(requestedAccount.getAccountId(), requestedAccount.getStatus());
         }
 
         return requestedAccount;
+    }
+
+    /**
+     * Retrieve account by reference with strict validation.
+     * Throws exception if account doesn't exist or is not active.
+     */
+    public Account getAccountByReferenceStrict(String accountReference) {
+        Account account = accountMapper.findAccountByReference(accountReference)
+            .orElseThrow(() -> new AccountNotFoundException(-1L));
+
+        if (account.getStatus() != null) {
+            String statusName = account.getStatus().name();
+            if (!statusName.equalsIgnoreCase("ACTIVE")) {
+                throw new AccountNotActiveException(account.getAccountId(), account.getStatus());
+            }
+        }
+
+        return account;
     }
 
     /**

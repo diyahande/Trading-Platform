@@ -84,43 +84,33 @@ class AccountServiceTest {
 
     @Test
     void verifyAuthorizedAccount_notFound_throws() {
-        when(accountMapper.findAccountById(5L)).thenReturn(Optional.empty());
+        when(accountMapper.findAccountByReference("missing-ref")).thenReturn(Optional.empty());
 
-        assertThrows(AccountNotFoundException.class, () -> accountService.verifyAuthorizedAccount(5L, "acc"));
+        assertThrows(AccountNotFoundException.class, () -> accountService.verifyAuthorizedAccount("missing-ref", "missing-ref"));
     }
 
     @Test
     void verifyAuthorizedAccount_inactive_throws() {
         Account account = account(5L, "acc-5", AccountStatus.CLOSED, new BigDecimal("100.00"), 1L);
-        when(accountMapper.findAccountById(5L)).thenReturn(Optional.of(account));
+        when(accountMapper.findAccountByReference("acc-5")).thenReturn(Optional.of(account));
 
-        assertThrows(AccountNotActiveException.class, () -> accountService.verifyAuthorizedAccount(5L, "acc-5"));
+        assertThrows(AccountNotActiveException.class, () -> accountService.verifyAuthorizedAccount("acc-5", "acc-5"));
     }
 
     @Test
     void verifyAuthorizedAccount_mismatch_throws() {
         Account account = account(5L, "acc-5", AccountStatus.ACTIVE, new BigDecimal("100.00"), 1L);
-        when(accountMapper.findAccountById(5L)).thenReturn(Optional.of(account));
+        when(accountMapper.findAccountByReference("acc-5")).thenReturn(Optional.of(account));
 
-        assertThrows(AccountNotActiveException.class, () -> accountService.verifyAuthorizedAccount(5L, "someone-else"));
+        assertThrows(AccountNotActiveException.class, () -> accountService.verifyAuthorizedAccount("acc-5", "someone-else"));
     }
 
     @Test
     void verifyAuthorizedAccount_referenceMatch_returnsAccount() {
         Account account = account(5L, "acc-5", AccountStatus.ACTIVE, new BigDecimal("100.00"), 1L);
-        when(accountMapper.findAccountById(5L)).thenReturn(Optional.of(account));
+        when(accountMapper.findAccountByReference("acc-5")).thenReturn(Optional.of(account));
 
-        Account result = accountService.verifyAuthorizedAccount(5L, "acc-5");
-
-        assertEquals(account, result);
-    }
-
-    @Test
-    void verifyAuthorizedAccount_numericIdMatch_returnsAccount() {
-        Account account = account(5L, "acc-5", AccountStatus.ACTIVE, new BigDecimal("100.00"), 1L);
-        when(accountMapper.findAccountById(5L)).thenReturn(Optional.of(account));
-
-        Account result = accountService.verifyAuthorizedAccount(5L, "5");
+        Account result = accountService.verifyAuthorizedAccount("acc-5", "acc-5");
 
         assertEquals(account, result);
     }
@@ -188,7 +178,7 @@ class AccountServiceTest {
     @Test
     void getPositionsByAccountId_validatesAndReturnsPositions() {
         Account account = account(1L, "acc-1", AccountStatus.ACTIVE, new BigDecimal("100.00"), 1L);
-        PositionResponse position = new PositionResponse(1L, "AAPL", 10, new BigDecimal("101.25"));
+        PositionResponse position = new PositionResponse("11111111-1111-4111-8111-111111111111", "AAPL", 10, new BigDecimal("101.25"));
         when(accountMapper.findAccountById(1L)).thenReturn(Optional.of(account));
         when(accountMapper.findPositionsByAccountId(1L)).thenReturn(List.of(position));
 

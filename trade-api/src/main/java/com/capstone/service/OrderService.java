@@ -52,7 +52,7 @@ public class OrderService {
     public OrderResponse cancelOrderForAuthorizedAccount(UUID orderId, String accountKey) {
         Order order = getOrderById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        accountService.verifyAuthorizedAccount(order.getAccountId(), accountKey);
+        accountService.verifyAuthorizedAccount(order.getAccountReference(), accountKey);
         cancelOrder(orderId);
 
         Order cancelledOrder = getOrderById(orderId)
@@ -65,14 +65,14 @@ public class OrderService {
      * Retrieve and filter account order history after authorization.
      */
     public List<OrderHistoryEntry> getOrderHistoryForAuthorizedAccount(
-            Long accountId,
+            String accountReference,
             String status,
             LocalDateTime from,
             LocalDateTime to,
             String accountKey) {
-        accountService.verifyAuthorizedAccount(accountId, accountKey);
+        Account account = accountService.verifyAuthorizedAccount(accountReference, accountKey);
 
-        List<OrderHistoryEntry> historyEntries = getOrdersByAccountId(accountId).stream()
+        List<OrderHistoryEntry> historyEntries = getOrdersByAccountId(account.getAccountId()).stream()
                 .map(this::mapOrderToHistoryEntry)
                 .toList();
 
@@ -120,7 +120,7 @@ public class OrderService {
         }
 
         // Validate account exists and is active (rules 1-2)
-        Account account = accountService.getAccountByIdStrict(request.getAccountId());
+        Account account = accountService.getAccountByReferenceStrict(request.getAccountId());
 
         // Validate instrument exists and is tradable (rule 3)
         com.capstone.entity.Instrument instrument = instrumentService.validateAndGetInstrument(request.getSymbol());
@@ -139,7 +139,7 @@ public class OrderService {
         // Convert quantity from Integer to BigDecimal for schema compatibility
         Order order = new Order(
                 orderId,
-                request.getAccountId(),
+                account.getAccountId(),
                 account.getAccountReference(),
                 instrument.getInstrumentId(),  // Use actual instrument ID from database
                 request.getSide(),  // Already OrderSide enum
@@ -227,7 +227,7 @@ public class OrderService {
 
             if (account.getCashBalance().compareTo(requiredCash) < 0) {
                 throw new InsufficientFundsException(
-                        request.getAccountId(),
+                    account.getAccountId(),
                         requiredCash,
                         account.getCashBalance()
                 );
@@ -235,7 +235,7 @@ public class OrderService {
 
             // Reserve cash by deducting from account balance with optimistic locking
             BigDecimal newBalance = account.getCashBalance().subtract(requiredCash);
-            accountService.updateCashBalance(request.getAccountId(), newBalance, account.getVersion());
+            accountService.updateCashBalance(account.getAccountId(), newBalance, account.getVersion());
         } else if (side == OrderSide.SELL) {
             // Check holdings for sell orders
             // TODO: Implement holdings validation via positions
@@ -272,7 +272,7 @@ public class OrderService {
     private OrderHistoryEntry mapOrderToHistoryEntry(Order order) {
         OrderHistoryEntry entry = new OrderHistoryEntry();
         entry.setOrderId("ORD-" + order.getOrderId());
-        entry.setAccountId(order.getAccountId());
+        entry.setAccountId(order.getAccountReference());
         entry.setSymbol(null); // TODO: Fetch instrument symbol from database
         entry.setSide(order.getSide().toString());
         entry.setQuantity(order.getQuantity().intValue());

@@ -58,7 +58,7 @@ class OrderServiceTest {
     void placeOrder_invalidQuantity_throws() {
         PlaceOrderRequest request = request(OrderSide.BUY, 0, new BigDecimal("10.00"));
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
-        when(accountService.getAccountByIdStrict(1L)).thenReturn(account(new BigDecimal("100.00"), 3L));
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 3L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
 
         assertThrows(InvalidOrderException.class, () -> orderService.placeOrder(request, "idem-12345"));
@@ -68,7 +68,7 @@ class OrderServiceTest {
     void placeOrder_invalidPrice_throws() {
         PlaceOrderRequest request = request(OrderSide.BUY, 2, BigDecimal.ZERO);
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
-        when(accountService.getAccountByIdStrict(1L)).thenReturn(account(new BigDecimal("100.00"), 3L));
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 3L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
 
         assertThrows(InvalidOrderException.class, () -> orderService.placeOrder(request, "idem-12345"));
@@ -78,7 +78,7 @@ class OrderServiceTest {
     void placeOrder_buyInsufficientFunds_throws() {
         PlaceOrderRequest request = request(OrderSide.BUY, 20, new BigDecimal("10.00"));
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
-        when(accountService.getAccountByIdStrict(1L)).thenReturn(account(new BigDecimal("50.00"), 3L));
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("50.00"), 3L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
 
         assertThrows(InsufficientFundsException.class, () -> orderService.placeOrder(request, "idem-12345"));
@@ -88,7 +88,7 @@ class OrderServiceTest {
     void placeOrder_buyValid_reservesFundsAndInsertsOrder() {
         PlaceOrderRequest request = request(OrderSide.BUY, 2, new BigDecimal("10.00"));
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
-        when(accountService.getAccountByIdStrict(1L)).thenReturn(account(new BigDecimal("100.00"), 7L));
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
 
         Order created = orderService.placeOrder(request, "idem-12345");
@@ -110,7 +110,7 @@ class OrderServiceTest {
     void placeOrder_sellValid_insertsOrderWithoutBalanceUpdate() {
         PlaceOrderRequest request = request(OrderSide.SELL, 2, new BigDecimal("10.00"));
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
-        when(accountService.getAccountByIdStrict(1L)).thenReturn(account(new BigDecimal("100.00"), 7L));
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
 
         Order created = orderService.placeOrder(request, "idem-12345");
@@ -177,7 +177,7 @@ class OrderServiceTest {
     }
 
     private static PlaceOrderRequest request(OrderSide side, Integer qty, BigDecimal price) {
-        return new PlaceOrderRequest(1L, "AAPL", side, qty, price, "idem-12345");
+        return new PlaceOrderRequest("11111111-1111-4111-8111-111111111111", "AAPL", side, qty, price, "idem-12345");
     }
 
     private static Account account(BigDecimal cash, Long version) {

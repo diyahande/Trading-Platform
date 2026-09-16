@@ -6,6 +6,9 @@ echo "Loading environment variables..."
 
 if [ -f ".env" ]; then
     while IFS='=' read -r key value; do
+        key="${key%$'\r'}"
+        value="${value%$'\r'}"
+
         case "$key" in
             ''|'#'*) continue ;;
         esac

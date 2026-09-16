@@ -20,47 +20,47 @@ public class AccountController {
     private final AccountService accountService;
 
     /**
-     * GET /api/v1/accounts/{id}
+     * GET /api/v1/accounts/{accountRef}
      * Returns account details.
      * 
-     * Auth: Token's account key must match requested account ID (ACC-403 if not).
+     * Auth: Token's account key must match requested account reference (ACC-403 if not).
      */
-    @GetMapping("/{id}")
+    @GetMapping("/{accountRef}")
     public ResponseEntity<AccountResponse> getAccount(
-            @PathVariable Long id,
+            @PathVariable String accountRef,
             Authentication authentication) {
         return ResponseEntity.ok(
-                accountService.getAccountResponseForAuthorizedAccount(id, authentication.getName())
+                accountService.getAccountResponseForAuthorizedAccount(accountRef, authentication.getName())
         );
     }
 
     /**
-     * GET /api/v1/accounts/{id}/balance
+     * GET /api/v1/accounts/{accountRef}/balance
      * Returns cash balance.
      * 
-     * Auth: Token's account key must match requested account ID (ACC-403 if not).
+     * Auth: Token's account key must match requested account reference (ACC-403 if not).
      */
-    @GetMapping("/{id}/balance")
+    @GetMapping("/{accountRef}/balance")
     public ResponseEntity<BalanceResponse> getBalance(
-            @PathVariable Long id,
+            @PathVariable String accountRef,
             Authentication authentication) {
         return ResponseEntity.ok(
-            accountService.getBalanceResponseForAuthorizedAccount(id, authentication.getName())
+            accountService.getBalanceResponseForAuthorizedAccount(accountRef, authentication.getName())
         );
     }
 
     /**
-     * GET /api/v1/accounts/{id}/positions
+     * GET /api/v1/accounts/{accountRef}/positions
      * Returns holdings.
      * 
-     * Auth: Token's account key must match requested account ID (ACC-403 if not).
+     * Auth: Token's account key must match requested account reference (ACC-403 if not).
      */
-    @GetMapping("/{id}/positions")
+    @GetMapping("/{accountRef}/positions")
     public ResponseEntity<List<PositionResponse>> getPositions(
-            @PathVariable Long id,
+            @PathVariable String accountRef,
             Authentication authentication) {
         return ResponseEntity.ok(
-                accountService.getPositionsForAuthorizedAccount(id, authentication.getName())
+                accountService.getPositionsForAuthorizedAccount(accountRef, authentication.getName())
         );
     }
 }

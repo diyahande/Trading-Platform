@@ -16,9 +16,9 @@ import java.math.BigDecimal;
 public class PositionResponse {
 
     /**
-     * Numeric account key
+     * Account reference UUID
      */
-    private Long accountId;
+    private String accountId;
 
     /**
      * Instrument symbol

@@ -17,9 +17,9 @@ import java.time.LocalDateTime;
 public class BalanceResponse {
 
     /**
-     * Numeric account key
+     * Account reference UUID
      */
-    private Long accountId;
+    private String accountId;
 
     /**
      * Available cash balance to 2 decimal places.

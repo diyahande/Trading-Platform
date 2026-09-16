@@ -33,7 +33,7 @@ public class OrderController {
      * Place a new order with comprehensive validation.
      *
      * Business rules enforced (in order):
-     * 1. Token's account key must match request account ID (ACC-403)
+    * 1. Token's account key must match request account reference (ACC-403)
      * 2. Account must exist (ACC-404)
      * 3. Account must be active (ACC-403)
      * 4. Instrument must exist and be tradable (INS-404)
@@ -78,22 +78,22 @@ public class OrderController {
     }
 
     /**
-     * GET /api/v1/accounts/{id}/orders
+    * GET /api/v1/accounts/{accountRef}/orders
      * Retrieve order history for an account.
      *
      * Returns every order recorded against the account, newest first.
      * Includes rejected and cancelled orders (full audit trail).
      *
-     * @param id Account identifier (numeric account key)
+    * @param accountRef Account reference (UUID)
      * @param status Optional filter by order status
      * @param from Optional start date for filtering
      * @param to Optional end date for filtering
     * @param authentication resolved authenticated principal from JWT
      * @return List of OrderHistoryEntry sorted by creation date (newest first)
      */
-    @GetMapping("/api/v1/accounts/{id}/orders")
+    @GetMapping("/api/v1/accounts/{accountRef}/orders")
     public ResponseEntity<List<OrderHistoryEntry>> getOrders(
-            @PathVariable Long id,
+            @PathVariable String accountRef,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) 
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
@@ -101,7 +101,7 @@ public class OrderController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             Authentication authentication) {
         return ResponseEntity.ok(
-                orderService.getOrderHistoryForAuthorizedAccount(id, status, from, to, authentication.getName())
+                orderService.getOrderHistoryForAuthorizedAccount(accountRef, status, from, to, authentication.getName())
         );
     }
 

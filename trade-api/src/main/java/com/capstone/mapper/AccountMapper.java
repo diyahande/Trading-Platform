@@ -136,24 +136,24 @@ public interface AccountMapper {
 
     @Select("""
             SELECT 
-                #{accountId} AS account_id,
+                                a.account_reference AS account_reference,
                 i.symbol,
                 ph.quantity,
                 ph.average_price AS average_cost
             FROM portfolio_holdings ph
+                        JOIN portfolios p
+                                ON ph.portfolio_id = p.portfolio_id
+                        JOIN accounts a
+                                ON p.account_id = a.account_id
             JOIN instruments i 
                 ON ph.instrument_id = i.instrument_id
-            WHERE ph.portfolio_id = (
-                SELECT portfolio_id 
-                FROM portfolios 
-                WHERE account_id = #{accountId}
-            )
+                        WHERE p.account_id = #{accountId}
             ORDER BY ph.last_updated DESC
             """)
     @Results(id = "positionMap", value = {
 
             @Result(property = "accountId",
-                    column = "account_id"),
+                    column = "account_reference"),
 
             @Result(property = "symbol",
                     column = "symbol"),

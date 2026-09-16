@@ -15,9 +15,9 @@ const SECRET = process.env.JWT_SECRET || 'mission-control-shared-secret-key-32-b
 // demonstrate "valid token in, protected data out" and "no token, or the
 // wrong one, in -> rejected".
 const USERS = {
-  'Alice Johnson': { password: 'mission123', roles: ['MISSION_OPERATOR'] },
+  'Charlie Brown': { password: 'mission123', roles: ['MISSION_OPERATOR']},
   'Bob Smith': { password: 'wrongpermissions', roles: ['MISSION_OPERATOR'] },
-  'ACC-10001': { password: 'mission123', roles: ['MISSION_OPERATOR'] }
+  '11111111-1111-4111-8111-111111111111': { password: 'mission123', roles: ['MISSION_OPERATOR']}
 };
 
 app.post('/login', (req, res) => {

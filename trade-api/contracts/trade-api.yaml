@@ -11,11 +11,8 @@ info:
 
     ## Identifiers
 
-    `accountId` means the numeric surrogate key `ACCOUNTS.id` everywhere in this contract: in the
-    path parameter, in the order request body, and in the JWT `accountId` claim. The string business
-    identifier lives on `ACCOUNTS.account_id` and is returned as `AccountResponse.accountId`, which
-    is the one place the name carries the other meaning. Where any other material uses the name
-    loosely, this contract is the one that binds.
+    `accountId` means the UUID account reference `ACCOUNTS.account_reference` everywhere in this
+    contract: in path parameters, in the order request body, and in the JWT account claim.
 
     ## Order lifecycle and the Sprint 7 change
 
@@ -90,7 +87,7 @@ paths:
         in Sprint 6.
 
         Retrying with the same `idempotencyKey` is not a way to poll for status. It returns
-        `ORD-409`. Poll `GET /api/v1/accounts/{id}/orders` instead.
+        `ORD-409`. Poll `GET /api/v1/accounts/{accountRef}/orders` instead.
       requestBody:
         required: true
         content:
@@ -101,7 +98,7 @@ paths:
               buy:
                 summary: Buy 100 shares
                 value:
-                  accountId: 1
+                  accountId: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
                   symbol: ACME
                   side: BUY
                   quantity: 100
@@ -237,7 +234,7 @@ paths:
                     errorCode: ORD-409
                     message: Order is not cancellable
 
-  /api/v1/accounts/{id}:
+  /api/v1/accounts/{accountRef}:
     get:
       tags: [Accounts]
       operationId: getAccount
@@ -258,7 +255,7 @@ paths:
         '404':
           $ref: '#/components/responses/AccountNotFound'
 
-  /api/v1/accounts/{id}/balance:
+  /api/v1/accounts/{accountRef}/balance:
     get:
       tags: [Accounts]
       operationId: getBalance
@@ -282,7 +279,7 @@ paths:
         '404':
           $ref: '#/components/responses/AccountNotFound'
 
-  /api/v1/accounts/{id}/positions:
+  /api/v1/accounts/{accountRef}/positions:
     get:
       tags: [Accounts]
       operationId: getPositions
@@ -305,11 +302,11 @@ paths:
               examples:
                 holdings:
                   value:
-                    - accountId: 1
+                    - accountId: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
                       symbol: ACME
                       quantity: 100
                       averageCost: 25.50
-                    - accountId: 1
+                    - accountId: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
                       symbol: INFY.NS
                       quantity: 40
                       averageCost: 1580.25
@@ -320,7 +317,7 @@ paths:
         '404':
           $ref: '#/components/responses/AccountNotFound'
 
-  /api/v1/accounts/{id}/orders:
+  /api/v1/accounts/{accountRef}/orders:
     get:
       tags: [Accounts]
       operationId: getOrders
@@ -378,15 +375,14 @@ components:
 
   parameters:
     AccountIdPath:
-      name: id
+      name: accountRef
       in: path
       required: true
-      description: The numeric account key, `ACCOUNTS.id`.
+      description: The account reference UUID, `ACCOUNTS.account_reference`.
       schema:
-        type: integer
-        format: int64
-        minimum: 1
-      example: 1
+        type: string
+        format: uuid
+      example: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
 
   responses:
     Unauthorised:
@@ -471,11 +467,10 @@ components:
       required: [accountId, symbol, side, quantity, price, idempotencyKey]
       properties:
         accountId:
-          type: integer
-          format: int64
-          minimum: 1
-          description: The numeric account key, `ACCOUNTS.id`. Must match the token's `accountId` claim.
-          example: 1
+          type: string
+          format: uuid
+          description: The account reference UUID, `ACCOUNTS.account_reference`. Must match the token's account claim.
+          example: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
         symbol:
           type: string
           minLength: 1
@@ -550,9 +545,9 @@ components:
           type: string
           example: ORD-6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
         accountId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          format: uuid
+          example: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
         symbol:
           type: string
           example: ACME
@@ -590,7 +585,7 @@ components:
         id:
           type: integer
           format: int64
-          description: The numeric account key. This is what every other endpoint calls `accountId`.
+          description: Internal numeric account key retained for traceability.
           example: 1
         accountId:
           type: string
@@ -626,9 +621,9 @@ components:
       required: [accountId, cashBalance, currency, asOf]
       properties:
         accountId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          format: uuid
+          example: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
         cashBalance:
           type: number
           format: double
@@ -650,9 +645,9 @@ components:
       required: [accountId, symbol, quantity, averageCost]
       properties:
         accountId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          format: uuid
+          example: 6f2b1c2a-6a1e-4a4f-9c0d-2f7a1b3c4d5e
         symbol:
           type: string
           example: ACME

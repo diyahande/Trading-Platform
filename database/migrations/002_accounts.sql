@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 
     user_id BIGINT NOT NULL,
 
-    account_reference VARCHAR(30) NOT NULL,
+    account_reference VARCHAR(36) NOT NULL,
 
     holder_name VARCHAR(100) NOT NULL,
 
@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS accounts (
 
     CONSTRAINT chk_accounts_holder_name
         CHECK (length(trim(holder_name)) > 0)
+
+    ,CONSTRAINT chk_accounts_reference_uuid
+        CHECK (
+            account_reference ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+        )
 );
 
 CREATE INDEX idx_accounts_user_id
