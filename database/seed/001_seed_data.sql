@@ -65,7 +65,7 @@ VALUES
         FROM users
         WHERE email = 'alice.johnson@example.com'
     ),
-    'ACC-10001',
+    '11111111-1111-4111-8111-111111111111',
     'Alice Johnson',
     'USD',
     15000.0000,
@@ -78,7 +78,7 @@ VALUES
         FROM users
         WHERE email = 'bob.smith@example.com'
     ),
-    'ACC-10002',
+    '22222222-2222-4222-8222-222222222222',
     'Bob Smith',
     'USD',
     25.0000,
@@ -91,7 +91,7 @@ VALUES
         FROM users
         WHERE email = 'charlie.brown@example.com'
     ),
-    'ACC-10003',
+    '33333333-3333-4333-8333-333333333333',
     'Charlie Brown',
     'USD',
     5000.0000,
@@ -104,7 +104,7 @@ VALUES
         FROM users
         WHERE email = 'alice.johnson@example.com'
     ),
-    'ACC-10004',
+    '44444444-4444-4444-8444-444444444444',
     'Alice Johnson',
     'USD',
     0.0000,
@@ -180,7 +180,7 @@ VALUES
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10001'
+        WHERE account_reference = '11111111-1111-4111-8111-111111111111'
     ),
     18500.0000,
     15000.0000,
@@ -190,7 +190,7 @@ VALUES
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10002'
+        WHERE account_reference = '22222222-2222-4222-8222-222222222222'
     ),
     0.0000,
     0.0000,
@@ -200,7 +200,7 @@ VALUES
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10003'
+        WHERE account_reference = '33333333-3333-4333-8333-333333333333'
     ),
     0.0000,
     0.0000,
@@ -210,7 +210,7 @@ VALUES
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10004'
+        WHERE account_reference = '44444444-4444-4444-8444-444444444444'
     ),
     1000.0000,
     1000.0000,
@@ -221,17 +221,17 @@ VALUES
 -- ============================================================
 -- 5. ORDERS
 --
--- Account ACC-10001:
+-- Account 11111111-1111-4111-8111-111111111111:
 --   - FILLED BUY AAPL
 --   - FILLED SELL AAPL
 --   - FILLED BUY MSFT
 --   - NEW BUY SPY
 --   - CANCELLED BUY MSFT
 --
--- Account ACC-10002:
+-- Account 22222222-2222-4222-8222-222222222222:
 --   - REJECTED BUY due to insufficient funds
 --
--- Account ACC-10004:
+-- Account 44444444-4444-4444-8444-444444444444:
 --   - Historical FILLED BUY of delisted OLDCO
 --
 -- No orders are placed for the SUSPENDED account.
@@ -241,6 +241,7 @@ VALUES
 
 -- Filled AAPL BUY
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -253,12 +254,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111001',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10001'
+        WHERE account_reference = '11111111-1111-4111-8111-111111111111'
     ),
-    'ACC-10001',
+    '11111111-1111-4111-8111-111111111111',
     (
         SELECT instrument_id
         FROM instruments
@@ -275,6 +277,7 @@ VALUES
 
 -- Filled AAPL SELL
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -287,12 +290,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111002',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10001'
+        WHERE account_reference = '11111111-1111-4111-8111-111111111111'
     ),
-    'ACC-10001',
+    '11111111-1111-4111-8111-111111111111',
     (
         SELECT instrument_id
         FROM instruments
@@ -309,6 +313,7 @@ VALUES
 
 -- Filled MSFT BUY
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -321,12 +326,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111003',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10001'
+        WHERE account_reference = '11111111-1111-4111-8111-111111111111'
     ),
-    'ACC-10001',
+    '11111111-1111-4111-8111-111111111111',
     (
         SELECT instrument_id
         FROM instruments
@@ -343,6 +349,7 @@ VALUES
 
 -- NEW / working order
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -355,12 +362,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111004',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10001'
+        WHERE account_reference = '11111111-1111-4111-8111-111111111111'
     ),
-    'ACC-10001',
+    '11111111-1111-4111-8111-111111111111',
     (
         SELECT instrument_id
         FROM instruments
@@ -377,6 +385,7 @@ VALUES
 
 -- CANCELLED order
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -389,12 +398,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111005',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10001'
+        WHERE account_reference = '11111111-1111-4111-8111-111111111111'
     ),
-    'ACC-10001',
+    '11111111-1111-4111-8111-111111111111',
     (
         SELECT instrument_id
         FROM instruments
@@ -412,6 +422,7 @@ VALUES
 -- REJECTED order:
 -- Account only has $25 but attempts to buy $2,000 worth.
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -424,12 +435,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111006',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10002'
+        WHERE account_reference = '22222222-2222-4222-8222-222222222222'
     ),
-    'ACC-10002',
+    '22222222-2222-4222-8222-222222222222',
     (
         SELECT instrument_id
         FROM instruments
@@ -446,6 +458,7 @@ VALUES
 
 -- Historical filled order against a now-delisted instrument.
 INSERT INTO orders (
+    order_id,
     account_id,
     account_reference,
     instrument_id,
@@ -458,12 +471,13 @@ INSERT INTO orders (
 )
 VALUES
 (
+    '11111111-1111-1111-1111-111111111007',
     (
         SELECT account_id
         FROM accounts
-        WHERE account_reference = 'ACC-10004'
+        WHERE account_reference = '44444444-4444-4444-8444-444444444444'
     ),
-    'ACC-10004',
+    '44444444-4444-4444-8444-444444444444',
     (
         SELECT instrument_id
         FROM instruments
@@ -564,7 +578,7 @@ VALUES
 --
 -- These reconcile with FILLED orders.
 --
--- ACC-10001:
+-- 11111111-1111-4111-8111-111111111111:
 --
 -- AAPL:
 --   +10 BUY
@@ -576,7 +590,7 @@ VALUES
 --   +5 BUY
 --   = 5 shares @ $400
 --
--- ACC-10004:
+-- 44444444-4444-4444-8444-444444444444:
 --
 -- OLDCO:
 --   +10 BUY
@@ -600,7 +614,7 @@ VALUES
         FROM portfolios p
         JOIN accounts a
             ON a.account_id = p.account_id
-        WHERE a.account_reference = 'ACC-10001'
+        WHERE a.account_reference = '11111111-1111-4111-8111-111111111111'
     ),
     (
         SELECT instrument_id
@@ -617,7 +631,7 @@ VALUES
         FROM portfolios p
         JOIN accounts a
             ON a.account_id = p.account_id
-        WHERE a.account_reference = 'ACC-10001'
+        WHERE a.account_reference = '11111111-1111-4111-8111-111111111111'
     ),
     (
         SELECT instrument_id
@@ -634,7 +648,7 @@ VALUES
         FROM portfolios p
         JOIN accounts a
             ON a.account_id = p.account_id
-        WHERE a.account_reference = 'ACC-10004'
+        WHERE a.account_reference = '44444444-4444-4444-8444-444444444444'
     ),
     (
         SELECT instrument_id

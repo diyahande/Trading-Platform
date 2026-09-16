@@ -1,0 +1,154 @@
+services:
+
+  database:
+    image: postgres:16-alpine
+    container_name: capstone-database
+    env_file:
+      - ./database/.env
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stock_trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - capstone-net
+
+  db-init:
+    image: postgres:16
+    container_name: capstone-db-init
+    working_dir: /workspace
+    command: ["bash", "./apply.sh"]
+    env_file:
+      - ./database/.env
+    environment:
+      PGHOST: database
+    volumes:
+      - ./database:/workspace
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - capstone-net
+
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: capstone-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: CONTROLLER://:9093,INTERNAL://:29092,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      # Topics must be explicitly created by create-topic.sh
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - capstone-net
+
+  kafka-init:
+    image: apache/kafka:3.9.1
+    container_name: capstone-kafka-init
+    working_dir: /workspace
+    command: ["bash", "./create-topic.sh"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    volumes:
+      - ./sprint-07-event-backbone:/workspace
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - capstone-net
+
+  auth-stub:
+    build:
+      context: ./auth-stub
+      dockerfile: Dockerfile
+    container_name: capstone-auth-stub
+    env_file:
+      - ./database/.env
+    ports:
+      - "8089:8089"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    networks:
+      - capstone-net
+
+  trade-api:
+    build:
+      context: ./trade-api
+      dockerfile: Dockerfile
+    container_name: capstone-trade-api
+    env_file:
+      - ./database/.env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8082:8082"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      auth-stub:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - capstone-net
+
+  executor:
+    build:
+      context: ./sprint-07-event-backbone/executor
+      dockerfile: Dockerfile
+    container_name: capstone-executor
+    env_file:
+      - ./database/.env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      database:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - capstone-net
+
+volumes:
+  db_data:
+  kafka_data:
+
+networks:
+  capstone-net:
+    driver: bridge

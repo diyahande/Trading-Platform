@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS orders (
-    order_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id UUID PRIMARY KEY,
 
     account_id BIGINT NOT NULL,
 
-    account_reference VARCHAR(30) NOT NULL,
+    account_reference VARCHAR(36) NOT NULL,
 
     instrument_id BIGINT NOT NULL,
 
