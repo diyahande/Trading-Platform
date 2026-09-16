@@ -3,8 +3,6 @@ package com.capstone.controller;
 import com.capstone.dto.AccountResponse;
 import com.capstone.dto.BalanceResponse;
 import com.capstone.dto.PositionResponse;
-import com.capstone.entity.Account;
-import com.capstone.enums.AccountStatus;
 import com.capstone.service.AccountService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,12 +37,20 @@ class AccountControllerTest {
 
     @Test
     void getAccount_mapsResponse() {
-        Account account = account();
-        when(accountService.getAccountByIdStrict(1L)).thenReturn(account);
+        AccountResponse accountResponse = new AccountResponse(
+            1L,
+            "acc-1",
+            "Trader",
+            new BigDecimal("50.00"),
+            "ACTIVE",
+            7,
+            LocalDateTime.now()
+        );
+        when(accountService.getAccountResponseForAuthorizedAccount(1L, "acc-1")).thenReturn(accountResponse);
 
         ResponseEntity<AccountResponse> response = controller.getAccount(1L, authentication);
 
-        verify(accountService).verifyAuthorizedAccount(1L, "acc-1");
+        verify(accountService).getAccountResponseForAuthorizedAccount(1L, "acc-1");
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(1L, response.getBody().getId());
@@ -56,11 +62,17 @@ class AccountControllerTest {
 
     @Test
     void getBalance_mapsResponse() {
-        when(accountService.getAccountBalance(1L)).thenReturn(new BigDecimal("12.34"));
+        BalanceResponse balanceResponse = new BalanceResponse(
+            1L,
+            new BigDecimal("12.34"),
+            "USD",
+            LocalDateTime.now()
+        );
+        when(accountService.getBalanceResponseForAuthorizedAccount(1L, "acc-1")).thenReturn(balanceResponse);
 
         ResponseEntity<BalanceResponse> response = controller.getBalance(1L, authentication);
 
-        verify(accountService).verifyAuthorizedAccount(1L, "acc-1");
+        verify(accountService).getBalanceResponseForAuthorizedAccount(1L, "acc-1");
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(1L, response.getBody().getAccountId());
@@ -72,28 +84,14 @@ class AccountControllerTest {
     @Test
     void getPositions_returnsServicePayload() {
         List<PositionResponse> positions = List.of(new PositionResponse(1L, "AAPL", 10, new BigDecimal("100.00")));
-        when(accountService.getPositionsByAccountId(1L)).thenReturn(positions);
+        when(accountService.getPositionsForAuthorizedAccount(1L, "acc-1")).thenReturn(positions);
 
         ResponseEntity<List<PositionResponse>> response = controller.getPositions(1L, authentication);
 
-        verify(accountService).verifyAuthorizedAccount(1L, "acc-1");
+        verify(accountService).getPositionsForAuthorizedAccount(1L, "acc-1");
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-    }
-
-    private static Account account() {
-        return new Account(
-                1L,
-                10L,
-                "acc-1",
-                "Trader",
-                "USD",
-                new BigDecimal("50.00"),
-                AccountStatus.ACTIVE,
-                7L,
-                Instant.parse("2024-01-01T00:00:00Z")
-        );
     }
 }
 

@@ -1,5 +1,7 @@
 package com.capstone.service;
 
+import com.capstone.dto.OrderHistoryEntry;
+import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
 import com.capstone.entity.Account;
 import com.capstone.entity.Order;
@@ -8,6 +10,7 @@ import com.capstone.enums.OrderStatus;
 import com.capstone.exception.DuplicateOrderException;
 import com.capstone.exception.InsufficientFundsException;
 import com.capstone.exception.InvalidOrderException;
+import com.capstone.exception.OrderNotFoundException;
 import com.capstone.exception.OrderNotCancellableException;
 import com.capstone.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,6 +36,66 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final AccountService accountService;
     private final InstrumentService instrumentService;
+
+    /**
+     * Place order after account authorization and return API response payload.
+     */
+    public OrderResponse placeOrderForAuthorizedAccount(PlaceOrderRequest request, String accountKey) {
+        accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
+        Order order = placeOrder(request, request.getIdempotencyKey());
+        return mapOrderToResponse(order, request.getSymbol());
+    }
+
+    /**
+     * Cancel order after authorization and return updated API response payload.
+     */
+    public OrderResponse cancelOrderForAuthorizedAccount(UUID orderId, String accountKey) {
+        Order order = getOrderById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        accountService.verifyAuthorizedAccount(order.getAccountId(), accountKey);
+        cancelOrder(orderId);
+
+        Order cancelledOrder = getOrderById(orderId)
+                .orElseThrow(() -> new IllegalStateException("Order disappeared after cancellation"));
+
+        return mapOrderToResponse(cancelledOrder, null);
+    }
+
+    /**
+     * Retrieve and filter account order history after authorization.
+     */
+    public List<OrderHistoryEntry> getOrderHistoryForAuthorizedAccount(
+            Long accountId,
+            String status,
+            LocalDateTime from,
+            LocalDateTime to,
+            String accountKey) {
+        accountService.verifyAuthorizedAccount(accountId, accountKey);
+
+        List<OrderHistoryEntry> historyEntries = getOrdersByAccountId(accountId).stream()
+                .map(this::mapOrderToHistoryEntry)
+                .toList();
+
+        if (status != null && !status.isEmpty()) {
+            historyEntries = historyEntries.stream()
+                    .filter(entry -> entry.getStatus().equals(status))
+                    .toList();
+        }
+
+        if (from != null) {
+            historyEntries = historyEntries.stream()
+                    .filter(entry -> entry.getCreatedOn().isAfter(from))
+                    .toList();
+        }
+
+        if (to != null) {
+            historyEntries = historyEntries.stream()
+                    .filter(entry -> entry.getCreatedOn().isBefore(to))
+                    .toList();
+        }
+
+        return historyEntries;
+    }
 
     /**
      * Place a new order with comprehensive validation.
@@ -182,5 +247,43 @@ public class OrderService {
      */
     public void updateOrderStatus(UUID orderId, OrderStatus status) {
         orderMapper.updateOrderStatus(orderId, status);
+    }
+
+    /**
+     * Map Order entity to OrderResponse DTO.
+     * Formats orderId with ORD- prefix.
+     */
+    private OrderResponse mapOrderToResponse(Order order, String symbol) {
+        OrderResponse response = new OrderResponse();
+        response.setOrderId("ORD-" + order.getOrderId());
+        response.setStatus(order.getStatus().toString());
+        response.setMessage("Order " + order.getStatus().toString());
+        response.setSymbol(symbol);
+        response.setSide(order.getSide().toString());
+        response.setQuantity(order.getQuantity().intValue());
+        response.setPrice(order.getPrice());
+        return response;
+    }
+
+    /**
+     * Map Order entity to OrderHistoryEntry DTO.
+     * For use in order history queries.
+     */
+    private OrderHistoryEntry mapOrderToHistoryEntry(Order order) {
+        OrderHistoryEntry entry = new OrderHistoryEntry();
+        entry.setOrderId("ORD-" + order.getOrderId());
+        entry.setAccountId(order.getAccountId());
+        entry.setSymbol(null); // TODO: Fetch instrument symbol from database
+        entry.setSide(order.getSide().toString());
+        entry.setQuantity(order.getQuantity().intValue());
+        entry.setPrice(order.getPrice());
+        entry.setExecutedPrice(null); // TODO: Set when order is FILLED
+        entry.setStatus(order.getStatus().toString());
+        entry.setIdempotencyKey(order.getIdempotencyKey());
+
+        LocalDateTime createdOn = LocalDateTime.ofInstant(order.getCreatedAt(), ZoneId.systemDefault());
+        entry.setCreatedOn(createdOn);
+
+        return entry;
     }
 }

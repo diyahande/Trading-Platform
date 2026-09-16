@@ -6,9 +6,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.math.BigDecimal;
 import java.util.Set;
@@ -78,6 +80,19 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("GEN-500", response.getBody().getErrorCode());
+    }
+
+    @Test
+    void handleNoResourceFound_returns404() {
+        NoResourceFoundException ex = mock(NoResourceFoundException.class);
+        when(ex.getHttpMethod()).thenReturn(HttpMethod.POST);
+        when(ex.getResourcePath()).thenReturn("/login");
+
+        ResponseEntity<ErrorResponse> response = handler.handleNoResourceFound(ex);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("GEN-404", response.getBody().getErrorCode());
     }
 
     private static DomainException exceptionForCode(String code) {

@@ -3,11 +3,8 @@ package com.capstone.controller;
 import com.capstone.dto.OrderHistoryEntry;
 import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
-import com.capstone.entity.Order;
 import com.capstone.enums.OrderSide;
 import com.capstone.enums.OrderStatus;
-import com.capstone.exception.OrderNotFoundException;
-import com.capstone.service.AccountService;
 import com.capstone.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,11 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,15 +28,13 @@ class OrderControllerTest {
     @Mock
     private OrderService orderService;
     @Mock
-    private AccountService accountService;
-    @Mock
     private Authentication authentication;
 
     private OrderController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new OrderController(orderService, accountService);
+        controller = new OrderController(orderService);
     }
 
     @Test
@@ -51,12 +43,20 @@ class OrderControllerTest {
         PlaceOrderRequest request = new PlaceOrderRequest(
                 1L, "AAPL", OrderSide.BUY, 3, new BigDecimal("12.00"), "idem-12345678"
         );
-        Order order = order(OrderSide.BUY, OrderStatus.NEW, Instant.parse("2024-01-01T00:00:00Z"), "idem-12345678");
-        when(orderService.placeOrder(request, "idem-12345678")).thenReturn(order);
+        OrderResponse serviceResponse = new OrderResponse(
+            "ORD-abc",
+            "NEW",
+            "Order NEW",
+            "AAPL",
+            "BUY",
+            3,
+            new BigDecimal("12.00")
+        );
+        when(orderService.placeOrderForAuthorizedAccount(request, "acc-1")).thenReturn(serviceResponse);
 
         ResponseEntity<OrderResponse> response = controller.placeOrder(request, authentication);
 
-        verify(accountService).verifyAuthorizedAccount(1L, "acc-1");
+        verify(orderService).placeOrderForAuthorizedAccount(request, "acc-1");
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().getOrderId().startsWith("ORD-"));
@@ -68,18 +68,20 @@ class OrderControllerTest {
 
     @Test
     void cancelOrder_notFound_throwsDomainException() {
+        when(authentication.getName()).thenReturn("acc-1");
         UUID id = UUID.randomUUID();
-        when(orderService.getOrderById(id)).thenReturn(Optional.empty());
+        when(orderService.cancelOrderForAuthorizedAccount(id, "acc-1"))
+                .thenThrow(new com.capstone.exception.OrderNotFoundException(id));
 
-        assertThrows(OrderNotFoundException.class, () -> controller.cancelOrder(id, authentication));
+        assertThrows(com.capstone.exception.OrderNotFoundException.class, () -> controller.cancelOrder(id, authentication));
     }
 
     @Test
     void cancelOrder_disappearsAfterCancel_throwsIllegalState() {
         when(authentication.getName()).thenReturn("acc-1");
         UUID id = UUID.randomUUID();
-        Order existing = order(OrderSide.BUY, OrderStatus.NEW, Instant.now(), "idem-1");
-        when(orderService.getOrderById(id)).thenReturn(Optional.of(existing), Optional.empty());
+        when(orderService.cancelOrderForAuthorizedAccount(id, "acc-1"))
+                .thenThrow(new IllegalStateException("Order disappeared after cancellation"));
 
         assertThrows(IllegalStateException.class, () -> controller.cancelOrder(id, authentication));
     }
@@ -88,33 +90,46 @@ class OrderControllerTest {
     void cancelOrder_success_returnsCancelledOrder() {
         when(authentication.getName()).thenReturn("acc-1");
         UUID id = UUID.randomUUID();
-        Order existing = new Order(id, 1L, "acc-1", 2L, OrderSide.BUY, new BigDecimal("1"), new BigDecimal("2.00"),
-                OrderStatus.NEW, "idem-1", Instant.now());
-        Order cancelled = new Order(id, 1L, "acc-1", 2L, OrderSide.BUY, new BigDecimal("1"), new BigDecimal("2.00"),
-                OrderStatus.CANCELLED, "idem-1", Instant.now());
-        when(orderService.getOrderById(id)).thenReturn(Optional.of(existing), Optional.of(cancelled));
+        OrderResponse cancelled = new OrderResponse(
+            "ORD-" + id,
+            "CANCELLED",
+            "Order CANCELLED",
+            null,
+            "BUY",
+            1,
+            new BigDecimal("2.00")
+        );
+        when(orderService.cancelOrderForAuthorizedAccount(id, "acc-1")).thenReturn(cancelled);
 
         ResponseEntity<OrderResponse> response = controller.cancelOrder(id, authentication);
 
-        verify(accountService).verifyAuthorizedAccount(1L, "acc-1");
-        verify(orderService).cancelOrder(id);
+        verify(orderService).cancelOrderForAuthorizedAccount(id, "acc-1");
         assertEquals("CANCELLED", response.getBody().getStatus());
     }
 
     @Test
     void getOrders_appliesStatusAndDateFilters() {
         when(authentication.getName()).thenReturn("acc-1");
-        Instant now = Instant.now();
-        Order newOrder = order(OrderSide.BUY, OrderStatus.NEW, now.minusSeconds(600), "k1");
-        Order filledOrder = order(OrderSide.SELL, OrderStatus.FILLED, now.minusSeconds(60), "k2");
-        when(orderService.getOrdersByAccountId(1L)).thenReturn(List.of(newOrder, filledOrder));
-
-        LocalDateTime from = LocalDateTime.ofInstant(now.minusSeconds(120), ZoneId.systemDefault());
-        LocalDateTime to = LocalDateTime.ofInstant(now.plusSeconds(30), ZoneId.systemDefault());
+        LocalDateTime from = LocalDateTime.now().minusHours(2);
+        LocalDateTime to = LocalDateTime.now().plusHours(1);
+        OrderHistoryEntry filled = new OrderHistoryEntry(
+            "ORD-2",
+            1L,
+            null,
+            "SELL",
+            2,
+            new BigDecimal("10.00"),
+            null,
+            "FILLED",
+            "k2",
+            LocalDateTime.now().minusMinutes(30)
+        );
+        when(orderService.getOrderHistoryForAuthorizedAccount(1L, "FILLED", from, to, "acc-1"))
+            .thenReturn(List.of(filled));
 
         ResponseEntity<List<OrderHistoryEntry>> response = controller.getOrders(1L, "FILLED", from, to, authentication);
 
-        verify(accountService).verifyAuthorizedAccount(1L, "acc-1");
+        verify(orderService).getOrderHistoryForAuthorizedAccount(1L, "FILLED", from, to, "acc-1");
         assertEquals(1, response.getBody().size());
         assertEquals("FILLED", response.getBody().get(0).getStatus());
     }
@@ -122,28 +137,17 @@ class OrderControllerTest {
     @Test
     void getOrders_withoutFilters_returnsAll() {
         when(authentication.getName()).thenReturn("acc-1");
-        Order o1 = order(OrderSide.BUY, OrderStatus.NEW, Instant.now(), "k1");
-        Order o2 = order(OrderSide.SELL, OrderStatus.CANCELLED, Instant.now(), "k2");
-        when(orderService.getOrdersByAccountId(1L)).thenReturn(List.of(o1, o2));
+        OrderHistoryEntry o1 = new OrderHistoryEntry();
+        o1.setStatus("NEW");
+        OrderHistoryEntry o2 = new OrderHistoryEntry();
+        o2.setStatus("CANCELLED");
+        when(orderService.getOrderHistoryForAuthorizedAccount(1L, null, null, null, "acc-1"))
+                .thenReturn(List.of(o1, o2));
 
         ResponseEntity<List<OrderHistoryEntry>> response = controller.getOrders(1L, null, null, null, authentication);
 
+        verify(orderService).getOrderHistoryForAuthorizedAccount(1L, null, null, null, "acc-1");
         assertEquals(2, response.getBody().size());
-    }
-
-    private static Order order(OrderSide side, OrderStatus status, Instant createdAt, String key) {
-        return new Order(
-                UUID.randomUUID(),
-                1L,
-                "acc-1",
-                2L,
-                side,
-                new BigDecimal("3"),
-                new BigDecimal("12.00"),
-                status,
-                key,
-                createdAt
-        );
     }
 }
 

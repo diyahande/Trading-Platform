@@ -3,10 +3,7 @@ package com.capstone.controller;
 import com.capstone.dto.OrderHistoryEntry;
 import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
-import com.capstone.entity.Order;
-import com.capstone.exception.OrderNotFoundException;
 import com.capstone.service.OrderService;
-import com.capstone.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -32,7 +27,6 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
-    private final AccountService accountService;
 
     /**
      * POST /api/v1/orders
@@ -57,14 +51,9 @@ public class OrderController {
     public ResponseEntity<OrderResponse> placeOrder(
             @Valid @RequestBody PlaceOrderRequest request,
             Authentication authentication) {
-        String accountKey = authentication.getName();
-        accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
-
-        String idempotencyKey = request.getIdempotencyKey();
-        Order order = orderService.placeOrder(request, idempotencyKey);
-
-        OrderResponse response = mapOrderToResponse(order, request.getSymbol());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+            orderService.placeOrderForAuthorizedAccount(request, authentication.getName())
+        );
     }
 
     /**
@@ -80,26 +69,12 @@ public class OrderController {
      * @return
      */
     @DeleteMapping("/api/v1/orders/{id}")
-        public ResponseEntity<OrderResponse> cancelOrder(
+    public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable UUID id,
             Authentication authentication) {
-        Optional<Order> orderOpt = orderService.getOrderById(id);
-        if (orderOpt.isEmpty()) {
-            throw new OrderNotFoundException(id);
-        }
-
-        Order order = orderOpt.get();
-
-        String accountKey = authentication.getName();
-        accountService.verifyAuthorizedAccount(order.getAccountId(), accountKey);
-
-        orderService.cancelOrder(id);
-
-        Order cancelledOrder = orderService.getOrderById(id)
-                .orElseThrow(() -> new IllegalStateException("Order disappeared after cancellation"));
-
-        OrderResponse response = mapOrderToResponse(cancelledOrder, null);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                orderService.cancelOrderForAuthorizedAccount(id, authentication.getName())
+        );
     }
 
     /**
@@ -125,77 +100,9 @@ public class OrderController {
             @RequestParam(required = false) 
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             Authentication authentication) {
-
-        String accountKey = authentication.getName();
-        accountService.verifyAuthorizedAccount(id, accountKey);
-
-        List<Order> orders = orderService.getOrdersByAccountId(id);
-
-        List<OrderHistoryEntry> historyEntries = orders.stream()
-                .map(this::mapOrderToHistoryEntry)
-                .toList();
-
-        if (status != null && !status.isEmpty()) {
-            historyEntries = historyEntries.stream()
-                    .filter(entry -> entry.getStatus().equals(status))
-                    .toList();
-        }
-
-        if (from != null) {
-            historyEntries = historyEntries.stream()
-                    .filter(entry -> entry.getCreatedOn().isAfter(from))
-                    .toList();
-        }
-
-        if (to != null) {
-            historyEntries = historyEntries.stream()
-                    .filter(entry -> entry.getCreatedOn().isBefore(to))
-                    .toList();
-        }
-
-        return ResponseEntity.ok(historyEntries);
-    }
-
-    /**
-     * Map Order entity to OrderResponse DTO.
-     * Formats orderId with ORD- prefix.
-     */
-    private OrderResponse mapOrderToResponse(Order order, String symbol) {
-        OrderResponse response = new OrderResponse();
-        response.setOrderId("ORD-" + order.getOrderId());
-        response.setStatus(order.getStatus().toString());
-        response.setMessage("Order " + order.getStatus().toString());
-        response.setSymbol(symbol);
-        response.setSide(order.getSide().toString());
-        response.setQuantity(order.getQuantity().intValue());
-        response.setPrice(order.getPrice());
-        return response;
-    }
-
-    /**
-     * Map Order entity to OrderHistoryEntry DTO.
-     * For use in order history queries.
-     */
-    private OrderHistoryEntry mapOrderToHistoryEntry(Order order) {
-        OrderHistoryEntry entry = new OrderHistoryEntry();
-        entry.setOrderId("ORD-" + order.getOrderId());
-        entry.setAccountId(order.getAccountId());
-        entry.setSymbol(null); // TODO: Fetch instrument symbol from database
-        entry.setSide(order.getSide().toString());
-        entry.setQuantity(order.getQuantity().intValue());
-        entry.setPrice(order.getPrice());
-        entry.setExecutedPrice(null); // TODO: Set when order is FILLED
-        entry.setStatus(order.getStatus().toString());
-        entry.setIdempotencyKey(order.getIdempotencyKey());
-
-        // Convert Instant to LocalDateTime
-        LocalDateTime createdOn = LocalDateTime.ofInstant(
-                order.getCreatedAt(),
-                ZoneId.systemDefault()
+        return ResponseEntity.ok(
+                orderService.getOrderHistoryForAuthorizedAccount(id, status, from, to, authentication.getName())
         );
-        entry.setCreatedOn(createdOn);
-
-        return entry;
     }
 
 }

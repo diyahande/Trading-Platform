@@ -1,5 +1,7 @@
 package com.capstone.service;
 
+import com.capstone.dto.AccountResponse;
+import com.capstone.dto.BalanceResponse;
 import com.capstone.entity.Account;
 import com.capstone.dto.PositionResponse;
 import com.capstone.exception.AccountNotActiveException;
@@ -11,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +25,49 @@ import java.util.Optional;
 public class AccountService {
 
     private final AccountMapper accountMapper;
+
+    /**
+     * Retrieve account details for an authorized caller.
+     */
+    public AccountResponse getAccountResponseForAuthorizedAccount(Long accountId, String accountKey) {
+        verifyAuthorizedAccount(accountId, accountKey);
+        Account account = getAccountByIdStrict(accountId);
+
+        AccountResponse response = new AccountResponse();
+        response.setId(account.getAccountId());
+        response.setAccountId(account.getAccountReference());
+        response.setHolderName(account.getHolderName());
+        response.setCashBalance(account.getCashBalance());
+        response.setStatus(account.getStatus().name());
+        response.setVersion(account.getVersion().intValue());
+        response.setLastUpdated(LocalDateTime.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()));
+
+        return response;
+    }
+
+    /**
+     * Retrieve balance details for an authorized caller.
+     */
+    public BalanceResponse getBalanceResponseForAuthorizedAccount(Long accountId, String accountKey) {
+        verifyAuthorizedAccount(accountId, accountKey);
+        BigDecimal balance = getAccountBalance(accountId);
+
+        BalanceResponse response = new BalanceResponse();
+        response.setAccountId(accountId);
+        response.setCashBalance(balance);
+        response.setCurrency("USD");
+        response.setAsOf(LocalDateTime.now());
+
+        return response;
+    }
+
+    /**
+     * Retrieve positions for an authorized caller.
+     */
+    public List<PositionResponse> getPositionsForAuthorizedAccount(Long accountId, String accountKey) {
+        verifyAuthorizedAccount(accountId, accountKey);
+        return getPositionsByAccountId(accountId);
+    }
 
     // Retrieve account by ID without strict validation.
     public Optional<Account> getAccountById(Long accountId) {

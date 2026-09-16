@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -49,6 +50,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HTTP_422)
                 .body(new ErrorResponse("VAL-422", "Invalid input"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
+        log.warn("No resource found: method={}, path={}", ex.getHttpMethod(), ex.getResourcePath());
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("GEN-404", "Not found"));
     }
 
     @ExceptionHandler(Exception.class)
