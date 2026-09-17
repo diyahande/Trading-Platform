@@ -10,8 +10,9 @@ import com.capstone.enums.OrderSide;
 import com.capstone.enums.OrderStatus;
 import com.capstone.exception.AccountNotActiveException;
 import com.capstone.exception.GlobalExceptionHandler;
-import com.capstone.exception.InsufficientFundsException;
 import com.capstone.exception.InstrumentNotFoundException;
+import com.capstone.kafka.OrderPlacedEventPublisher;
+import com.capstone.kafka.TransactionCommitHook;
 import com.capstone.mapper.OrderMapper;
 import com.capstone.service.AccountService;
 import com.capstone.service.InstrumentService;
@@ -34,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -59,8 +59,16 @@ class OrderPlacementCharacterisationTest {
         orderMapper = mock(OrderMapper.class);
         accountService = mock(AccountService.class);
         instrumentService = mock(InstrumentService.class);
+        OrderPlacedEventPublisher orderPlacedEventPublisher = mock(OrderPlacedEventPublisher.class);
+        TransactionCommitHook transactionCommitHook = mock(TransactionCommitHook.class);
 
-        OrderService orderService = new OrderService(orderMapper, accountService, instrumentService);
+        OrderService orderService = new OrderService(
+                orderMapper,
+                accountService,
+                instrumentService,
+                orderPlacedEventPublisher,
+                transactionCommitHook
+        );
         OrderController controller = new OrderController(orderService);
 
         mockMvc = MockMvcBuilders

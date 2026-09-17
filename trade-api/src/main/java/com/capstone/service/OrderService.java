@@ -12,6 +12,8 @@ import com.capstone.exception.InsufficientFundsException;
 import com.capstone.exception.InvalidOrderException;
 import com.capstone.exception.OrderNotFoundException;
 import com.capstone.exception.OrderNotCancellableException;
+import com.capstone.kafka.OrderPlacedEventPublisher;
+import com.capstone.kafka.TransactionCommitHook;
 import com.capstone.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,10 +38,13 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final AccountService accountService;
     private final InstrumentService instrumentService;
+    private final OrderPlacedEventPublisher orderPlacedEventPublisher;
+    private final TransactionCommitHook transactionCommitHook;
 
     /**
      * Place order after account authorization and return API response payload.
      */
+    @Transactional
     public OrderResponse placeOrderForAuthorizedAccount(PlaceOrderRequest request, String accountKey) {
         accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
         Order order = placeOrder(request, request.getIdempotencyKey());
@@ -112,7 +117,6 @@ public class OrderService {
      * Transactional: Cash and position move together or neither moves.
      * Optimistic locking: Version is checked on cash balance update; concurrent modification is ORD-409.
      */
-    @Transactional
     public Order placeOrder(PlaceOrderRequest request, String idempotencyKey) {
         // Rule 8: idempotency key must be unique
         if (orderMapper.findOrderByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -152,6 +156,10 @@ public class OrderService {
 
         // Insert order
         orderMapper.insertOrder(order);
+
+        transactionCommitHook.runAfterCommit(() ->
+            orderPlacedEventPublisher.publishOrderPlaced(order, request.getSymbol()));
+
         return order;
     }
 
