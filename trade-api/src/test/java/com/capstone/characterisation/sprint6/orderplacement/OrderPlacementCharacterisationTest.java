@@ -92,6 +92,7 @@ class OrderPlacementCharacterisationTest {
                 .andExpect(jsonPath("$.orderId", startsWith("ORD-")));
 
         verify(accountService).updateCashBalance(1L, new BigDecimal("14980.0000"), 7L);
+        verify(accountService, never()).getPositionsByAccountId(any());
 
         ArgumentCaptor<Order> insertedOrder = ArgumentCaptor.forClass(Order.class);
         verify(orderMapper).insertOrder(insertedOrder.capture());
