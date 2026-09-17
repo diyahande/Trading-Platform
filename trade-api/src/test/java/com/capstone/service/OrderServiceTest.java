@@ -12,7 +12,10 @@ import com.capstone.exception.DuplicateOrderException;
 import com.capstone.exception.InsufficientFundsException;
 import com.capstone.exception.InvalidOrderException;
 import com.capstone.exception.OrderNotCancellableException;
+import com.capstone.kafka.OrderPlacedEventPublisher;
+import com.capstone.kafka.TransactionCommitHook;
 import com.capstone.mapper.OrderMapper;
+import com.capstone.dto.OrderResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,12 +41,22 @@ class OrderServiceTest {
     private AccountService accountService;
     @Mock
     private InstrumentService instrumentService;
+    @Mock
+    private OrderPlacedEventPublisher orderPlacedEventPublisher;
+    @Mock
+    private TransactionCommitHook transactionCommitHook;
 
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(orderMapper, accountService, instrumentService);
+        orderService = new OrderService(
+                orderMapper,
+                accountService,
+                instrumentService,
+                orderPlacedEventPublisher,
+                transactionCommitHook
+        );
     }
 
     @Test
@@ -52,6 +65,8 @@ class OrderServiceTest {
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.of(sampleOrder(OrderSide.BUY, OrderStatus.NEW)));
 
         assertThrows(DuplicateOrderException.class, () -> orderService.placeOrder(request, "idem-12345"));
+        verify(transactionCommitHook, never()).runAfterCommit(any());
+        verify(orderPlacedEventPublisher, never()).publishOrderPlaced(any(), anyString());
     }
 
     @Test
@@ -62,6 +77,8 @@ class OrderServiceTest {
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
 
         assertThrows(InvalidOrderException.class, () -> orderService.placeOrder(request, "idem-12345"));
+        verify(transactionCommitHook, never()).runAfterCommit(any());
+        verify(orderPlacedEventPublisher, never()).publishOrderPlaced(any(), anyString());
     }
 
     @Test
@@ -104,6 +121,36 @@ class OrderServiceTest {
         assertEquals("idem-12345", inserted.getIdempotencyKey());
         assertNotNull(inserted.getOrderId());
         assertEquals(inserted, created);
+
+        ArgumentCaptor<Runnable> afterCommitAction = ArgumentCaptor.forClass(Runnable.class);
+        verify(transactionCommitHook).runAfterCommit(afterCommitAction.capture());
+        verify(orderPlacedEventPublisher, never()).publishOrderPlaced(any(), anyString());
+
+        afterCommitAction.getValue().run();
+        verify(orderPlacedEventPublisher).publishOrderPlaced(created, "AAPL");
+    }
+
+    @Test
+    void placeOrderForAuthorizedAccount_acceptsAtNew_answersNew_andDefersPublishUntilAfterCommit() {
+        PlaceOrderRequest request = request(OrderSide.BUY, 2, new BigDecimal("10.00"));
+        when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
+        when(accountService.verifyAuthorizedAccount("11111111-1111-4111-8111-111111111111", "11111111-1111-4111-8111-111111111111"))
+                .thenReturn(account(new BigDecimal("100.00"), 7L));
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
+        when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
+
+        OrderResponse response = orderService.placeOrderForAuthorizedAccount(request, "11111111-1111-4111-8111-111111111111");
+
+        assertEquals("NEW", response.getStatus());
+        assertEquals("Order NEW", response.getMessage());
+        verify(orderMapper).insertOrder(any(Order.class));
+
+        ArgumentCaptor<Runnable> afterCommitAction = ArgumentCaptor.forClass(Runnable.class);
+        verify(transactionCommitHook).runAfterCommit(afterCommitAction.capture());
+        verify(orderPlacedEventPublisher, never()).publishOrderPlaced(any(), anyString());
+
+        afterCommitAction.getValue().run();
+        verify(orderPlacedEventPublisher).publishOrderPlaced(any(Order.class), eq("AAPL"));
     }
 
     @Test
@@ -117,6 +164,7 @@ class OrderServiceTest {
 
         verify(orderMapper).insertOrder(any(Order.class));
         verify(accountService, never()).updateCashBalance(anyLong(), any(), anyLong());
+        verify(transactionCommitHook).runAfterCommit(any());
         assertEquals(OrderSide.SELL, created.getSide());
     }
 
