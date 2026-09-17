@@ -12,6 +12,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -61,11 +65,30 @@ public class MarketDataPoller {
      */
     private static final long MIN_INTERVAL_SECONDS = 60L;
 
+    /**
+     * Cache refresh interval in milliseconds.
+     * Queries database for symbol list every 15 minutes instead of every poll.
+     */
+    private static final long CACHE_REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
+    /**
+     * Local cache file path for symbol list.
+     * Persists cached symbols to disk for inspection and recovery after restart.
+     */
+    private static final Path CACHE_FILE_PATH = Paths.get(".cache/symbols-cache.txt");
+
     private final FauxnanceQuoteClient fauxnanceClient;
     private final MarketDataKafkaPublisher kafkaPublisher;
     private final SymbolMapper symbolMapper;
     private final long pollIntervalSeconds;
     private long lastPollTime = 0;
+
+    /**
+     * Cached list of symbols from database.
+     * Refreshed every CACHE_REFRESH_INTERVAL_MS (15 minutes).
+     */
+    private List<String> cachedSymbols = new ArrayList<>();
+    private long lastCacheRefreshTime = 0;
 
     public MarketDataPoller(
             FauxnanceQuoteClient fauxnanceClient,
@@ -100,6 +123,9 @@ public class MarketDataPoller {
 
         // Log quota calculation
         logQuotaCalculation();
+        
+        // Load cache from file if it exists
+        loadCacheFromFile();
     }
 
     /**
@@ -131,15 +157,15 @@ public class MarketDataPoller {
 
             logger.info("Starting market data poll cycle");
 
-            // Fetch all unique symbols from portfolio_holdings, orders, watchlist
-            List<String> symbols = symbolMapper.fetchWatchedAndHeldSymbols();
+            // Fetch symbols from cache or refresh if stale
+            List<String> symbols = getOrRefreshSymbolsCache(currentTime);
 
             if (symbols == null || symbols.isEmpty()) {
                 logger.info("No symbols to poll");
                 return;
             }
 
-            logger.info("Fetched {} unique symbols for polling", symbols.size());
+            logger.info("Fetched {} unique symbols for polling (from cache)", symbols.size());
 
             // Batch symbols and fetch quotes
             int totalQuotesFetched = 0;
@@ -187,6 +213,119 @@ public class MarketDataPoller {
             logger.error("Market data poller was interrupted", e);
         } catch (Exception e) {
             logger.error("Market data poller failed: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get cached symbols or refresh cache if stale (older than 15 minutes).
+     * 
+     * Cache optimization: Instead of querying the database every 60 seconds,
+     * we cache the symbol list and only query every 15 minutes. This reduces
+     * database load while still keeping the list relatively fresh.
+     * 
+     * @param currentTime current time in milliseconds
+     * @return list of symbols to poll
+     */
+    private synchronized List<String> getOrRefreshSymbolsCache(long currentTime) {
+        long timeSinceLastRefresh = currentTime - lastCacheRefreshTime;
+        
+        // Refresh cache if first time or stale (older than 15 minutes)
+        if (lastCacheRefreshTime == 0 || timeSinceLastRefresh >= CACHE_REFRESH_INTERVAL_MS) {
+            logger.info(
+                    "Refreshing symbol cache (last refresh: {} ms ago)",
+                    timeSinceLastRefresh
+            );
+            
+            try {
+                cachedSymbols = symbolMapper.fetchWatchedAndHeldSymbols();
+                lastCacheRefreshTime = currentTime;
+                
+                if (cachedSymbols != null && !cachedSymbols.isEmpty()) {
+                    logger.info(
+                            "Symbol cache refreshed: {} symbols = {}",
+                            cachedSymbols.size(),
+                            cachedSymbols
+                    );
+                    // Persist cache to file
+                    saveCacheToFile(cachedSymbols);
+                } else {
+                    logger.info("Symbol cache refreshed: 0 symbols (empty list)");
+                }
+            } catch (Exception e) {
+                logger.error("Failed to refresh symbol cache: {}", e.getMessage(), e);
+                // Return cached symbols even if refresh fails, to keep system running
+                if (cachedSymbols == null) {
+                    cachedSymbols = new ArrayList<>();
+                }
+            }
+        } else {
+            logger.debug(
+                    "Using cached symbols ({} ms since refresh, next refresh in {} ms) = {}",
+                    timeSinceLastRefresh,
+                    CACHE_REFRESH_INTERVAL_MS - timeSinceLastRefresh,
+                    cachedSymbols
+            );
+        }
+        
+        return cachedSymbols;
+    }
+
+    /**
+     * Load cached symbols from disk file if it exists.
+     * Used on startup to pre-populate cache without database query.
+     * Non-fatal: If file I/O fails, continues without cache.
+     * 
+     * NOTE: Does NOT set lastCacheRefreshTime, so first pollMarketData() call
+     * will still query the database (fresh data on startup).
+     */
+    private void loadCacheFromFile() {
+        try {
+            if (!Files.exists(CACHE_FILE_PATH)) {
+                logger.debug("Cache file does not exist: {}", CACHE_FILE_PATH.toAbsolutePath());
+                return;
+            }
+            
+            List<String> symbols = Files.readAllLines(CACHE_FILE_PATH);
+            if (symbols != null && !symbols.isEmpty()) {
+                cachedSymbols = new ArrayList<>(symbols);
+                // NOTE: Do NOT set lastCacheRefreshTime here - let first poll query fresh data
+                logger.info(
+                        "Loaded {} symbols from cache file (will refresh on first poll): {}",
+                        symbols.size(),
+                        symbols
+                );
+            }
+        } catch (IOException e) {
+            logger.debug("Could not load cache from file (non-fatal): {}", e.getMessage());
+        } catch (Exception e) {
+            logger.debug("Unexpected error loading cache (non-fatal): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Save cached symbols to disk file for persistence and inspection.
+     * File location: .cache/symbols-cache.txt (one symbol per line)
+     * Non-fatal: If file I/O fails, system continues normally.
+     * 
+     * @param symbols list of symbols to cache
+     */
+    private void saveCacheToFile(List<String> symbols) {
+        try {
+            // Create .cache directory if it doesn't exist
+            Path cacheDir = CACHE_FILE_PATH.getParent();
+            if (cacheDir != null && !Files.exists(cacheDir)) {
+                Files.createDirectories(cacheDir);
+            }
+            
+            // Write symbols to file (one per line)
+            if (symbols != null && !symbols.isEmpty()) {
+                Files.write(CACHE_FILE_PATH, symbols);
+                logger.debug("Cache saved to file: {} ({} symbols)", CACHE_FILE_PATH.toAbsolutePath(), symbols.size());
+            }
+        } catch (IOException e) {
+            logger.debug("Could not save cache to file (non-fatal): {}", e.getMessage());
+        } catch (Exception e) {
+            logger.debug("Unexpected error saving cache (non-fatal): {}", e.getMessage());
         }
     }
 
