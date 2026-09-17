@@ -160,6 +160,174 @@ VALUES
     'USD',
     FALSE,
     '2025-10-01 09:00:00+00'
+),
+(
+    'GOOGL',
+    'Alphabet Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-05 09:00:00+00'
+),
+(
+    'AMZN',
+    'Amazon.com Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-08 09:00:00+00'
+),
+(
+    'NFLX',
+    'Netflix Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-10 09:00:00+00'
+),
+(
+    'TSLA',
+    'Tesla Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-12 09:00:00+00'
+),
+(
+    'META',
+    'Meta Platforms Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-15 09:00:00+00'
+),
+(
+    'NVDA',
+    'NVIDIA Corporation',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-20 09:00:00+00'
+),
+(
+    'JNJ',
+    'Johnson & Johnson',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-15 09:00:00+00'
+),
+(
+    'PFE',
+    'Pfizer Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-18 09:00:00+00'
+),
+(
+    'UNH',
+    'UnitedHealth Group',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-22 09:00:00+00'
+),
+(
+    'JPM',
+    'JPMorgan Chase & Co.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-01 09:00:00+00'
+),
+(
+    'BAC',
+    'Bank of America',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-03 09:00:00+00'
+),
+(
+    'GS',
+    'Goldman Sachs Group Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-06 09:00:00+00'
+),
+(
+    'WMT',
+    'Walmart Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-25 09:00:00+00'
+),
+(
+    'TM',
+    'Toyota Motor Corporation',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-28 09:00:00+00'
+),
+(
+    'KO',
+    'The Coca-Cola Company',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-09 09:00:00+00'
+),
+(
+    'XOM',
+    'Exxon Mobil Corporation',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-10 09:00:00+00'
+),
+(
+    'CVX',
+    'Chevron Corporation',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-11-12 09:00:00+00'
+),
+(
+    'QQQ',
+    'Invesco QQQ Trust',
+    'ETF',
+    'USD',
+    TRUE,
+    '2025-12-18 09:00:00+00'
+),
+(
+    'IVV',
+    'iShares Core S&P 500 ETF',
+    'ETF',
+    'USD',
+    TRUE,
+    '2025-12-20 09:00:00+00'
+),
+(
+    'BRK.B',
+    'Berkshire Hathaway Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-22 09:00:00+00'
+),
+(
+    'V',
+    'Visa Inc.',
+    'EQUITY',
+    'USD',
+    TRUE,
+    '2025-12-25 09:00:00+00'
 );
 
 
@@ -658,4 +826,353 @@ VALUES
     10.00000000,
     100.00000000,
     '2026-08-20 16:15:00+00'
+);
+
+
+-- ============================================================
+-- 8. WATCHLIST
+-- ============================================================
+
+INSERT INTO watchlist (
+    user_id,
+    instrument_id,
+    name,
+    created_at
+)
+VALUES
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'AAPL'
+    ),
+    'My Tech Stocks',
+    '2026-08-15 10:00:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'MSFT'
+    ),
+    'My Tech Stocks',
+    '2026-08-15 10:05:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'SPY'
+    ),
+    'ETF Portfolio',
+    '2026-08-18 14:20:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'MSFT'
+    ),
+    'Tech Watch',
+    '2026-08-16 09:30:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'AAPL'
+    ),
+    'Watchlist',
+    '2026-08-17 11:15:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'GOOGL'
+    ),
+    'Tech Giants',
+    '2026-08-19 10:00:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'AMZN'
+    ),
+    'Tech Giants',
+    '2026-08-19 10:05:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'NVDA'
+    ),
+    'AI Stocks',
+    '2026-08-19 10:10:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'TSLA'
+    ),
+    'Growth Stocks',
+    '2026-08-19 10:15:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'META'
+    ),
+    'Tech Giants',
+    '2026-08-19 10:20:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'QQQ'
+    ),
+    'ETF Portfolio',
+    '2026-08-19 10:25:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'alice.johnson@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'JNJ'
+    ),
+    'Healthcare Stocks',
+    '2026-08-19 10:30:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'AMZN'
+    ),
+    'Tech Watch',
+    '2026-08-19 10:35:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'GOOGL'
+    ),
+    'Tech Watch',
+    '2026-08-19 10:40:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'TSLA'
+    ),
+    'Growth Stocks',
+    '2026-08-19 10:45:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'NFLX'
+    ),
+    'Entertainment',
+    '2026-08-19 10:50:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'JPM'
+    ),
+    'Financial Sector',
+    '2026-08-19 10:55:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'bob.smith@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'V'
+    ),
+    'Payment Systems',
+    '2026-08-19 11:00:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'GOOGL'
+    ),
+    'Watchlist',
+    '2026-08-19 11:05:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'XOM'
+    ),
+    'Energy Sector',
+    '2026-08-19 11:10:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'CVX'
+    ),
+    'Energy Sector',
+    '2026-08-19 11:15:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'KO'
+    ),
+    'Consumer Goods',
+    '2026-08-19 11:20:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'WMT'
+    ),
+    'Retail Sector',
+    '2026-08-19 11:25:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'charlie.brown@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'IVV'
+    ),
+    'Index Funds',
+    '2026-08-19 11:30:00+00'
 );
