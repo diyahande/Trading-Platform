@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: executor
+  server:
+    port: 8083
+  datasource:
+    url: jdbc:postgresql://localhost:5432/stock_trading_etp
+    username: postgres
+    password: n3u3d4!
+    driver-class-name: org.postgresql.Driver
+  kafka:
+    bootstrap-servers: 10.8.78.68:8085
+    consumer:
+      group-id: trade-executor
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+    producer:
+      acks: all
+      retries: 3
+
+mybatis:
+  mapper-locations: classpath*:mappers/**/*.xml
+  type-aliases-package: com.capstone.executor.mapper
+  configuration:
+    map-underscore-to-camel-case: true
+
+fauxnance:
+  base-url: ${FAUXNANCE_BASE_URL:https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1}
+  api-key: ${FAUXNANCE_API_KEY:fnx_dev_w94amk7F63WTtF8RTkdEESXffMagvsC0}
+  max-retries: ${FAUXNANCE_MAX_RETRIES:3}
+  retry-delay-ms: ${FAUXNANCE_RETRY_DELAY_MS:100}
+
+logging:
+  level:
+    com.capstone.executor: INFO
+    org.springframework.kafka: WARN
