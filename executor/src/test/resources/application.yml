@@ -15,6 +15,9 @@ fauxnance:
   max-retries: 1
   retry-delay-ms: 50
 
+market-data:
+  poll-interval-seconds: 60
+
 logging:
   level:
     com.capstone.executor: DEBUG
