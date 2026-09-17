@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: executor-test
+  kafka:
+    bootstrap-servers: localhost:9092
+
+fauxnance:
+  base-url: http://localhost:8888
+  api-key: test-key
+  max-retries: 1
+  retry-delay-ms: 50
+
+logging:
+  level:
+    com.capstone.executor: DEBUG
+    org.springframework.kafka: WARN
