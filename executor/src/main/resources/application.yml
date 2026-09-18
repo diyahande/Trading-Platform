@@ -46,5 +46,6 @@ market-data:
 
 logging:
   level:
-    com.capstone.executor: INFO
-    org.springframework.kafka: WARN
+    com.capstone.executor: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: INFO

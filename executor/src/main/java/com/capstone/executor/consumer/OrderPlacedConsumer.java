@@ -68,6 +68,14 @@ public class OrderPlacedConsumer {
                     required = false
             ) String retryCountHeader) {
 
+        logger.info(
+                "OrderPlacedConsumer received message from Kafka: topic={} retryCount={} messageLength={} firstChars={}",
+                ORDERS_TOPIC,
+                retryCountHeader,
+                message.length(),
+                message.substring(0, Math.min(100, message.length()))
+        );
+
         int retryCount =
                 retryPolicy.parseRetryCount(retryCountHeader);
 
