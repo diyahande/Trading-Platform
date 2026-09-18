@@ -14,6 +14,7 @@ import com.capstone.executor.mapper.PortfolioDto;
 import com.capstone.executor.mapper.PortfolioHoldingsDto;
 import com.capstone.executor.mapper.PortfolioHoldingsMapper;
 import com.capstone.executor.mapper.PortfolioMapper;
+import com.capstone.executor.mapper.TransactionMapper;
 import com.capstone.executor.client.FauxnanceQuoteClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,7 @@ public class OrderExecutionServiceTest {
     @Mock private InstrumentMapper instrumentMapper;
     @Mock private PortfolioMapper portfolioMapper;
     @Mock private PortfolioHoldingsMapper portfolioHoldingsMapper;
+    @Mock private TransactionMapper transactionMapper;
     @Mock private TradeEventPublisher tradeEventPublisher;
     private OrderExecutionService service;
     private List<EventEnvelope<?>> publishedEvents;
@@ -56,7 +58,8 @@ public class OrderExecutionServiceTest {
         publishedEvents = new ArrayList<>();
         lenient().doAnswer(inv -> { publishedEvents.add(inv.getArgument(0)); return null; })
             .when(tradeEventPublisher).publish(any());
-        service = new OrderExecutionService(quoteClient, orderMapper, accountMapper, instrumentMapper, portfolioMapper, portfolioHoldingsMapper, tradeEventPublisher);
+        lenient().doNothing().when(transactionMapper).insert(anyString(), anyLong(), any(BigDecimal.class), any(BigDecimal.class), anyString());
+        service = new OrderExecutionService(quoteClient, orderMapper, accountMapper, instrumentMapper, portfolioMapper, portfolioHoldingsMapper, transactionMapper, tradeEventPublisher);
     }
     
     // Test 1: BUY limit at or above quote fills at quote

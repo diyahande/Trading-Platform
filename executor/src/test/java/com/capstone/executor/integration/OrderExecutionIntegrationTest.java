@@ -13,6 +13,7 @@ import com.capstone.executor.mapper.OrderMapper;
 import com.capstone.executor.mapper.PortfolioDto;
 import com.capstone.executor.mapper.PortfolioMapper;
 import com.capstone.executor.mapper.PortfolioHoldingsMapper;
+import com.capstone.executor.mapper.TransactionMapper;
 import com.capstone.executor.client.FauxnanceQuoteClient;
 import com.capstone.executor.service.OrderExecutionService;
 import com.capstone.executor.service.TradeEventPublisher;
@@ -39,6 +40,7 @@ public class OrderExecutionIntegrationTest {
     @Mock private InstrumentMapper instrumentMapper;
     @Mock private PortfolioMapper portfolioMapper;
     @Mock private PortfolioHoldingsMapper portfolioHoldingsMapper;
+    @Mock private TransactionMapper transactionMapper;
     @Mock private TradeEventPublisher tradeEventPublisher;
     private OrderExecutionService service;
     private List<EventEnvelope<TradeEventPayload>> publishedEvents;
@@ -48,7 +50,8 @@ public class OrderExecutionIntegrationTest {
         publishedEvents = new ArrayList<>();
         lenient().doAnswer(inv -> { publishedEvents.add(inv.getArgument(0)); return null; })
             .when(tradeEventPublisher).publish(any());
-        service = new OrderExecutionService(quoteClient, orderMapper, accountMapper, instrumentMapper, portfolioMapper, portfolioHoldingsMapper, tradeEventPublisher);
+        lenient().doNothing().when(transactionMapper).insert(anyString(), anyLong(), any(BigDecimal.class), any(BigDecimal.class), anyString());
+        service = new OrderExecutionService(quoteClient, orderMapper, accountMapper, instrumentMapper, portfolioMapper, portfolioHoldingsMapper, transactionMapper, tradeEventPublisher);
     }
     
     // Integration Test Case A: Fill

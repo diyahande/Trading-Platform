@@ -17,6 +17,7 @@ import com.capstone.executor.mapper.PortfolioDto;
 import com.capstone.executor.mapper.PortfolioHoldingsDto;
 import com.capstone.executor.mapper.PortfolioHoldingsMapper;
 import com.capstone.executor.mapper.PortfolioMapper;
+import com.capstone.executor.mapper.TransactionMapper;
 import com.capstone.executor.client.FauxnanceQuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ public class OrderExecutionService {
     private final InstrumentMapper instrumentMapper;
     private final PortfolioMapper portfolioMapper;
     private final PortfolioHoldingsMapper portfolioHoldingsMapper;
+    private final TransactionMapper transactionMapper;
     private final TradeEventPublisher tradeEventPublisher;
 
     public OrderExecutionService(
@@ -49,6 +51,7 @@ public class OrderExecutionService {
             InstrumentMapper instrumentMapper,
             PortfolioMapper portfolioMapper,
             PortfolioHoldingsMapper portfolioHoldingsMapper,
+            TransactionMapper transactionMapper,
             TradeEventPublisher tradeEventPublisher) {
 
         this.quoteClient = quoteClient;
@@ -57,6 +60,7 @@ public class OrderExecutionService {
         this.instrumentMapper = instrumentMapper;
         this.portfolioMapper = portfolioMapper;
         this.portfolioHoldingsMapper = portfolioHoldingsMapper;
+        this.transactionMapper = transactionMapper;
         this.tradeEventPublisher = tradeEventPublisher;
     }
 
@@ -436,7 +440,28 @@ public class OrderExecutionService {
                 );
             }
 
-            // Success: all three writes completed in one transaction
+            /**
+             * WRITE 4: Record transaction
+             * Creates an immutable record of the trade execution.
+             * This is part of the atomic settlement transaction.
+             */
+            transactionMapper.insert(
+                    orderId,
+                    instrument.getInstrumentId(),
+                    quantity,
+                    normalizedPrice,
+                    "COMPLETED"
+            );
+
+            logger.debug(
+                    "Transaction recorded: orderId={} instrumentId={} qty={} price={}",
+                    orderId,
+                    instrument.getInstrumentId(),
+                    quantity,
+                    normalizedPrice
+            );
+
+            // Success: all four writes completed in one transaction
             logger.info(
                     "Order settled successfully: orderId={} price={} side={} qty={}",
                     orderId,
