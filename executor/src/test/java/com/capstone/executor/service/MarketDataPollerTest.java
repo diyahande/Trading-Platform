@@ -183,10 +183,8 @@ public class MarketDataPollerTest {
         // requestsPerDay <= 2000
         // (86400 / interval) * 1 <= 2000
         // interval >= 86400 / 2000 = 43.2 seconds
-        long minIntervalForQuota = 86400 / 2000; // ~43 seconds
-
         // At 24 symbols, 60 second interval is within 2000 request/day quota
-        assertTrue(requestsPerDay <= 2000, 
+        assertTrue(requestsPerDay <= 2000 && requestsPerDay > 43, 
                 "24 symbols at 60 second interval should be within 2000 request/day quota");
 
         // But validate the batching is working correctly

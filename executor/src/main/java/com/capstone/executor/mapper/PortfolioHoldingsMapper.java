@@ -17,7 +17,7 @@ public interface PortfolioHoldingsMapper {
      * Find holding by portfolio_id and instrument_id.
      * Returns null if holding does not exist.
      */
-    @Select("SELECT holding_id, portfolio_id, instrument_id, quantity, average_price, version, last_updated " +
+    @Select("SELECT holding_id, portfolio_id, instrument_id, quantity, average_price, last_updated " +
             "FROM portfolio_holdings " +
             "WHERE portfolio_id = #{portfolioId} AND instrument_id = #{instrumentId}")
     PortfolioHoldingsDto findByPortfolioAndInstrument(
@@ -44,8 +44,8 @@ public interface PortfolioHoldingsMapper {
      * Called when buying/selling an instrument for the first time in this portfolio.
      */
     @Insert("INSERT INTO portfolio_holdings " +
-            "(portfolio_id, instrument_id, quantity, average_price, version, last_updated) " +
-            "VALUES (#{portfolioId}, #{instrumentId}, #{quantity}, #{averagePrice}, 0, CURRENT_TIMESTAMP)")
+            "(portfolio_id, instrument_id, quantity, average_price, last_updated) " +
+            "VALUES (#{portfolioId}, #{instrumentId}, #{quantity}, #{averagePrice}, CURRENT_TIMESTAMP)")
     void insert(
             @Param("portfolioId") Long portfolioId,
             @Param("instrumentId") Long instrumentId,

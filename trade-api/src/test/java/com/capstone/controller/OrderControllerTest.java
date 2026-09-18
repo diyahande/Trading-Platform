@@ -4,7 +4,7 @@ import com.capstone.dto.OrderHistoryEntry;
 import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
 import com.capstone.enums.OrderSide;
-import com.capstone.enums.OrderStatus;
+
 import com.capstone.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
