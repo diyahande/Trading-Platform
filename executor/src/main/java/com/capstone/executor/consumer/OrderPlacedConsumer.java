@@ -58,7 +58,7 @@ public class OrderPlacedConsumer {
 
     @KafkaListener(
             topics = ORDERS_TOPIC,
-            groupId = "trade-executor"
+            groupId = "trade-executor-soumya"
     )
     public void consumeOrderPlaced(
             @Payload String message,

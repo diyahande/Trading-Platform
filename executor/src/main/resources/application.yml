@@ -2,7 +2,7 @@ spring:
   application:
     name: executor
   server:
-    port: 8083
+    port: 8084
   datasource:
     url: jdbc:postgresql://localhost:5432/stock_trading_db
     username: postgres
@@ -42,7 +42,7 @@ market-data:
   # For 2000 request/day quota target:
   # - required interval: 86400 / 2000 = 43.2 seconds minimum
   # - with batching, saves ~8x requests vs one-at-a-time
-  poll-interval-seconds: ${POLL_INTERVAL_SECONDS:60}
+  poll-interval-seconds: ${POLL_INTERVAL_SECONDS:300}
 
 logging:
   level:
