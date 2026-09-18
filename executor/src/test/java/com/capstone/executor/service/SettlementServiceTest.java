@@ -282,40 +282,58 @@ public class SettlementServiceTest {
      * Test 6: Idempotent BUY fill (already filled - 0 rows affected)
      */
     @Test
-    public void testFillBuyIdempotentNoOp() {
-        String orderId = "order-6";
-        OrderPlacedPayload payload = new OrderPlacedPayload(
-            orderId, 1L, "AAPL", "BUY", 100,
-            new BigDecimal("233.00"), "key6", Instant.now()
+public void testFillBuyIdempotentNoOp() {
+    String orderId = "order-6";
+
+    OrderPlacedPayload payload = new OrderPlacedPayload(
+        orderId,
+        1L,
+        "AAPL",
+        "BUY",
+        100,
+        new BigDecimal("233.00"),
+        "key6",
+        Instant.now()
+    );
+
+    InstrumentDto instrument = new InstrumentDto();
+    instrument.setInstrumentId(1L);
+
+    BigDecimal executionPrice = new BigDecimal("232.50");
+
+    // Simulate order already filled
+    when(orderMapper.updateToFilled(
+        anyString(),
+        any(BigDecimal.class),
+        any(Instant.class)
+    )).thenReturn(0);
+
+    // Execute
+    try {
+        settlementService.fillOrder(
+            orderId,
+            payload,
+            executionPrice,
+            instrument
         );
-        InstrumentDto instrument = new InstrumentDto();
-        instrument.setInstrumentId(1L);
-        
-        BigDecimal executionPrice = new BigDecimal("232.50");
-        
-        // Simulate order already filled
-        when(orderMapper.updateToFilled(anyString(), any(BigDecimal.class), any(Instant.class)))
-            .thenReturn(0);  // 0 rows affected
-        
-        AccountDto account = new AccountDto();
-        account.setAccountId(1L);
-        account.setStatus("ACTIVE");
-        account.setCashBalance(new BigDecimal("100000"));
-        account.setVersion(0L);
-        
-        when(accountMapper.findById(1L))
-            .thenReturn(account);
-        
-        // Execute
-        try {
-            settlementService.fillOrder(orderId, payload, executionPrice, instrument);
-        } catch (IllegalStateException e) {
-            if (!e.getMessage().contains("No active transaction")) throw e;
+    } catch (IllegalStateException e) {
+        if (!e.getMessage().contains("No active transaction")) {
+            throw e;
         }
-        
-        // Verify order was checked but no cash update attempted
-        verify(orderMapper).updateToFilled(anyString(), any(BigDecimal.class), any(Instant.class));
-        // No further DB operations should happen
-        verify(accountMapper, never()).updateCashWithVersionGuard(anyLong(), any(BigDecimal.class), anyLong());
     }
+
+    // Verify order update was attempted
+    verify(orderMapper).updateToFilled(
+        anyString(),
+        any(BigDecimal.class),
+        any(Instant.class)
+    );
+
+    // No cash update should be attempted
+    verify(accountMapper, never()).updateCashWithVersionGuard(
+        anyLong(),
+        any(BigDecimal.class),
+        anyLong()
+    );
+}
 }
