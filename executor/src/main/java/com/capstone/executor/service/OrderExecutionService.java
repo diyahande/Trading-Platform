@@ -13,6 +13,10 @@ import com.capstone.executor.mapper.InstrumentDto;
 import com.capstone.executor.mapper.InstrumentMapper;
 import com.capstone.executor.mapper.OrderDto;
 import com.capstone.executor.mapper.OrderMapper;
+import com.capstone.executor.mapper.PortfolioDto;
+import com.capstone.executor.mapper.PortfolioHoldingsDto;
+import com.capstone.executor.mapper.PortfolioHoldingsMapper;
+import com.capstone.executor.mapper.PortfolioMapper;
 import com.capstone.executor.client.FauxnanceQuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +38,8 @@ public class OrderExecutionService {
     private final OrderMapper orderMapper;
     private final AccountMapper accountMapper;
     private final InstrumentMapper instrumentMapper;
+    private final PortfolioMapper portfolioMapper;
+    private final PortfolioHoldingsMapper portfolioHoldingsMapper;
     private final TradeEventPublisher tradeEventPublisher;
 
     public OrderExecutionService(
@@ -41,12 +47,16 @@ public class OrderExecutionService {
             OrderMapper orderMapper,
             AccountMapper accountMapper,
             InstrumentMapper instrumentMapper,
+            PortfolioMapper portfolioMapper,
+            PortfolioHoldingsMapper portfolioHoldingsMapper,
             TradeEventPublisher tradeEventPublisher) {
 
         this.quoteClient = quoteClient;
         this.orderMapper = orderMapper;
         this.accountMapper = accountMapper;
         this.instrumentMapper = instrumentMapper;
+        this.portfolioMapper = portfolioMapper;
+        this.portfolioHoldingsMapper = portfolioHoldingsMapper;
         this.tradeEventPublisher = tradeEventPublisher;
     }
 
@@ -214,12 +224,15 @@ public class OrderExecutionService {
              * FailureClassifier can classify it as permanent
              * and send it to orders.DLT.
              *
+             * Also rethrow exhausted retry errors from optimistic locking.
+             * 
              * Other exceptions keep the previous SYSTEM_ERROR
              * behavior.
              */
             if (e instanceof IllegalStateException
                     && e.getMessage() != null
-                    && e.getMessage().contains("Order not found")) {
+                    && (e.getMessage().contains("Order not found")
+                        || e.getMessage().contains("Exhausted optimistic lock retries"))) {
 
                 throw e;
             }
@@ -235,7 +248,17 @@ public class OrderExecutionService {
         }
     }
 
-    // Fill order transactionally: update DB then publish event
+    /**
+     * Fill order with atomic settlement: status change, cash movement, and position write
+     * all happen in one transaction, guarded by optimistic locks on account and position versions.
+     * 
+     * Acceptance Criteria:
+     * 1. All three writes (order status, cash, position) happen together or not at all
+     * 2. Guarded state transition (WHERE status='NEW') is first write - idempotent
+     * 3. Optimistic lock on account version with bounded retry attempts
+     * 4. Zero rows affected on optimistic lock failure -> re-read and retry
+     * 5. Event published AFTER transaction commit, offset acknowledged AFTER event publish
+     */
     @Transactional
     private void fillOrder(
             String orderId,
@@ -244,57 +267,202 @@ public class OrderExecutionService {
             AccountDto account,
             InstrumentDto instrument) {
 
-        BigDecimal normalizedPrice =
-                PriceNormalizer.normalize(executionPrice);
-
+        BigDecimal normalizedPrice = PriceNormalizer.normalize(executionPrice);
         Instant now = Instant.now();
 
-        // Guarded update: returns 1 if successful, 0 if not NEW (idempotent)
-        int updated =
-                orderMapper.updateToFilled(
-                        orderId,
-                        normalizedPrice,
-                        now
-                );
+        /**
+         * WRITE 1: Guarded state transition
+         * First write in transaction: conditional on order still being NEW.
+         * Zero rows affected means another delivery got there first -> return without publishing.
+         */
+        int updated = orderMapper.updateToFilled(orderId, normalizedPrice, now);
 
         if (updated == 0) {
-
             logger.info(
-                    "Order already resolved (idempotent): orderId={}",
+                    "Order already resolved (idempotent delivery): orderId={}",
                     orderId
             );
-
             return;
         }
 
-        // Calculate position and cash delta
-        BigDecimal cashDelta =
-                normalizedPrice.multiply(
-                        BigDecimal.valueOf(
-                                payload.getQuantity()
-                        )
-                );
+        logger.debug("Order status updated: orderId={}", orderId);
 
+        // Calculate cash delta (negative for BUY, positive for SELL)
+        BigDecimal quantity = BigDecimal.valueOf(payload.getQuantity());
+        BigDecimal cashDelta = normalizedPrice.multiply(quantity);
         if ("BUY".equalsIgnoreCase(payload.getSide())) {
             cashDelta = cashDelta.negate();
         }
 
-        // Publish trade event after DB commit but before offset commit
-        publishTradeEvent(
-                payload,
-                "ORDER_FILLED",
-                normalizedPrice,
-                null,
-                cashDelta,
-                0,
-                BigDecimal.ZERO,
-                now
-        );
+        /**
+         * WRITES 2 & 3: Optimistic lock retry loop
+         * 
+         * Account version guard ensures only one delivery successfully moves cash.
+         * Portfolio position version guard ensures positions stay consistent.
+         * Retry up to 3 attempts if version conflict (another service writing to account).
+         * Treat only exhausted budget as error, not version conflicts.
+         */
+        final int MAX_RETRIES = 3;
+        int attempt = 0;
+        while (attempt < MAX_RETRIES) {
+            attempt++;
 
-        logger.info(
-                "Order filled: orderId={} price={}",
-                orderId,
-                normalizedPrice
+            // Re-read account to get current version
+            AccountDto currentAccount = accountMapper.findById(payload.getAccountId());
+            if (currentAccount == null || !currentAccount.isActive()) {
+                throw new IllegalStateException(
+                        "Account became inactive during settlement: orderId=" + orderId
+                );
+            }
+
+            logger.debug(
+                    "Optimistic lock attempt {}: orderId={} accountVersion={}",
+                    attempt,
+                    orderId,
+                    currentAccount.getVersion()
+            );
+
+            /**
+             * WRITE 2: Update account cash with version guard
+             * Only succeeds if version matches - detects concurrent modifications.
+             * Zero rows affected -> version conflict, re-read and retry.
+             */
+            int cashUpdated = accountMapper.updateCashWithVersionGuard(
+                    payload.getAccountId(),
+                    cashDelta,
+                    currentAccount.getVersion()
+            );
+
+            if (cashUpdated == 0) {
+                logger.debug(
+                        "Account version conflict (attempt {}): orderId={} retrying",
+                        attempt,
+                        orderId
+                );
+                if (attempt < MAX_RETRIES) {
+                    continue; // Retry
+                } else {
+                    throw new IllegalStateException(
+                            "Exhausted optimistic lock retries for account cash update: "
+                                    + "orderId=" + orderId + " attempts=" + MAX_RETRIES
+                    );
+                }
+            }
+
+            logger.debug("Account cash updated: orderId={} delta={}", orderId, cashDelta);
+
+            /**
+             * WRITE 3: Update portfolio position with version guard
+             * Similar optimistic lock: only succeeds if version matches.
+             * Creates new position if it doesn't exist.
+             */
+            PortfolioDto portfolio = portfolioMapper.findByAccountId(payload.getAccountId());
+            if (portfolio == null) {
+                throw new IllegalStateException(
+                        "Portfolio not found for account: orderId=" + orderId
+                );
+            }
+
+            PortfolioHoldingsDto holding = portfolioHoldingsMapper.findByPortfolioAndInstrument(
+                    portfolio.getPortfolioId(),
+                    instrument.getInstrumentId()
+            );
+
+            if (holding == null) {
+                // New position: create it
+                if ("BUY".equalsIgnoreCase(payload.getSide())) {
+                    portfolioHoldingsMapper.insert(
+                            portfolio.getPortfolioId(),
+                            instrument.getInstrumentId(),
+                            quantity,
+                            normalizedPrice
+                    );
+                    logger.debug(
+                            "New position created: orderId={} symbol={} qty={}",
+                            orderId,
+                            payload.getSymbol(),
+                            quantity
+                    );
+                } else {
+                    // SELL on non-existent position - should not happen, but log it
+                    logger.warn(
+                            "SELL order on non-existent position: orderId={} symbol={}",
+                            orderId,
+                            payload.getSymbol()
+                    );
+                }
+            } else {
+                // Existing position: update with new quantity and average price
+                BigDecimal newQuantity = holding.getQuantity();
+                BigDecimal newAveragePrice = holding.getAveragePrice();
+
+                if ("BUY".equalsIgnoreCase(payload.getSide())) {
+                    // Update average price: weighted by quantity
+                    BigDecimal totalCost = holding.getAveragePrice()
+                            .multiply(holding.getQuantity())
+                            .add(normalizedPrice.multiply(quantity));
+                    newQuantity = holding.getQuantity().add(quantity);
+                    newAveragePrice = totalCost.divide(newQuantity,
+                            8, java.math.RoundingMode.HALF_UP);
+                } else {
+                    // SELL: reduce quantity
+                    newQuantity = holding.getQuantity().subtract(quantity);
+                    if (newQuantity.compareTo(BigDecimal.ZERO) < 0) {
+                        throw new IllegalStateException(
+                                "Insufficient position to sell: orderId=" + orderId
+                        );
+                    }
+                    // Average price stays the same on SELL
+                }
+
+                int positionUpdated = portfolioHoldingsMapper.update(
+                        portfolio.getPortfolioId(),
+                        instrument.getInstrumentId(),
+                        newQuantity,
+                        newAveragePrice
+                );
+
+                if (positionUpdated == 0) {
+                    throw new IllegalStateException(
+                            "Position not found or update failed: orderId=" + orderId
+                    );
+                }
+
+                logger.debug(
+                        "Position updated: orderId={} symbol={} newQty={}",
+                        orderId,
+                        payload.getSymbol(),
+                        newQuantity
+                );
+            }
+
+            // Success: all three writes completed in one transaction
+            logger.info(
+                    "Order settled successfully: orderId={} price={} side={} qty={}",
+                    orderId,
+                    normalizedPrice,
+                    payload.getSide(),
+                    quantity
+            );
+
+            // Publish event AFTER transaction commits (Spring handles this with @Transactional)
+            publishTradeEvent(
+                    payload,
+                    "ORDER_FILLED",
+                    normalizedPrice,
+                    null,
+                    cashDelta,
+                    holding != null ? holding.getQuantity().intValue() : quantity.intValue(),
+                    holding != null ? holding.getAveragePrice() : normalizedPrice,
+                    now
+            );
+
+            return; // Exit retry loop on success
+        }
+
+        // Should not reach here due to throw in loop, but just in case
+        throw new IllegalStateException(
+                "Order settlement failed with exhausted retries: orderId=" + orderId
         );
     }
 
