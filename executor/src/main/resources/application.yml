@@ -2,14 +2,14 @@ spring:
   application:
     name: executor
   server:
-    port: 8083
+    port: ${SERVER_PORT}
   datasource:
-    url: jdbc:postgresql://localhost:5432/stock_trading_db
-    username: postgres
-    password: n3u3d4!
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   kafka:
-    bootstrap-servers: 10.8.78.68:8085
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
       group-id: trade-executor
       enable-auto-commit: false
@@ -25,24 +25,13 @@ mybatis:
     map-underscore-to-camel-case: true
 
 fauxnance:
-  base-url: ${FAUXNANCE_BASE_URL:https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1}
-  api-key: ${FAUXNANCE_API_KEY:fnx_dev_w94amk7F63WTtF8RTkdEESXffMagvsC0}
-  max-retries: ${FAUXNANCE_MAX_RETRIES:3}
-  retry-delay-ms: ${FAUXNANCE_RETRY_DELAY_MS:100}
+  base-url: ${FAUXNANCE_BASE_URL}
+  api-key: ${FAUXNANCE_API_KEY}
+  max-retries: ${FAUXNANCE_MAX_RETRIES}
+  retry-delay-ms: ${FAUXNANCE_RETRY_DELAY_MS}
 
 market-data:
-  # Market data poller interval in seconds
-  # Minimum floor: 30 seconds (enforced in code to stay within quota)
-  #
-  # Quota calculation for 24 symbols:
-  # - polls per day: 86400 / 30 = 2880
-  # - batches per poll: 1 (24 symbols <= 25 limit)
-  # - requests per day: 1440 * 1 = 1440
-  #
-  # For 2000 request/day quota target:
-  # - required interval: 86400 / 2000 = 43.2 seconds minimum
-  # - with batching, saves ~8x requests vs one-at-a-time
-  poll-interval-seconds: ${POLL_INTERVAL_SECONDS:60}
+  poll-interval-seconds: ${POLL_INTERVAL_SECONDS}
 
 logging:
   level:

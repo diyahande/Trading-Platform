@@ -94,7 +94,7 @@ public class MarketDataPoller {
             FauxnanceQuoteClient fauxnanceClient,
             MarketDataKafkaPublisher kafkaPublisher,
             SymbolMapper symbolMapper,
-            @Value("${POLL_INTERVAL_SECONDS:60}") long pollIntervalSeconds) {
+            @Value("${POLL_INTERVAL_SECONDS:300}") long pollIntervalSeconds) {
 
         this.fauxnanceClient = fauxnanceClient;
         this.kafkaPublisher = kafkaPublisher;
@@ -136,7 +136,7 @@ public class MarketDataPoller {
      * MAX_SYMBOLS_PER_BATCH for efficient Fauxnance API calls. Publishes
      * one message per symbol to the market-data topic.
      */
-    @Scheduled(fixedDelayString = "${POLL_INTERVAL_SECONDS:60}000")
+    @Scheduled(fixedDelayString = "${POLL_INTERVAL_SECONDS:300}000")
     public void pollMarketData() {
         try {
             // Enforce interval floor at execution time
