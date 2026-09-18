@@ -10,6 +10,10 @@ import com.capstone.executor.mapper.InstrumentDto;
 import com.capstone.executor.mapper.InstrumentMapper;
 import com.capstone.executor.mapper.OrderDto;
 import com.capstone.executor.mapper.OrderMapper;
+import com.capstone.executor.mapper.PortfolioDto;
+import com.capstone.executor.mapper.PortfolioMapper;
+import com.capstone.executor.mapper.PortfolioHoldingsMapper;
+import com.capstone.executor.mapper.TransactionMapper;
 import com.capstone.executor.client.FauxnanceQuoteClient;
 import com.capstone.executor.service.OrderExecutionService;
 import com.capstone.executor.service.TradeEventPublisher;
@@ -34,6 +38,9 @@ public class OrderExecutionIntegrationTest {
     @Mock private OrderMapper orderMapper;
     @Mock private AccountMapper accountMapper;
     @Mock private InstrumentMapper instrumentMapper;
+    @Mock private PortfolioMapper portfolioMapper;
+    @Mock private PortfolioHoldingsMapper portfolioHoldingsMapper;
+    @Mock private TransactionMapper transactionMapper;
     @Mock private TradeEventPublisher tradeEventPublisher;
     private OrderExecutionService service;
     private List<EventEnvelope<TradeEventPayload>> publishedEvents;
@@ -43,7 +50,8 @@ public class OrderExecutionIntegrationTest {
         publishedEvents = new ArrayList<>();
         lenient().doAnswer(inv -> { publishedEvents.add(inv.getArgument(0)); return null; })
             .when(tradeEventPublisher).publish(any());
-        service = new OrderExecutionService(quoteClient, orderMapper, accountMapper, instrumentMapper, tradeEventPublisher);
+        lenient().doNothing().when(transactionMapper).insert(anyString(), anyLong(), any(BigDecimal.class), any(BigDecimal.class), anyString());
+        service = new OrderExecutionService(quoteClient, orderMapper, accountMapper, instrumentMapper, portfolioMapper, portfolioHoldingsMapper, transactionMapper, tradeEventPublisher);
     }
     
     // Integration Test Case A: Fill
@@ -51,8 +59,17 @@ public class OrderExecutionIntegrationTest {
     public void testIntegrationFillBuyOrder() {
         // Setup: valid order, ACTIVE account, tradable instrument
         OrderDto order = new OrderDto("order-fill-buy", 1L, "acc-1", 1L, "BUY", 100, new BigDecimal("233.00"), "NEW", "key-fill", Instant.now(), null, null, null);
-        AccountDto account = new AccountDto(); account.setAccountId(1L); account.setStatus("ACTIVE"); account.setCashBalance(new BigDecimal("100000"));
-        InstrumentDto instrument = new InstrumentDto(); instrument.setSymbol("AAPL"); instrument.setTradable(true);
+        AccountDto account = new AccountDto(); 
+        account.setAccountId(1L); 
+        account.setStatus("ACTIVE"); 
+        account.setVersion(0L);  // Critical: set version to 0 so version guard matches
+        account.setCashBalance(new BigDecimal("100000"));
+        
+        InstrumentDto instrument = new InstrumentDto(); 
+        instrument.setInstrumentId(1L);  // Must match instrumentId in order
+        instrument.setSymbol("AAPL"); 
+        instrument.setTradable(true);
+        
         Quote quote = new Quote("AAPL", new BigDecimal("232.50"), new BigDecimal("232.40"), new BigDecimal("232.60"), "USD", null, null, null, "open", false, Instant.now());
         
         when(orderMapper.findById(eq("order-fill-buy"))).thenReturn(order);
@@ -60,6 +77,16 @@ public class OrderExecutionIntegrationTest {
         when(instrumentMapper.findBySymbol(eq("AAPL"))).thenReturn(instrument);
         when(quoteClient.fetchQuote(eq("AAPL"))).thenReturn(quote);
         when(orderMapper.updateToFilled(anyString(), any(), any())).thenReturn(1);
+        
+        // Mock portfolio and portfolio holdings for order settlement
+        PortfolioDto portfolio = new PortfolioDto();
+        portfolio.setPortfolioId(200L);
+        when(portfolioMapper.findByAccountId(eq(1L))).thenReturn(portfolio);
+        when(portfolioHoldingsMapper.findByPortfolioAndInstrument(eq(200L), anyLong())).thenReturn(null);
+        lenient().doNothing().when(portfolioHoldingsMapper).insert(anyLong(), anyLong(), any(), any());
+        
+        // Mock account cash update with version guard (returns 1 for success)
+        when(accountMapper.updateCashWithVersionGuard(eq(1L), any(BigDecimal.class), eq(0L))).thenReturn(1);
         
         EventEnvelope<OrderPlacedPayload> event = new EventEnvelope<>("evt-fill", "ORDER_PLACED", Instant.now(), "trade-api", 1,
             new OrderPlacedPayload("order-fill-buy", 1L, "AAPL", "BUY", 100, new BigDecimal("233.00"), "key-fill", Instant.now()));
