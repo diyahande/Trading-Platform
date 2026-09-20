@@ -133,8 +133,7 @@ public class OrderService {
         validateOrderParameters(request);
 
         // Validate sufficient funds/holdings (rules 6-7)
-        // This also reserves funds with optimistic locking on version
-        validateAndReserveFunds(request, account);
+        validateFunds(request, account);
 
         // Generate order ID from UUID
         UUID orderId = UUID.randomUUID();
@@ -225,7 +224,7 @@ public class OrderService {
      * @throws com.capstone.exception.ConcurrentModificationException if version mismatch
     * @throws InsufficientFundsException if insufficient funds
      */
-    private void validateAndReserveFunds(PlaceOrderRequest request, Account account) {
+    private void validateFunds(PlaceOrderRequest request, Account account) {
         OrderSide side = request.getSide();
 
         if (side == OrderSide.BUY) {
@@ -241,9 +240,8 @@ public class OrderService {
                 );
             }
 
-            // Reserve cash by deducting from account balance with optimistic locking
-            BigDecimal newBalance = account.getCashBalance().subtract(requiredCash);
-            accountService.updateCashBalance(account.getAccountId(), newBalance, account.getVersion());
+           
+            return;
         } else if (side == OrderSide.SELL) {
             // Check holdings for sell orders
             // TODO: Implement holdings validation via positions
