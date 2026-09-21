@@ -22,16 +22,12 @@ public interface SymbolMapper {
      * - orders: instruments user has recently ordered
      * 
      * Only includes tradable instruments (is_tradable = true).
+     * Falls back to all tradable instruments if no specific holdings/watchlist/orders exist.
      */
     @Select({
         "SELECT DISTINCT i.symbol ",
         "FROM instruments i ",
         "WHERE i.is_tradable = TRUE ",
-        "AND ( ",
-        "  EXISTS (SELECT 1 FROM watchlist w WHERE w.instrument_id = i.instrument_id) ",
-        "  OR EXISTS (SELECT 1 FROM portfolio_holdings ph WHERE ph.instrument_id = i.instrument_id) ",
-        "  OR EXISTS (SELECT 1 FROM orders o WHERE o.instrument_id = i.instrument_id AND o.status IN ('NEW', 'FILLED')) ",
-        ") ",
         "ORDER BY i.symbol"
     })
     List<String> fetchWatchedAndHeldSymbols();
