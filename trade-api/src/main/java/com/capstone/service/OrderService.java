@@ -9,6 +9,7 @@ import com.capstone.enums.OrderSide;
 import com.capstone.enums.OrderStatus;
 import com.capstone.exception.DuplicateOrderException;
 import com.capstone.exception.InsufficientFundsException;
+import com.capstone.exception.InsufficientHoldingsException;
 import com.capstone.exception.InvalidOrderException;
 import com.capstone.exception.OrderNotFoundException;
 import com.capstone.exception.OrderNotCancellableException;
@@ -114,9 +115,9 @@ public class OrderService {
      * 7. Sufficient holdings for sell orders (ORD-409)
      * 8. Idempotency key must be unique (ORD-409)
      *
-     * Transactional: Cash and position move together or neither moves.
-     * Optimistic locking: Version is checked on cash balance update; concurrent modification is ORD-409.
+    * Transactional: validation, order insert, and event registration move together.
      */
+    @Transactional
     public Order placeOrder(PlaceOrderRequest request, String idempotencyKey) {
         // Rule 8: idempotency key must be unique
         if (orderMapper.findOrderByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -133,7 +134,7 @@ public class OrderService {
         validateOrderParameters(request);
 
         // Validate sufficient funds/holdings (rules 6-7)
-        validateFunds(request, account);
+        validateFunds(request, account, instrument.getInstrumentId());
 
         // Generate order ID from UUID
         UUID orderId = UUID.randomUUID();
@@ -217,14 +218,12 @@ public class OrderService {
     }
 
     /**
-     * Validate and reserve funds for the order.
-     * For BUY orders: check sufficient cash balance and deduct funds with optimistic locking.
-     * For SELL orders: check sufficient holdings (TODO: full implementation).
+     * Validate order affordability for BUY and holdings sufficiency for SELL.
+     * No cash or holdings mutation happens in trade-api at placement time.
      * 
-     * @throws com.capstone.exception.ConcurrentModificationException if version mismatch
-    * @throws InsufficientFundsException if insufficient funds
+     * @throws InsufficientFundsException if insufficient funds
      */
-    private void validateFunds(PlaceOrderRequest request, Account account) {
+    private void validateFunds(PlaceOrderRequest request, Account account, Long instrumentId) {
         OrderSide side = request.getSide();
 
         if (side == OrderSide.BUY) {
@@ -240,12 +239,26 @@ public class OrderService {
                 );
             }
 
-           
             return;
         } else if (side == OrderSide.SELL) {
-            // Check holdings for sell orders
-            // TODO: Implement holdings validation via positions
+            BigDecimal requiredQuantity = new BigDecimal(request.getQuantity());
+            BigDecimal availableQuantity = orderMapper
+                    .findHoldingQuantityForUpdate(account.getAccountId(), instrumentId)
+                    .orElse(BigDecimal.ZERO);
+
+            if (availableQuantity.compareTo(requiredQuantity) < 0) {
+                throw new InsufficientHoldingsException(
+                        account.getAccountId(),
+                        request.getSymbol(),
+                        requiredQuantity,
+                        availableQuantity
+                );
+            }
+
+            return;
         }
+
+        throw new InvalidOrderException("side");
     }
 
     /**

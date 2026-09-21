@@ -5,6 +5,7 @@ import com.capstone.enums.OrderStatus;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.type.JdbcType;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -64,6 +65,20 @@ public interface OrderMapper {
             """)
     @ResultMap("orderMap")
     Optional<Order> findOrderByIdempotencyKey(@Param("idempotencyKey") String idempotencyKey);
+
+    @Select("""
+            SELECT ph.quantity
+            FROM portfolios p
+            JOIN portfolio_holdings ph
+              ON ph.portfolio_id = p.portfolio_id
+            WHERE p.account_id = #{accountId}
+              AND ph.instrument_id = #{instrumentId}
+            FOR UPDATE OF ph
+            """)
+    Optional<BigDecimal> findHoldingQuantityForUpdate(
+            @Param("accountId") Long accountId,
+            @Param("instrumentId") Long instrumentId
+    );
 
     @Update("""
             UPDATE orders
