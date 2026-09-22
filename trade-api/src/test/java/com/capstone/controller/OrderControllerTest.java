@@ -4,7 +4,7 @@ import com.capstone.dto.OrderHistoryEntry;
 import com.capstone.dto.OrderResponse;
 import com.capstone.dto.PlaceOrderRequest;
 import com.capstone.enums.OrderSide;
-import com.capstone.enums.OrderStatus;
+
 import com.capstone.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -110,8 +110,8 @@ class OrderControllerTest {
     @Test
     void getOrders_appliesStatusAndDateFilters() {
         when(authentication.getName()).thenReturn("11111111-1111-4111-8111-111111111111");
-        LocalDateTime from = LocalDateTime.now().minusHours(2);
-        LocalDateTime to = LocalDateTime.now().plusHours(1);
+        OffsetDateTime from = OffsetDateTime.now().minusHours(2);
+        OffsetDateTime to = OffsetDateTime.now().plusHours(1);
         OrderHistoryEntry filled = new OrderHistoryEntry(
             "ORD-2",
             "11111111-1111-4111-8111-111111111111",
@@ -122,7 +122,7 @@ class OrderControllerTest {
             null,
             "FILLED",
             "k2",
-            LocalDateTime.now().minusMinutes(30)
+            OffsetDateTime.now().minusMinutes(30)
         );
         when(orderService.getOrderHistoryForAuthorizedAccount("11111111-1111-4111-8111-111111111111", "FILLED", from, to, "11111111-1111-4111-8111-111111111111"))
             .thenReturn(List.of(filled));

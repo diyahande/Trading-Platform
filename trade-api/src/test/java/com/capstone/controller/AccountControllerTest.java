@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,7 +44,7 @@ class AccountControllerTest {
             new BigDecimal("50.00"),
             "ACTIVE",
             7,
-            LocalDateTime.now()
+            OffsetDateTime.now()
         );
         when(accountService.getAccountResponseForAuthorizedAccount("11111111-1111-4111-8111-111111111111", "11111111-1111-4111-8111-111111111111")).thenReturn(accountResponse);
 
@@ -66,7 +66,7 @@ class AccountControllerTest {
             "11111111-1111-4111-8111-111111111111",
             new BigDecimal("12.34"),
             "USD",
-            LocalDateTime.now()
+            OffsetDateTime.now()
         );
         when(accountService.getBalanceResponseForAuthorizedAccount("11111111-1111-4111-8111-111111111111", "11111111-1111-4111-8111-111111111111")).thenReturn(balanceResponse);
 

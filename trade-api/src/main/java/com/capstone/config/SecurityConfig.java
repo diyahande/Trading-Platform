@@ -14,9 +14,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Security configuration for JWT auth on /api/v1/** routes.
- */
+
 @Configuration
 public class SecurityConfig {
 
