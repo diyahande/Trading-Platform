@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 
 @Data
@@ -22,5 +22,5 @@ public class BalanceResponse {
     private String currency;
 
     
-    private LocalDateTime asOf;
+    private OffsetDateTime asOf;
 }

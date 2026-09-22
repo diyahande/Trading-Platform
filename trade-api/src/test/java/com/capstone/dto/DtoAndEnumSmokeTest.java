@@ -8,7 +8,7 @@ import com.capstone.enums.TransactionStatus;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,7 +30,7 @@ class DtoAndEnumSmokeTest {
 
     @Test
     void lombokDtos_haveUsableAccessors() {
-        LocalDateTime now = LocalDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now();
 
         AccountResponse accountResponse = new AccountResponse();
         accountResponse.setId(1L);
@@ -49,7 +49,7 @@ class DtoAndEnumSmokeTest {
         assertEquals("ACC-404", errorResponse.getErrorCode());
 
         OrderHistoryEntry historyEntry = new OrderHistoryEntry("ORD-1", "11111111-1111-4111-8111-111111111111", "AAPL", "BUY", 1,
-                new BigDecimal("10"), null, "NEW", "k", now);
+            new BigDecimal("10"), null, "NEW", "k", now);
         assertEquals("NEW", historyEntry.getStatus());
 
         OrderResponse orderResponse = new OrderResponse("ORD-2", "NEW", "ok", "AAPL", "BUY", 2, new BigDecimal("20"));

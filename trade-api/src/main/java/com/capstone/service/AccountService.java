@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +36,7 @@ public class AccountService {
         response.setCashBalance(account.getCashBalance());
         response.setStatus(account.getStatus().name());
         response.setVersion(account.getVersion().intValue());
-        response.setLastUpdated(LocalDateTime.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()));
+        response.setLastUpdated(OffsetDateTime.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()));
 
         return response;
     }
@@ -50,7 +50,7 @@ public class AccountService {
         response.setAccountId(account.getAccountReference());
         response.setCashBalance(balance);
         response.setCurrency("USD");
-        response.setAsOf(LocalDateTime.now());
+        response.setAsOf(OffsetDateTime.now());
 
         return response;
     }

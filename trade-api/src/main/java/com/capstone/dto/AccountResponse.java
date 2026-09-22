@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @NoArgsConstructor
@@ -25,5 +25,5 @@ public class AccountResponse {
  
     private Integer version;
 
-    private LocalDateTime lastUpdated;
+    private OffsetDateTime lastUpdated;
 }
