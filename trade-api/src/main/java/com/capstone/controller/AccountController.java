@@ -19,12 +19,7 @@ public class AccountController {
 
     private final AccountService accountService;
 
-    /**
-     * GET /api/v1/accounts/{accountRef}
-     * Returns account details.
-     * 
-     * Auth: Token's account key must match requested account reference (ACC-403 if not).
-     */
+   
     @GetMapping("/{accountRef}")
     public ResponseEntity<AccountResponse> getAccount(
             @PathVariable String accountRef,
@@ -34,12 +29,7 @@ public class AccountController {
         );
     }
 
-    /**
-     * GET /api/v1/accounts/{accountRef}/balance
-     * Returns cash balance.
-     * 
-     * Auth: Token's account key must match requested account reference (ACC-403 if not).
-     */
+ 
     @GetMapping("/{accountRef}/balance")
     public ResponseEntity<BalanceResponse> getBalance(
             @PathVariable String accountRef,
@@ -49,12 +39,7 @@ public class AccountController {
         );
     }
 
-    /**
-     * GET /api/v1/accounts/{accountRef}/positions
-     * Returns holdings.
-     * 
-     * Auth: Token's account key must match requested account reference (ACC-403 if not).
-     */
+ 
     @GetMapping("/{accountRef}/positions")
     public ResponseEntity<List<PositionResponse>> getPositions(
             @PathVariable String accountRef,

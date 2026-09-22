@@ -22,14 +22,8 @@ public class AccountResponse {
 
     private String status;
 
-    /**
-     * Optimistic lock version.
-     * Increments on every account update.
-     */
+ 
     private Integer version;
 
-    /**
-     * Last update timestamp.
-     */
     private LocalDateTime lastUpdated;
 }

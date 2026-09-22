@@ -42,9 +42,7 @@ public class OrderService {
     private final OrderPlacedEventPublisher orderPlacedEventPublisher;
     private final TransactionCommitHook transactionCommitHook;
 
-    /**
-     * Place order after account authorization and return API response payload.
-     */
+ 
     @Transactional
     public OrderResponse placeOrderForAuthorizedAccount(PlaceOrderRequest request, String accountKey) {
         accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
@@ -52,9 +50,7 @@ public class OrderService {
         return mapOrderToResponse(order, request.getSymbol());
     }
 
-    /**
-     * Cancel order after authorization and return updated API response payload.
-     */
+
     public OrderResponse cancelOrderForAuthorizedAccount(UUID orderId, String accountKey) {
         Order order = getOrderById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
 
@@ -67,9 +63,7 @@ public class OrderService {
         return mapOrderToResponse(cancelledOrder, null);
     }
 
-    /**
-     * Retrieve and filter account order history after authorization.
-     */
+ 
     public List<OrderHistoryEntry> getOrderHistoryForAuthorizedAccount(
             String accountReference,
             String status,
@@ -101,20 +95,7 @@ public class OrderService {
         return historyEntries;
     }
 
-    /**
-     * Place a new order with comprehensive validation.
-     * Validation rules (in order):
-     * 1. Account must exist (ACC-404)
-     * 2. Account must be active (ACC-403)
-     * 3. Instrument must exist and be tradable (INS-404)
-     * 4. Quantity must be positive (VAL-422)
-     * 5. Price must be positive (VAL-422)
-     * 6. Sufficient cash balance for buy orders (ORD-400)
-     * 7. Sufficient holdings for sell orders (ORD-409)
-     * 8. Idempotency key must be unique (ORD-409)
-     *
-    * Transactional: validation, order insert, and event registration move together.
-     */
+  
     @Transactional
     public Order placeOrder(PlaceOrderRequest request, String idempotencyKey) {
         // Rule 8: idempotency key must be unique
@@ -137,8 +118,7 @@ public class OrderService {
         // Generate order ID from UUID
         UUID orderId = UUID.randomUUID();
 
-        // Create Order entity using immutable constructor
-        // Convert quantity from Integer to BigDecimal for schema compatibility
+      
         Order order = new Order(
                 orderId,
                 account.getAccountId(),
@@ -161,27 +141,17 @@ public class OrderService {
         return order;
     }
 
-    /**
-     * Retrieve order by ID.
-     */
+
     public Optional<Order> getOrderById(UUID orderId) {
         return orderMapper.findOrderById(orderId);
     }
 
-    /**
-     * Retrieve all orders for a given account.
-     */
+
     public List<Order> getOrdersByAccountId(Long accountId) {
         return orderMapper.findOrdersByAccountId(accountId);
     }
 
-    /**
-     * Cancel/delete an order (update status to CANCELLED).
-     * Only succeeds if the order is currently in NEW status.
-     * Conditional in a single statement to prevent race conditions.
-     * 
-     * @throws OrderNotCancellableException (ORD-409) if order is not in NEW status
-     */
+  
     @Transactional
     public void cancelOrder(UUID orderId) {
         int rowsAffected = orderMapper.updateOrderStatusConditional(
@@ -195,16 +165,10 @@ public class OrderService {
         }
     }
 
-    /**
-     * Check for duplicate order using idempotency key.
-     */
     public Optional<Order> getOrderByIdempotencyKey(String idempotencyKey) {
         return orderMapper.findOrderByIdempotencyKey(idempotencyKey);
     }
 
-    /**
-     * Validate order parameters (quantity and price).
-     */
     private void validateOrderParameters(PlaceOrderRequest request) {
         if (request.getQuantity() == null || request.getQuantity() <= 0) {
             throw new InvalidOrderException("quantity");
@@ -215,12 +179,6 @@ public class OrderService {
         }
     }
 
-    /**
-     * Validate order affordability for BUY and holdings sufficiency for SELL.
-     * No cash or holdings mutation happens in trade-api at placement time.
-     * 
-     * @throws InsufficientFundsException if insufficient funds
-     */
     private void validateFunds(PlaceOrderRequest request, Account account, Long instrumentId) {
         OrderSide side = request.getSide();
 
@@ -259,17 +217,10 @@ public class OrderService {
         throw new InvalidOrderException("side");
     }
 
-    /**
-     * Update order status (used for order execution/completion).
-     */
     public void updateOrderStatus(UUID orderId, OrderStatus status) {
         orderMapper.updateOrderStatus(orderId, status);
     }
 
-    /**
-     * Map Order entity to OrderResponse DTO.
-     * Formats orderId with ORD- prefix.
-     */
     private OrderResponse mapOrderToResponse(Order order, String symbol) {
         OrderResponse response = new OrderResponse();
         response.setOrderId("ORD-" + order.getOrderId());

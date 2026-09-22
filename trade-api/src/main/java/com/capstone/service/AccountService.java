@@ -26,9 +26,6 @@ public class AccountService {
 
     private final AccountMapper accountMapper;
 
-    /**
-     * Retrieve account details for an authorized caller.
-     */
     public AccountResponse getAccountResponseForAuthorizedAccount(String accountReference, String accountKey) {
         Account account = verifyAuthorizedAccount(accountReference, accountKey);
 
@@ -44,9 +41,7 @@ public class AccountService {
         return response;
     }
 
-    /**
-     * Retrieve balance details for an authorized caller.
-     */
+
     public BalanceResponse getBalanceResponseForAuthorizedAccount(String accountReference, String accountKey) {
         Account account = verifyAuthorizedAccount(accountReference, accountKey);
         BigDecimal balance = getAccountBalance(account.getAccountId());
@@ -60,9 +55,7 @@ public class AccountService {
         return response;
     }
 
-    /**
-     * Retrieve positions for an authorized caller.
-     */
+
     public List<PositionResponse> getPositionsForAuthorizedAccount(String accountReference, String accountKey) {
         Account account = verifyAuthorizedAccount(accountReference, accountKey);
         return getPositionsByAccountId(account.getAccountId());
@@ -73,11 +66,7 @@ public class AccountService {
         return accountMapper.findAccountById(accountId);
     }
 
-    /**
-     * Resolve account from JWT token's account key (reference/username).
-     * Throws AccountNotFoundException if account doesn't exist (ACC-404).
-     * Throws AccountNotActiveException if account is not active (ACC-403).
-     */
+
     public Account resolveAccountFromToken(String accountKey) {
         Account account = accountMapper.findAccountByReference(accountKey)
                 .orElseThrow(() -> new AccountNotFoundException(-1L));
@@ -89,12 +78,6 @@ public class AccountService {
         return account;
     }
 
-    /**
-     * Verify the requested account matches the authenticated account key.
-     * Throws AccountNotFoundException if requested account doesn't exist (ACC-404).
-     * Throws AccountNotActiveException if requested account is not active (ACC-403).
-     * Throws AccountNotActiveException if account key doesn't match requested account (ACC-403).
-     */
     public Account verifyAuthorizedAccount(String requestedAccountReference, String accountKey) {
         Account requestedAccount = accountMapper.findAccountByReference(requestedAccountReference)
                 .orElseThrow(() -> new AccountNotFoundException(-1L));
@@ -111,10 +94,6 @@ public class AccountService {
         return requestedAccount;
     }
 
-    /**
-     * Retrieve account by reference with strict validation.
-     * Throws exception if account doesn't exist or is not active.
-     */
     public Account getAccountByReferenceStrict(String accountReference) {
         Account account = accountMapper.findAccountByReference(accountReference)
             .orElseThrow(() -> new AccountNotFoundException(-1L));
@@ -129,11 +108,7 @@ public class AccountService {
         return account;
     }
 
-    /**
-     * Retrieve account by ID with strict validation.
-     * Throws exception if account doesn't exist or is not active.
-     * Used by OrderService for validation.
-     */
+ 
     public Account getAccountByIdStrict(Long accountId) {
         Account account = accountMapper.findAccountById(accountId)
             .orElseThrow(() -> new AccountNotFoundException(accountId));
@@ -149,19 +124,12 @@ public class AccountService {
         return account;
     }
 
-    /**
-     * Retrieve account balance (cash balance).
-     */
     public BigDecimal getAccountBalance(Long accountId) {
         Account account = getAccountByIdStrict(accountId);
         return account.getCashBalance();
     }
 
-    /**
-     * Update account cash balance with optimistic locking.
-     * Increments the version to detect concurrent modifications.
-     * Throws ConcurrentModificationException if version mismatch is detected.
-     */
+  
     public void updateCashBalance(Long accountId, BigDecimal newBalance, Long version) {
         int rowsAffected = accountMapper.updateCashBalanceWithVersion(accountId, newBalance, version);
 
@@ -170,16 +138,7 @@ public class AccountService {
         }
     }
 
-    /**
-     * Retrieve all positions (holdings) for an account.
-     * Returns a list of PositionResponse objects containing:
-     * - holdingId
-     * - portfolioId
-     * - instrumentId
-     * - quantity
-     * - averagePrice
-     * - lastUpdated
-     */
+ 
     public List<PositionResponse> getPositionsByAccountId(Long accountId) {
         // Verify account exists first
         getAccountByIdStrict(accountId);
@@ -187,16 +146,9 @@ public class AccountService {
         return accountMapper.findPositionsByAccountId(accountId);
     }
 
-    /**
-     * Check if account exists (soft check, no exception).
-     */
     public boolean accountExists(Long accountId) {
         return accountMapper.findAccountById(accountId).isPresent();
     }
-
-    /**
-     * Check if account is active.
-     */
     public boolean isAccountActive(Long accountId) {
         try {
             getAccountByIdStrict(accountId);
@@ -206,9 +158,7 @@ public class AccountService {
         }
     }
 
-    /**
-     * Retrieve account details with all related data.
-     */
+    
     public Account getAccountDetails(Long accountId) {
         return getAccountByIdStrict(accountId);
     }

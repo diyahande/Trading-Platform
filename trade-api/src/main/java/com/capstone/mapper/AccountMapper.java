@@ -60,10 +60,6 @@ public interface AccountMapper {
     );
 
 
-    /**
-     * Find account by reference (username from JWT token's subject claim).
-     * Used to resolve token's account key to internal account ID.
-     */
     @Select("""
             SELECT 
                 account_id,
@@ -113,13 +109,6 @@ public interface AccountMapper {
     );
 
 
-    /**
-     * Update cash balance with optimistic locking.
-     * Reads the current version, increments it, and updates only if version matches.
-     * Returns the number of rows affected.
-     * - 1: Update succeeded, no concurrent modification
-     * - 0: Version mismatch, concurrent modification detected
-     */
     @Update("""
             UPDATE accounts
             SET cash_balance = #{cashBalance},
