@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -73,14 +73,12 @@ public class OrderService {
     public List<OrderHistoryEntry> getOrderHistoryForAuthorizedAccount(
             String accountReference,
             String status,
-            LocalDateTime from,
-            LocalDateTime to,
+            OffsetDateTime from,
+            OffsetDateTime to,
             String accountKey) {
         Account account = accountService.verifyAuthorizedAccount(accountReference, accountKey);
 
-        List<OrderHistoryEntry> historyEntries = getOrdersByAccountId(account.getAccountId()).stream()
-                .map(this::mapOrderToHistoryEntry)
-                .toList();
+        List<OrderHistoryEntry> historyEntries = orderMapper.findOrderHistoryByAccountId(account.getAccountId());
 
         if (status != null && !status.isEmpty()) {
             historyEntries = historyEntries.stream()
@@ -284,25 +282,4 @@ public class OrderService {
         return response;
     }
 
-    /**
-     * Map Order entity to OrderHistoryEntry DTO.
-     * For use in order history queries.
-     */
-    private OrderHistoryEntry mapOrderToHistoryEntry(Order order) {
-        OrderHistoryEntry entry = new OrderHistoryEntry();
-        entry.setOrderId("ORD-" + order.getOrderId());
-        entry.setAccountId(order.getAccountReference());
-        entry.setSymbol(null); // TODO: Fetch instrument symbol from database
-        entry.setSide(order.getSide().toString());
-        entry.setQuantity(order.getQuantity().intValue());
-        entry.setPrice(order.getPrice());
-        entry.setExecutedPrice(null); // TODO: Set when order is FILLED
-        entry.setStatus(order.getStatus().toString());
-        entry.setIdempotencyKey(order.getIdempotencyKey());
-
-        LocalDateTime createdOn = LocalDateTime.ofInstant(order.getCreatedAt(), ZoneId.systemDefault());
-        entry.setCreatedOn(createdOn);
-
-        return entry;
-    }
 }

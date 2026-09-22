@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * Order history entry for an account.
@@ -67,5 +67,5 @@ public class OrderHistoryEntry {
      * Order creation timestamp
      */
     
-    private LocalDateTime createdOn;
+    private OffsetDateTime createdOn;
 }
