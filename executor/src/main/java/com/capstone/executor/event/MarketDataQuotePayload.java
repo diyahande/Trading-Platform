@@ -4,14 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Payload for market-data QUOTE events on the market-data Kafka topic.
- * 
- * Contract binding: kafka-topics.md
- * 
- * A quote provides current market data for a single symbol. Fields match
- * what Fauxnance provides.
- */
+
 public class MarketDataQuotePayload {
 
     @JsonProperty("symbol")

@@ -109,28 +109,12 @@ public class FauxnanceQuoteClient {
                         body
                 );
 
-                // -------------------------------------------------
-                // SUCCESS
-                // -------------------------------------------------
+            
                 if (status >= 200 && status < 300) {
 
                     try {
 
-                        /*
-                         * Fauxnance response contains:
-                         *
-                         * {
-                         *     "data": {
-                         *         "symbol": "AAPL",
-                         *         "price": ...,
-                         *         "bid": ...,
-                         *         "ask": ...
-                         *     }
-                         * }
-                         *
-                         * Therefore deserialize into
-                         * FauxnanceQuoteResponse first.
-                         */
+                
 
                         FauxnanceQuoteResponse wrapper =
                                 objectMapper.readValue(
@@ -186,10 +170,7 @@ public class FauxnanceQuoteClient {
 
                     } catch (Exception parseException) {
 
-                        /*
-                         * This is a response parsing problem,
-                         * NOT a network problem.
-                         */
+                        
                         logger.error(
                                 "Could not parse Fauxnance response: symbol={} body={} error={}",
                                 symbol,
@@ -202,9 +183,7 @@ public class FauxnanceQuoteClient {
                     }
                 }
 
-                // -------------------------------------------------
-                // 4xx
-                // -------------------------------------------------
+              
                 if (status >= 400 && status < 500) {
 
                     logger.warn(
@@ -217,9 +196,6 @@ public class FauxnanceQuoteClient {
                     return null;
                 }
 
-                // -------------------------------------------------
-                // 5xx
-                // -------------------------------------------------
                 if (status >= 500) {
 
                     logger.warn(
@@ -328,15 +304,7 @@ public class FauxnanceQuoteClient {
         return null;
     }
 
-    /**
-     * Fetch batch quotes for multiple symbols in a single Fauxnance request.
-     * 
-     * Symbols are comma-separated in the URL query string, up to 25 per request.
-     * Fauxnance batch endpoint returns all quotes in a single JSON array.
-     * 
-     * @param symbols list of symbols to fetch, should not exceed 25
-     * @return map of symbol to Quote, with null values for failed symbols
-     */
+
     public Map<String, Quote> fetchQuotesBatch(List<String> symbols) {
         if (symbols == null || symbols.isEmpty()) {
             logger.warn("Batch quote requested with null/empty symbols");
@@ -395,32 +363,10 @@ public class FauxnanceQuoteClient {
                         body.length()
                 );
 
-                // -------------------------------------------------
-                // SUCCESS
-                // -------------------------------------------------
+               
                 if (status >= 200 && status < 300) {
                     try {
-                        /*
-                         * Fauxnance batch response contains:
-                         *
-                         * {
-                         *     "data": {
-                         *         "quotes": [
-                         *             {
-                         *                 "symbol": "AAPL",
-                         *                 "source": "cache",
-                         *                 "stale": false,
-                         *                 "quote": {
-                         *                     "symbol": "AAPL",
-                         *                     "price": 332.41,
-                         *                     ...
-                         *                 }
-                         *             },
-                         *             ...
-                         *         ]
-                         *     }
-                         * }
-                         */
+                        
                         logger.info("Fauxnance batch response body (first 500 chars): {}", 
                                 body.length() > 500 ? body.substring(0, 500) : body);
                         
@@ -532,9 +478,7 @@ public class FauxnanceQuoteClient {
                     }
                 }
 
-                // -------------------------------------------------
-                // 4xx
-                // -------------------------------------------------
+              
                 if (status >= 400 && status < 500) {
                     logger.warn(
                             "Fauxnance batch 4xx: count={} status={} body={}",
@@ -549,9 +493,7 @@ public class FauxnanceQuoteClient {
                     return errorQuotes;
                 }
 
-                // -------------------------------------------------
-                // 5xx
-                // -------------------------------------------------
+          
                 if (status >= 500) {
                     logger.warn(
                             "Fauxnance batch 5xx: count={} status={} attempt={}/{}",

@@ -120,9 +120,7 @@ public class OrderExecutionIntegrationTest {
     // Integration Test Case C: Pricing unavailable (Fauxnance outage) - RECOVERABLE
     @Test
     public void testIntegrationPricingUnavailableAfterRetries() {
-        // Setup: Fauxnance returns null after retries
-        // NEW BEHAVIOR: This is now treated as a recoverable error and throws exception
-        // The Kafka consumer will retry the message
+       
         OrderDto order = new OrderDto("order-pricing-na", 1L, "acc-1", 1L, "BUY", 100, new BigDecimal("233.00"), "NEW", "key-pna", Instant.now(), null, null, null);
         AccountDto account = new AccountDto(); 
         account.setAccountId(1L); 
@@ -153,11 +151,7 @@ public class OrderExecutionIntegrationTest {
     // Integration test: FauxnanceQuoteClient retry behavior - RECOVERABLE
     @Test
     public void testFauxnanceRetryBehavior() {
-        // This test verifies the quote client retries on 5xx and eventually returns null
-        // The client is tested separately but we verify integration with service
-        // NEW BEHAVIOR: When quote is null, throw exception for retry (not permanent rejection)
         
-        // Setup: quote client will return null after retries
         OrderDto order = new OrderDto("order-retry", 1L, "acc-1", 1L, "SELL", 50, new BigDecimal("232.00"), "NEW", "key-retry", Instant.now(), null, null, null);
         AccountDto account = new AccountDto(); 
         account.setAccountId(1L); 

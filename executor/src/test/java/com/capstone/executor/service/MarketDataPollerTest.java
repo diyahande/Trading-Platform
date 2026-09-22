@@ -16,15 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for MarketDataPoller.
- * 
- * Covers:
- * - Batch of up to 25 symbols is fetched in one request
- * - Each quote is published as its own message keyed by symbol
- * - The configured interval stays inside the daily quota for the declared symbol set
- * - The interval floor is enforced in code
- */
+
 public class MarketDataPollerTest {
 
     @Mock
@@ -43,12 +35,6 @@ public class MarketDataPollerTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    /**
-     * TEST: A batch of up to 25 symbols is fetched in one request.
-     * 
-     * Verifies that the poller batches symbols correctly and calls
-     * fetchQuotesBatch with the expected batch size.
-     */
     @Test
     public void testBatchFetchUpTo25Symbols() {
         // Arrange
@@ -96,12 +82,7 @@ public class MarketDataPollerTest {
         verify(kafkaPublisher, times(24)).publishQuote(any());
     }
 
-    /**
-     * TEST: Each quote is published as its own message keyed by symbol.
-     * 
-     * Verifies that publishQuote is called once per unique symbol,
-     * demonstrating one message per symbol, not one per batch.
-     */
+ 
     @Test
     public void testEachQuotePublishedAsOwnMessage() {
         // Arrange
@@ -136,23 +117,11 @@ public class MarketDataPollerTest {
                 30L
         );
 
-        // Act
         poller.pollMarketData();
 
-        // Assert
-        // Should publish exactly 3 messages, one per symbol
         verify(kafkaPublisher, times(3)).publishQuote(any());
     }
 
-    /**
-     * TEST: The configured interval stays inside the daily quota.
-     * 
-     * Verifies quota calculation:
-     * - 24 symbols at 30 second interval
-     * - 86400 seconds/day ÷ 30 seconds = 2880 polls/day
-     * - 2880 polls × 1 batch = 2880 requests/day
-     * - Within the 2000 request/day quota requires batching
-     */
     @Test
     public void testQuotaCalculationForConfiguredInterval() {
         // Arrange
@@ -174,32 +143,16 @@ public class MarketDataPollerTest {
         int batchesPerPoll = 1;  // 24 symbols <= 25 limit
         long requestsPerDay = pollsPerDay * batchesPerPoll; // 1440
 
-        // Verify quota calculation
-        // Note: 1440 is within 2000, so 24 symbols at 60 seconds stays under quota
-        // with proper batching (vs one-at-a-time) it's 8x better than
-        // single-symbol fetching which would be 11520 per day
-        
-        // For staying within 2000 quota:
-        // requestsPerDay <= 2000
-        // (86400 / interval) * 1 <= 2000
-        // interval >= 86400 / 2000 = 43.2 seconds
-        // At 24 symbols, 60 second interval is within 2000 request/day quota
         assertTrue(requestsPerDay <= 2000 && requestsPerDay > 43, 
                 "24 symbols at 60 second interval should be within 2000 request/day quota");
 
-        // But validate the batching is working correctly
-        // With batching: much better than without
+        
         long requestsPerDayWithoutBatching = 24 * pollsPerDay;
         assertTrue(requestsPerDay < requestsPerDayWithoutBatching,
                 "Batched requests should be less than non-batched");
     }
 
-    /**
-     * TEST: The interval floor is enforced in code.
-     * 
-     * Verifies that when an interval below the minimum floor is provided,
-     * it is clamped to the minimum value.
-     */
+
     @Test
     public void testIntervalFloorEnforced() {
         // Arrange
@@ -220,11 +173,7 @@ public class MarketDataPollerTest {
                 "Minimum interval floor should be 60 seconds");
     }
 
-    /**
-     * TEST: Interval floor enforcement edge case - exact floor value.
-     * 
-     * Verifies that the exact floor value is accepted without clamping.
-     */
+  
     @Test
     public void testIntervalFloorExactValue() {
         // Arrange
@@ -243,11 +192,7 @@ public class MarketDataPollerTest {
                 "Interval at floor should be accepted");
     }
 
-    /**
-     * TEST: Interval floor enforcement edge case - above floor value.
-     * 
-     * Verifies that intervals above the floor are accepted without clamping.
-     */
+  
     @Test
     public void testIntervalFloorAboveFloor() {
         // Arrange
@@ -266,12 +211,7 @@ public class MarketDataPollerTest {
                 "Interval above floor should be accepted as-is");
     }
 
-    /**
-     * TEST: Multiple batches when symbol count exceeds 25.
-     * 
-     * Verifies that symbols beyond 25 per batch are handled correctly
-     * and fetchQuotesBatch is called multiple times.
-     */
+  
     @Test
     public void testMultipleBatchesWhenSymbolsExceed25() {
         // Arrange
@@ -282,8 +222,6 @@ public class MarketDataPollerTest {
 
         when(symbolMapper.fetchWatchedAndHeldSymbols()).thenReturn(symbols);
 
-        // Mock fetchQuotesBatch to return quotes for only the requested symbols
-        // This ensures each batch returns only its portion of quotes
         when(fauxnanceClient.fetchQuotesBatch(any())).thenAnswer(invocation -> {
             List<String> requestedSymbols = invocation.getArgument(0);
             Map<String, Quote> batchQuotes = new HashMap<>();
@@ -316,19 +254,13 @@ public class MarketDataPollerTest {
         // Act
         poller.pollMarketData();
 
-        // Assert
-        // Should call fetchQuotesBatch 3 times (52 / 25 = 3 batches: 25+25+2)
+    
         verify(fauxnanceClient, times(3)).fetchQuotesBatch(any());
-        // Should publish all 52 quotes (one per symbol)
+       
         verify(kafkaPublisher, times(52)).publishQuote(any());
     }
 
-    /**
-     * TEST: Handles missing quotes gracefully.
-     * 
-     * Verifies that when a symbol returns null quote, it's not published
-     * and the poller continues with other symbols.
-     */
+
     @Test
     public void testHandlesMissingQuotes() {
         // Arrange
@@ -378,16 +310,11 @@ public class MarketDataPollerTest {
         // Act
         poller.pollMarketData();
 
-        // Assert
-        // Should only publish 2 quotes (AAPL and GOOGL, not MSFT)
+  
         verify(kafkaPublisher, times(2)).publishQuote(any());
     }
 
-    /**
-     * TEST: Empty symbol list is handled gracefully.
-     * 
-     * Verifies that when no symbols are available, the poller exits cleanly.
-     */
+  
     @Test
     public void testHandlesEmptySymbolList() {
         // Arrange
