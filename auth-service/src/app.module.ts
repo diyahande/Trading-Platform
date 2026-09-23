@@ -1,10 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { JwtService } from './auth/jwt.service';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { AuthModule } from './auth/auth.module';
 
 
 @Module({
@@ -12,9 +9,10 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    AuthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, JwtService, JwtAuthGuard],
-  exports: [JwtService, JwtAuthGuard],
+  controllers: [],
+  providers: [],
+  exports: [],
 })
 export class AppModule {}

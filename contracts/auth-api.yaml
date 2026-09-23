@@ -15,8 +15,7 @@ info:
 
     | Claim | Type | Meaning |
     |---|---|---|
-    | `sub` | string | The user identifier. A UUID. Stable for the life of the user. Not the username, not the email, because both can change. |
-    | `accountId` | integer | The numeric trading account key, `ACCOUNTS.id`. The Trade REST API compares this against the account in the request path or body and returns `ACC-403` if they differ. |
+    | `sub` | string | Use the account reference. |
     | `roles` | array of string | Authorisation roles. `CUSTOMER` for a normal trading user, `ADMIN` for an operator. Always present, never empty. |
     | `iat` | integer | Issued-at, seconds since the Unix epoch. |
     | `exp` | integer | Expiry, seconds since the Unix epoch. Fifteen minutes after `iat` for an access token. |
@@ -26,8 +25,7 @@ info:
 
     ```json
     {
-      "sub": "8f14e45f-ceea-4c1b-9d3b-1a2b3c4d5e6f",
-      "accountId": 1,
+      "sub": "11111111-1111-4111-8111-111111111111",
       "roles": ["CUSTOMER"],
       "iat": 1790000000,
       "exp": 1790000900,
