@@ -8,6 +8,8 @@ describe('JwtAuthGuard', () => {
   let jwtService: JwtService;
 
   beforeEach(async () => {
+    // ensure a known secret during tests
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
     const mod = await Test.createTestingModule({
       providers: [JwtService, JwtAuthGuard],
     }).compile();
@@ -22,14 +24,16 @@ describe('JwtAuthGuard', () => {
   }
 
   it('a valid token is accepted', () => {
-    const token = jwtService.sign({ sub: 'uuid', accountId: 1, roles: ['CUSTOMER'], iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 900, iss: 'auth-service' });
+    // sign with the service helper for 15 minutes
+    const token = jwtService.sign({ sub: 'uuid', accountId: 1, roles: ['CUSTOMER'], iss: 'auth-service' }, 900);
     const ctx = makeContext(`Bearer ${token}`);
     expect(guard.canActivate(ctx)).toBe(true);
   });
 
   it('an expired token is refused', () => {
+    // build a genuine token with a past expiry and sign it with the service secret
     const past = Math.floor(Date.now() / 1000) - 3600;
-    const token = jwt.sign({ sub: 'uuid', accountId: 1, roles: ['CUSTOMER'], iat: past - 100, exp: past, iss: 'auth-service' }, process.env.JWT_SECRET || 'dev-secret', { algorithm: 'HS256' });
+    const token = jwt.sign({ sub: 'uuid', accountId: 1, roles: ['CUSTOMER'], iat: past - 10, exp: past, iss: 'auth-service' }, process.env.JWT_SECRET || 'dev-secret', { algorithm: 'HS256' });
     const ctx = makeContext(`Bearer ${token}`);
     expect(() => guard.canActivate(ctx)).toThrow();
   });
