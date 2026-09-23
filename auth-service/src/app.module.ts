@@ -3,8 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { JwtService } from './auth/jwt.service';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { JwtService } from './auth-guard/jwt.service';
+import { JwtAuthGuard } from './auth-guard/jwt-auth.guard';
 
 
 @Module({
