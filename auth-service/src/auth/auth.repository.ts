@@ -43,6 +43,17 @@ export class AuthRepository implements OnModuleDestroy {
     return this.mapUser(result.rows[0]);
   }
 
+  async findUserByAccountId(accountId: string): Promise<AuthUserRecord | null> {
+    const result = await this.pool.query<UserRow>(
+      `SELECT id, username, password_hash, account_reference, roles, created_on
+       FROM auth_users
+       WHERE account_reference = $1`,
+      [accountId],
+    );
+
+    return this.mapUser(result.rows[0]);
+  }
+
   async createUser(input: {
     username: string;
     passwordHash: string;

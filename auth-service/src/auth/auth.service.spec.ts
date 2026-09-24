@@ -13,6 +13,7 @@ describe('AuthService', () => {
     authRepository = {
       findUserByUsername: jest.fn(),
       findUserById: jest.fn(),
+      findUserByAccountId: jest.fn(),
       createUser: jest.fn(),
       storeRefreshToken: jest.fn(),
       findRefreshTokenByHash: jest.fn(),

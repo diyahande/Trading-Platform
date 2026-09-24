@@ -93,7 +93,7 @@ export class AuthService {
   }
 
   async me(claims: AccessTokenClaims): Promise<UserResponseDto> {
-    const user = await this.authRepository.findUserById(claims.sub);
+    const user = await this.authRepository.findUserByAccountId(claims.sub);
     if (!user) {
       throw new UnauthorizedException(ERROR_UNAUTHORISED);
     }
@@ -111,7 +111,7 @@ export class AuthService {
     });
 
     return {
-      accessToken: this.tokenService.signAccessToken(user.id, user.accountId, user.roles),
+      accessToken: this.tokenService.signAccessToken(user.accountId, user.roles),
       refreshToken,
       tokenType: 'Bearer',
       expiresIn: this.tokenService.accessTtlSeconds,

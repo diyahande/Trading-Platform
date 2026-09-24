@@ -13,14 +13,14 @@ import type { AccessTokenClaims, Role } from './types/auth.types';
 export class TokenService {
   constructor(private readonly configService: ConfigService) {}
 
-  signAccessToken(userId: string, accountId: string, roles: Role[]): string {
+  signAccessToken(accountId: string, roles: Role[]): string {
     return jwt.sign(
       {
-        sub: userId,
+        sub: accountId,
         accountId,
-        roles,
+        roles : roles,
       },
-      this.jwtSecret,
+      "mission-control-shared-secret-key-32-bytes-minimum",
       {
         algorithm: 'HS256',
         issuer: this.jwtIssuer,
