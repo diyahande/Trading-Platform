@@ -25,6 +25,14 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Sprint 8 security review
+
+This sprint uses a filled security review derived from the provided template.
+
+- Review file: `security-review/sprint-08-auth-service-review.md`
+- Scope: OWASP Top Ten categories relevant to the auth service, with written findings and dispositions for each category
+- Evidence: command outputs and code locations captured in the review document
+
 ## Project setup
 
 ```bash

@@ -38,6 +38,11 @@ export class AuthService {
       throw new ConflictException(ERROR_REGISTRATION_FAILED);
     }
 
+    const existingAccountId = await this.authRepository.findUserByAccountId(request.accountId);
+    if (existingAccountId) {
+      throw new ConflictException(ERROR_REGISTRATION_FAILED);
+    }
+
     const user = await this.authRepository.createUser({
       username: request.username,
       passwordHash: await bcrypt.hash(request.password, 12),

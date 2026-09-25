@@ -25,6 +25,14 @@ describe('JwtAuthGuard', () => {
     guard = new JwtAuthGuard(new TokenService(configService));
   });
 
+  beforeEach(() => {
+    console.info(`[TEST START] ${expect.getState().currentTestName}`);
+  });
+
+  afterEach(() => {
+    console.info(`[TEST END] ${expect.getState().currentTestName}`);
+  });
+
   const makeContext = (authorization?: string) => {
     const request = { headers: { authorization } };
 
@@ -83,6 +91,40 @@ describe('JwtAuthGuard', () => {
 
   it('rejects malformed authorization header', () => {
     const { context } = makeContext('MalformedHeaderValue');
+    expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
+  });
+
+  it('rejects missing authorization header', () => {
+    const { context } = makeContext(undefined);
+    expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
+  });
+
+  it('rejects non-bearer authorization scheme', () => {
+    const { context } = makeContext('Basic abc123');
+    expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
+  });
+
+  it('rejects malformed jwt token payload', () => {
+    const { context } = makeContext('Bearer not-a-jwt-token');
+    expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
+  });
+
+  it('rejects token with empty roles claim', () => {
+    const token = jwt.sign(
+      {
+        sub: '8f14e45f-ceea-4c1b-9d3b-1a2b3c4d5e6f',
+        accountId: '11111111-1111-4111-8111-111111111111',
+        roles: [],
+      },
+      secret,
+      {
+        algorithm: 'HS256',
+        issuer: 'auth-service',
+        expiresIn: 900,
+      },
+    );
+
+    const { context } = makeContext(`Bearer ${token}`);
     expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
   });
 

@@ -18,6 +18,7 @@ import { RegisterRequestDto } from './dto/register-request.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LoginThrottleGuard } from './guards/login-throttle.guard';
 import type { AccessTokenClaims } from './types/auth.types';
 
 @ApiTags('Auth')
@@ -37,10 +38,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @UseGuards(LoginThrottleGuard)
   @ApiOperation({ summary: 'Log in and receive tokens' })
   @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ type: TokenResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 429, type: ErrorResponseDto })
   @ApiResponse({ status: 422, type: ErrorResponseDto })
   login(@Body() request: LoginRequestDto): Promise<TokenResponseDto> {
     return this.authService.login(request);
