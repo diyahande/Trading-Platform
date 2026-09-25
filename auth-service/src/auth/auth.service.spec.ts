@@ -1,13 +1,24 @@
 import { UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { TokenService } from './token.service';
+import type { Role } from './types/auth.types';
 
 describe('AuthService', () => {
   let authService: AuthService;
   let authRepository: jest.Mocked<AuthRepository>;
   let tokenService: jest.Mocked<TokenService>;
+
+  const userRecord = {
+    id: 'user-id',
+    username: 'priya.menon',
+    passwordHash: '$2b$12$gR1nXz7VvPBmkfA6o8URxe2P0xX0/84f8M6XqQ.A8lP3bEf4thvqe',
+    accountId: '11111111-1111-4111-8111-111111111111',
+    roles: ['CUSTOMER'] as Role[],
+    createdOn: new Date('2026-01-01T00:00:00Z'),
+  };
 
   beforeEach(() => {
     authRepository = {
@@ -61,6 +72,39 @@ describe('AuthService', () => {
     expect(authRepository.storeRefreshToken).toHaveBeenCalledTimes(1);
   });
 
+  it('newly issued refresh token can be exchanged for a fresh token pair', async () => {
+    authRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'refresh-id-1',
+      userId: 'user-id',
+      tokenHash: 'hash',
+      expiresOn: new Date(Date.now() + 10_000),
+      consumedOn: null,
+      revokedOn: null,
+    });
+    authRepository.consumeRefreshToken.mockResolvedValue(true);
+    authRepository.findUserById.mockResolvedValue(userRecord);
+    tokenService.signAccessToken.mockReturnValue('access-token-1');
+
+    const first = await authService.refresh({ refreshToken: 'valid-refresh-token' });
+    expect(first.accessToken).toBe('access-token-1');
+
+    authRepository.findRefreshTokenByHash.mockResolvedValueOnce({
+      id: 'refresh-id-2',
+      userId: 'user-id',
+      tokenHash: 'hash-2',
+      expiresOn: new Date(Date.now() + 10_000),
+      consumedOn: null,
+      revokedOn: null,
+    });
+    tokenService.signAccessToken.mockReturnValueOnce('access-token-2');
+
+    const second = await authService.refresh({ refreshToken: first.refreshToken });
+
+    expect(second.accessToken).toBe('access-token-2');
+    expect(second.refreshToken).toHaveLength(64);
+    expect(authRepository.storeRefreshToken).toHaveBeenCalledTimes(2);
+  });
+
   it('revokes all refresh tokens and rejects when a consumed token is presented again', async () => {
     authRepository.findRefreshTokenByHash.mockResolvedValue({
       id: 'refresh-id',
@@ -80,4 +124,80 @@ describe('AuthService', () => {
       expect.any(Date),
     );
   });
+
+  it('accepts login with correct password and issues tokens', async () => {
+    const password = 'StrongPassword#123';
+    const hash = await bcrypt.hash(password, 12);
+
+    authRepository.findUserByUsername.mockResolvedValue({
+      ...userRecord,
+      passwordHash: hash,
+    });
+    tokenService.signAccessToken.mockReturnValue('access-token');
+
+    const result = await authService.login({
+      username: userRecord.username,
+      password,
+    });
+
+    expect(result.accessToken).toBe('access-token');
+    expect(result.refreshToken).toHaveLength(64);
+    expect(result.tokenType).toBe('Bearer');
+    expect(result.expiresIn).toBe(900);
+  });
+
+  it('rejects login with incorrect password', async () => {
+    const hash = await bcrypt.hash('CorrectPassword#123', 12);
+    authRepository.findUserByUsername.mockResolvedValue({
+      ...userRecord,
+      passwordHash: hash,
+    });
+
+    await expect(
+      authService.login({
+        username: userRecord.username,
+        password: 'WrongPassword#123',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('unknown user and wrong password both return UnauthorizedException with same body', async () => {
+    authRepository.findUserByUsername.mockResolvedValueOnce(null);
+
+    await expect(
+      authService.login({
+        username: 'unknown.user',
+        password: 'SomePassword#123',
+      }),
+    ).rejects.toEqual(expect.objectContaining({ response: expect.objectContaining({ errorCode: 'AUTH-401' }) }));
+
+    const hash = await bcrypt.hash('CorrectPassword#123', 12);
+    authRepository.findUserByUsername.mockResolvedValueOnce({
+      ...userRecord,
+      passwordHash: hash,
+    });
+
+    await expect(
+      authService.login({
+        username: userRecord.username,
+        password: 'WrongPassword#123',
+      }),
+    ).rejects.toEqual(expect.objectContaining({ response: expect.objectContaining({ errorCode: 'AUTH-401' }) }));
+  });
+
+  it('unknown user path still performs bcrypt compare using dummy hash', async () => {
+    const issueTokenPairSpy = jest.spyOn(authService as never, 'issueTokenPair');
+    authRepository.findUserByUsername.mockResolvedValue(null);
+
+    await expect(
+      authService.login({
+        username: 'unknown.user',
+        password: 'AnyPassword#123',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(issueTokenPairSpy).not.toHaveBeenCalled();
+  });
+
+  it.todo('throttle limits repeated failed attempts from one caller');
 });

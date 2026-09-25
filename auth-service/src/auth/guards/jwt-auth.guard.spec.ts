@@ -76,7 +76,13 @@ describe('JwtAuthGuard', () => {
       },
     );
 
-    const { context } = makeContext(`Bearer ${token}`);
+    const { context, request } = makeContext(`Bearer ${token}`);
+    expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
+    expect(request).not.toHaveProperty('user');
+  });
+
+  it('rejects malformed authorization header', () => {
+    const { context } = makeContext('MalformedHeaderValue');
     expect(() => guard.canActivate(context as never)).toThrow(UnauthorizedException);
   });
 
