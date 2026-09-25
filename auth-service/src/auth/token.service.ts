@@ -18,9 +18,9 @@ export class TokenService {
       {
         sub: accountId,
         accountId,
-        roles : roles,
+        roles,
       },
-      "mission-control-shared-secret-key-32-bytes-minimum",
+      this.jwtSecret,
       {
         algorithm: 'HS256',
         issuer: this.jwtIssuer,
