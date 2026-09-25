@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -36,6 +36,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Log in and receive tokens' })
   @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ type: TokenResponseDto })
@@ -46,6 +47,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
   @ApiBody({ type: RefreshRequestDto })
   @ApiOkResponse({ type: TokenResponseDto })
