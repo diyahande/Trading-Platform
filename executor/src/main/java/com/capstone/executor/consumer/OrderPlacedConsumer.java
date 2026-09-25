@@ -15,12 +15,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
-/**
- * Consumes ORDER_PLACED events from the orders topic.
- *
- * Permanent failures are sent directly to orders.DLT.
- * Transient failures are retried with bounded exponential backoff.
- */
+
 @Component
 public class OrderPlacedConsumer {
 
@@ -79,11 +74,7 @@ public class OrderPlacedConsumer {
         int retryCount =
                 retryPolicy.parseRetryCount(retryCountHeader);
 
-        /*
-         * ---------------------------------------------------------
-         * DESERIALIZATION
-         * ---------------------------------------------------------
-         */
+      
         EventEnvelope<OrderPlacedPayload> orderEvent;
 
         try {
@@ -100,9 +91,7 @@ public class OrderPlacedConsumer {
 
         } catch (Exception e) {
 
-            /*
-             * Malformed JSON is permanent.
-             */
+          
             FailureClassifier.FailureClassification classification =
                     failureClassifier.classify(e, message);
 
@@ -122,11 +111,7 @@ public class OrderPlacedConsumer {
             return;
         }
 
-        /*
-         * ---------------------------------------------------------
-         * EVENT TYPE VALIDATION
-         * ---------------------------------------------------------
-         */
+     
         if (orderEvent == null) {
 
             String reason =
@@ -167,12 +152,7 @@ public class OrderPlacedConsumer {
             return;
         }
 
-        /*
-         * ---------------------------------------------------------
-         * PAYLOAD VALIDATION
-         * ---------------------------------------------------------
-         */
-        if (orderEvent.getPayload() == null) {
+               if (orderEvent.getPayload() == null) {
 
             String reason =
                     "MISSING_ORDER_ID: payload is missing";
@@ -212,11 +192,7 @@ public class OrderPlacedConsumer {
             return;
         }
 
-        /*
-         * ---------------------------------------------------------
-         * PROCESS ORDER
-         * ---------------------------------------------------------
-         */
+     
         logger.debug(
                 "Processing order: orderId={}, retryCount={}",
                 orderEvent.getPayload().getOrderId(),
@@ -229,9 +205,7 @@ public class OrderPlacedConsumer {
 
                 executionService.executeOrder(orderEvent);
 
-                /*
-                 * Processing succeeded.
-                 */
+            
                 ack.acknowledge();
 
                 logger.info(
@@ -254,11 +228,6 @@ public class OrderPlacedConsumer {
                 FailureClassifier.FailureClassification classification =
                         failureClassifier.classify(e, message);
 
-                /*
-                 * -------------------------------------------------
-                 * PERMANENT FAILURE
-                 * -------------------------------------------------
-                 */
                 if (!classification.isRecoverable()) {
 
                     logger.warn(
@@ -278,11 +247,6 @@ public class OrderPlacedConsumer {
                     return;
                 }
 
-                /*
-                 * -------------------------------------------------
-                 * RETRY AVAILABLE
-                 * -------------------------------------------------
-                 */
                 if (retryPolicy.shouldRetry(retryCount)) {
 
                     long backoffMs =
@@ -327,11 +291,7 @@ public class OrderPlacedConsumer {
                     continue;
                 }
 
-                /*
-                 * -------------------------------------------------
-                 * RETRY BUDGET EXHAUSTED
-                 * -------------------------------------------------
-                 */
+            
                 String dlqReason =
                         "RETRY_BUDGET_EXHAUSTED: "
                                 + classification.getReason();

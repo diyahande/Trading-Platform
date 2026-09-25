@@ -22,32 +22,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Handles transactional settlement of orders.
- *
- * This class is responsible ONLY for database settlement.
- *
- * Kafka publication is intentionally NOT done inside this class.
- *
- * Flow:
- *
- * OrderExecutionService
- *        |
- *        v
- * SettlementService.fillOrder()
- *        |
- *        v
- * Database transaction
- *        |
- *        v
- * COMMIT
- *        |
- *        v
- * return TradeEvent to OrderExecutionService
- *        |
- *        v
- * publish to Kafka
- */
+
 @Service
 public class SettlementService {
 
@@ -74,26 +49,7 @@ public class SettlementService {
         this.transactionMapper = transactionMapper;
     }
 
-    /**
-     * Settles a filled order.
-     *
-     * IMPORTANT:
-     *
-     * Because this method is public and belongs to a separate
-     * Spring bean, @Transactional is actually applied.
-     *
-     * All database changes happen in one transaction:
-     *
-     * 1. Order -> FILLED
-     * 2. Account cash update
-     * 3. Portfolio position update
-     * 4. Transaction record
-     *
-     * If anything fails, the entire transaction rolls back.
-     *
-     * After the transaction commits successfully, this method
-     * returns the TradeEvent to the caller.
-     */
+   
     @Transactional
     public EventEnvelope<TradeEventPayload> fillOrder(
             String orderId,
@@ -123,15 +79,7 @@ public class SettlementService {
 
         Instant executedOn = Instant.now();
 
-        /*
-         * ---------------------------------------------------------
-         * 1. Guarded order state transition
-         * ---------------------------------------------------------
-         *
-         * Only NEW orders can become FILLED.
-         *
-         * If updated == 0, the order was already processed.
-         */
+   
         int updated =
                 orderMapper.updateToFilled(
                         orderId,
@@ -158,14 +106,6 @@ public class SettlementService {
         BigDecimal quantity =
                 BigDecimal.valueOf(payload.getQuantity());
 
-        /*
-         * ---------------------------------------------------------
-         * 2. Calculate cash movement
-         * ---------------------------------------------------------
-         *
-         * BUY  -> negative cash
-         * SELL -> positive cash
-         */
         BigDecimal cashDelta =
                 normalizedPrice.multiply(quantity);
 
@@ -173,11 +113,6 @@ public class SettlementService {
             cashDelta = cashDelta.negate();
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 3. Account settlement
-         * ---------------------------------------------------------
-         */
         final int MAX_RETRIES = 3;
 
         BigDecimal positionQuantityAfter = BigDecimal.ZERO;
@@ -200,10 +135,7 @@ public class SettlementService {
                 );
             }
 
-            /*
-             * Account may have been suspended after the order
-             * was accepted but before execution.
-             */
+          
             if (!currentAccount.isActive()) {
 
                 throw new IllegalStateException(
@@ -212,11 +144,6 @@ public class SettlementService {
                 );
             }
 
-            /*
-             * -----------------------------------------------------
-             * Execution-time BUY balance check
-             * -----------------------------------------------------
-             */
             if ("BUY".equalsIgnoreCase(payload.getSide())) {
 
                 BigDecimal required =
@@ -242,11 +169,7 @@ public class SettlementService {
                     currentAccount.getVersion()
             );
 
-            /*
-             * -----------------------------------------------------
-             * Update account cash using optimistic locking
-             * -----------------------------------------------------
-             */
+          
             int cashUpdated =
                     accountMapper.updateCashWithVersionGuard(
                             payload.getAccountId(),
@@ -280,11 +203,6 @@ public class SettlementService {
                     cashDelta
             );
 
-            /*
-             * -----------------------------------------------------
-             * 4. Load portfolio
-             * -----------------------------------------------------
-             */
             PortfolioDto portfolio =
                     portfolioMapper.findByAccountId(
                             payload.getAccountId()
@@ -298,11 +216,7 @@ public class SettlementService {
                 );
             }
 
-            /*
-             * -----------------------------------------------------
-             * 5. Load current holding
-             * -----------------------------------------------------
-             */
+        
             PortfolioHoldingsDto holding =
                     portfolioHoldingsMapper
                             .findByPortfolioAndInstrument(
@@ -310,18 +224,12 @@ public class SettlementService {
                                     instrument.getInstrumentId()
                             );
 
-            /*
-             * -----------------------------------------------------
-             * 6. BUY
-             * -----------------------------------------------------
-             */
+           
             if ("BUY".equalsIgnoreCase(payload.getSide())) {
 
                 if (holding == null) {
 
-                    /*
-                     * New position.
-                     */
+                 
                     portfolioHoldingsMapper.insert(
                             portfolio.getPortfolioId(),
                             instrument.getInstrumentId(),
@@ -343,17 +251,7 @@ public class SettlementService {
 
                 } else {
 
-                    /*
-                     * Existing position.
-                     *
-                     * Weighted average:
-                     *
-                     * oldQty * oldAvg
-                     * +
-                     * newQty * newPrice
-                     * -------------------
-                     * totalQty
-                     */
+                   
                     BigDecimal oldQuantity =
                             holding.getQuantity();
 
@@ -408,11 +306,7 @@ public class SettlementService {
                 }
             }
 
-            /*
-             * -----------------------------------------------------
-             * 7. SELL
-             * -----------------------------------------------------
-             */
+        
             else if ("SELL".equalsIgnoreCase(payload.getSide())) {
 
                 if (holding == null) {
@@ -469,11 +363,7 @@ public class SettlementService {
                 );
             }
 
-            /*
-             * -----------------------------------------------------
-             * 8. Transaction record
-             * -----------------------------------------------------
-             */
+        
             transactionMapper.insert(
                     orderId,
                     instrument.getInstrumentId(),
@@ -507,18 +397,7 @@ public class SettlementService {
                 averageCostAfter
         );
 
-        /*
-         * ---------------------------------------------------------
-         * 9. Build trade event
-         * ---------------------------------------------------------
-         *
-         * IMPORTANT:
-         *
-         * We only return this event.
-         *
-         * Kafka publication happens in OrderExecutionService
-         * AFTER this transactional method has committed.
-         */
+    
         TradeEventPayload tradeEventPayload =
                 new TradeEventPayload(
                         payload.getOrderId(),
@@ -555,14 +434,6 @@ public class SettlementService {
         return resultEvent;
     }
 
-    /**
-     * Reject an order.
-     *
-     * This method has its own transaction.
-     *
-     * It returns the trade event to the caller.
-     * The caller publishes it after this transaction commits.
-     */
     @Transactional
     public EventEnvelope<TradeEventPayload> rejectOrder(
             String orderId,

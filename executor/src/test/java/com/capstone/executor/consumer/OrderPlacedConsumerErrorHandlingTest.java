@@ -16,13 +16,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
 
-/**
- * Integration tests for OrderPlacedConsumer error handling
- * Tests three key scenarios:
- * 1. Malformed message dead-lettered on first attempt
- * 2. Transient failure retried and succeeds
- * 3. Poison message doesn't block partition
- */
+
 @ExtendWith(MockitoExtension.class)
 public class OrderPlacedConsumerErrorHandlingTest {
     
@@ -45,14 +39,7 @@ public class OrderPlacedConsumerErrorHandlingTest {
         // IMPORTANT: Do NOT set a global shouldRetry(anyInt()) - let tests configure their own retry limits
         lenient().when(retryPolicy.getBackoffMs(anyInt())).thenReturn(10L);  // Reduced from 100ms for faster tests
     }
-    
-    /**
-     * Test 1: Malformed JSON is dead-lettered on first attempt
-     * - Consumer receives invalid JSON
-     * - Failure classified as UNRECOVERABLE
-     * - Message sent to DLQ immediately
-     * - Offset committed to prevent message replay
-     */
+
     @Test
     public void testMalformedJsonDeadLetteredImmediately() {
         String malformedMessage = "{ invalid json }";
@@ -77,12 +64,7 @@ public class OrderPlacedConsumerErrorHandlingTest {
         verify(executionService, never()).executeOrder(any());
     }
     
-    /**
-     * Test 2: Unexpected event type is dead-lettered immediately
-     * - Consumer receives valid JSON but wrong event type
-     * - Message sent to DLQ immediately
-     * - Offset committed to prevent infinite loops
-     */
+ 
     @Test
     public void testUnexpectedEventTypeDeadLetteredImmediately() {
         String unexpectedTypeMessage = "{\"eventType\":\"UNKNOWN_EVENT\",\"payload\":{}}";
@@ -100,15 +82,7 @@ public class OrderPlacedConsumerErrorHandlingTest {
         verify(acknowledgment).acknowledge();
     }
     
-    /**
-     * Test 3: Transient failure (database unavailable) is not acknowledged
-     * - Consumer receives valid message
-     * - Execution fails with database connection error
-     * - Failure classified as RECOVERABLE
-     * - Retry count is 0 (first attempt)
-     * - After local retries exhausted, message NOT acknowledged - Kafka will retry
-     * - DLQ is NOT called
-     */
+ 
     @Test
     public void testTransientFailureIsRetried() throws Exception {
         String validMessage = "{\"eventType\":\"ORDER_PLACED\",\"payload\":{\"orderId\":\"order-1\"}}";
@@ -138,16 +112,7 @@ public class OrderPlacedConsumerErrorHandlingTest {
         // Verify offset was committed to move past failed message
         verify(acknowledgment).acknowledge();
     }
-    
-    /**
-     * Test 4: Retry budget exhausted sends to DLQ
-     * - Consumer receives valid message
-     * - Execution fails with database connection error
-     * - Failure classified as RECOVERABLE
-     * - Retry count is already at max (3)
-     * - Message sent to DLQ with "RETRY_BUDGET_EXHAUSTED" reason
-     * - Offset committed to prevent infinite loops
-     */
+  
     @Test
     public void testRetryBudgetExhaustedSendsToDLQ() throws Exception {
         String validMessage = "{\"eventType\":\"ORDER_PLACED\",\"payload\":{\"orderId\":\"order-2\"}}";
@@ -176,15 +141,7 @@ public class OrderPlacedConsumerErrorHandlingTest {
         // Verify offset was committed (moves past failed message)
         verify(acknowledgment).acknowledge();
     }
-    
-    /**
-     * Test 5: Poison message (unrecoverable error) doesn't block partition
-     * - Consumer receives message that will NEVER succeed (order not found)
-     * - Failure classified as UNRECOVERABLE
-     * - Message dead-lettered immediately
-     * - Offset committed immediately (doesn't wait for manual handling)
-     * - Partition can continue processing other messages
-     */
+
     @Test
     public void testPoisonMessageDoesntBlockPartition() throws Exception {
         String validMessage = "{\"eventType\":\"ORDER_PLACED\",\"payload\":{\"orderId\":\"order-missing\"}}";
@@ -212,11 +169,7 @@ public class OrderPlacedConsumerErrorHandlingTest {
         // Partition is now unblocked and can process next message
     }
     
-    /**
-     * Test 6: Unknown error is treated as UNRECOVERABLE
-     * - Prevents poison message loops from unknown issues
-     * - Follows fail-safe principle: assume unrecoverable unless classified as recoverable
-     */
+
     @Test
     public void testUnknownErrorTreatedAsUnrecoverable() throws Exception {
         String validMessage = "{\"eventType\":\"ORDER_PLACED\",\"payload\":{\"orderId\":\"order-3\"}}";

@@ -2,17 +2,7 @@ package com.capstone.executor.error;
 
 import org.springframework.stereotype.Component;
 
-/**
- * Manages bounded retry logic with exponential backoff.
- *
- * Retry delays:
- *
- * Attempt 1 -> 100 ms
- * Attempt 2 -> 200 ms
- * Attempt 3 -> 400 ms
- *
- * After the retry budget is exhausted, the message is sent to DLT.
- */
+
 @Component
 public class RetryPolicy {
 
@@ -30,21 +20,12 @@ public class RetryPolicy {
     public static final String RETRY_REASON_HEADER =
             "x-retry-reason";
 
-    /**
-     * Returns true when another retry is allowed.
-     *
-     * retryCount = 0 -> retry allowed
-     * retryCount = 1 -> retry allowed
-     * retryCount = 2 -> retry allowed
-     * retryCount = 3 -> no more retries
-     */
+    
     public boolean shouldRetry(int retryCount) {
         return retryCount < MAX_RETRIES;
     }
 
-    /**
-     * Calculates exponential backoff.
-     */
+   
     public long getBackoffMs(int retryCount) {
 
         long backoff = (long) (
@@ -58,9 +39,7 @@ public class RetryPolicy {
         return Math.min(backoff, MAX_BACKOFF_MS);
     }
 
-    /**
-     * Parses the retry count from a Kafka header.
-     */
+ 
     public int parseRetryCount(String retryCountHeader) {
 
         if (retryCountHeader == null

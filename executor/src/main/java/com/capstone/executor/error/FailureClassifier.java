@@ -11,15 +11,7 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.sql.SQLException;
 
-/**
- * Classifies failures into two categories:
- *
- * UNRECOVERABLE:
- * The message/data will never succeed and should go to the DLT immediately.
- *
- * RECOVERABLE:
- * The failure may succeed later and should be retried with backoff.
- */
+
 @Component
 public class FailureClassifier {
 
@@ -48,18 +40,10 @@ public class FailureClassifier {
         }
     }
 
-    /**
-     * Classifies a processing exception.
-     */
     public FailureClassification classify(
             Exception exception,
             String message) {
 
-        /*
-         * ---------------------------------------------------------
-         * 1. MALFORMED JSON
-         * ---------------------------------------------------------
-         */
         if (containsCause(exception, JsonProcessingException.class)) {
 
             return new FailureClassification(
@@ -68,11 +52,7 @@ public class FailureClassifier {
             );
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 2. MISSING / INVALID REQUIRED DATA
-         * ---------------------------------------------------------
-         */
+     
         String exceptionMessage = safeMessage(exception);
 
         if (exception instanceof IllegalArgumentException) {
@@ -99,11 +79,7 @@ public class FailureClassifier {
             );
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 3. UNKNOWN ORDER
-         * ---------------------------------------------------------
-         */
+      
         if (containsIgnoreCase(exceptionMessage, "order not found")
                 || containsIgnoreCase(exceptionMessage, "order not exist")
                 || containsIgnoreCase(exceptionMessage, "unknown order")) {
@@ -114,11 +90,7 @@ public class FailureClassifier {
             );
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 4. NETWORK / TIMEOUT FAILURE (check before database)
-         * ---------------------------------------------------------
-         */
+       
         if (containsCause(exception, ConnectException.class)
                 || containsCause(exception, SocketTimeoutException.class)
                 || containsCause(exception, IOException.class)
@@ -131,11 +103,6 @@ public class FailureClassifier {
             );
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 5. DATABASE CONNECTION FAILURE
-         * ---------------------------------------------------------
-         */
         if (containsCause(exception, SQLException.class)
                 || containsCause(exception, DataAccessException.class)
                 || containsIgnoreCase(exceptionMessage, "connection")
@@ -149,11 +116,7 @@ public class FailureClassifier {
             );
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 6. OPTIMISTIC LOCK / CONCURRENT UPDATE
-         * ---------------------------------------------------------
-         */
+       
         if (containsIgnoreCase(exceptionMessage, "optimistic")
                 || containsIgnoreCase(exceptionMessage, "lock")
                 || containsIgnoreCase(exceptionMessage, "concurrent update")
@@ -165,14 +128,7 @@ public class FailureClassifier {
             );
         }
 
-        /*
-         * ---------------------------------------------------------
-         * 7. DEFAULT
-         *
-         * Unknown failures are treated as permanent so that a
-         * poison message cannot retry forever.
-         * ---------------------------------------------------------
-         */
+   
         logger.warn(
                 "Unknown exception classified as unrecoverable: {}",
                 exception.getClass().getSimpleName()
@@ -185,9 +141,7 @@ public class FailureClassifier {
         );
     }
 
-    /**
-     * Checks the complete exception cause chain.
-     */
+
     private boolean containsCause(
             Throwable exception,
             Class<? extends Throwable> type) {

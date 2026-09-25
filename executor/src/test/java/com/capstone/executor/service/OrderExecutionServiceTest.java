@@ -23,19 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for OrderExecutionService orchestration.
- * 
- * Tests the coordination flow:
- * 1. Load and validate order
- * 2. Check account status
- * 3. Check instrument tradability
- * 4. Fetch market quote
- * 5. Apply fill/reject decision
- * 6. Delegate settlement to SettlementService
- * 
- * Note: Settlement details are tested separately in SettlementServiceTest
- */
+
 @ExtendWith(MockitoExtension.class)
 public class OrderExecutionServiceTest {
     
@@ -60,9 +48,7 @@ public class OrderExecutionServiceTest {
         );
     }
     
-    /**
-     * Test 1: Order not found throws exception (for Kafka consumer to DLQ)
-     */
+
     @Test
     public void testOrderNotFoundThrows() {
         when(orderMapper.findById("unknown")).thenReturn(null);
@@ -80,9 +66,7 @@ public class OrderExecutionServiceTest {
         assertTrue(ex.getMessage().contains("Order not found"));
     }
     
-    /**
-     * Test 2: Already resolved order (FILLED/REJECTED) - no-op
-     */
+  
     @Test
     public void testAlreadyResolvedOrderIsNoOp() {
         OrderDto order = new OrderDto();
@@ -103,10 +87,7 @@ public class OrderExecutionServiceTest {
         verify(settlementService, never()).fillOrder(any(), any(), any(), any());
         verify(settlementService, never()).rejectOrder(any(), any(), any());
     }
-    
-    /**
-     * Test 3: Account not found -> reject
-     */
+
     @Test
     public void testAccountNotFoundRejects() {
         OrderDto order = new OrderDto();
@@ -131,9 +112,7 @@ public class OrderExecutionServiceTest {
         );
     }
     
-    /**
-     * Test 4: Account suspended -> reject
-     */
+
     @Test
     public void testSuspendedAccountRejects() {
         OrderDto order = new OrderDto();
@@ -162,9 +141,7 @@ public class OrderExecutionServiceTest {
         );
     }
     
-    /**
-     * Test 5: Instrument not found -> reject
-     */
+   
     @Test
 public void testInstrumentNotFoundRejects() {
     OrderDto order = new OrderDto();
@@ -205,9 +182,7 @@ public void testInstrumentNotFoundRejects() {
         "INSTRUMENT_NOT_TRADABLE"
     );
 }
-    /**
-     * Test 6: Instrument not tradable -> reject
-     */
+  
     @Test
     public void testInstrumentNotTradableRejects() {
         OrderDto order = new OrderDto();
@@ -241,9 +216,7 @@ public void testInstrumentNotFoundRejects() {
         );
     }
     
-    /**
-     * Test 7: Quote unavailable -> throw (recoverable, will retry)
-     */
+
     @Test
     public void testQuoteUnavailableThrows() {
         OrderDto order = new OrderDto();
@@ -276,10 +249,7 @@ public void testInstrumentNotFoundRejects() {
         // Not rejected - will be retried
         verify(settlementService, never()).rejectOrder(any(), any(), any());
     }
-    
-    /**
-     * Test 8: BUY limit at or above ask -> fills and delegates to SettlementService
-     */
+  
     @Test
 public void testBuyLimitAboveAskFills() {
     OrderDto order = new OrderDto();
@@ -343,9 +313,7 @@ public void testBuyLimitAboveAskFills() {
         eq(instrument)
     );
 }
-    /**
-     * Test 9: BUY limit below ask -> rejected
-     */
+ 
     @Test
     public void testBuyLimitBelowAskRejects() {
         OrderDto order = new OrderDto();
@@ -384,10 +352,7 @@ public void testBuyLimitAboveAskFills() {
             "PRICE_NOT_MET"
         );
     }
-    
-    /**
-     * Test 10: SELL limit at or below bid -> fills and delegates
-     */
+   
     @Test
 public void testSellLimitBelowBidFills() {
     OrderDto order = new OrderDto();
@@ -428,9 +393,7 @@ public void testSellLimitBelowBidFills() {
         eq(instrument)
     );
 } 
-    /**
-     * Test 11: SELL limit above bid -> rejected
-     */
+    
     @Test
     public void testSellLimitAboveBidRejects() {
         OrderDto order = new OrderDto();

@@ -19,19 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
-/**
- * Coordinates the order execution flow.
- *
- * Flow:
- *
- * 1. Load order
- * 2. Check account
- * 3. Check instrument
- * 4. Fetch live Fauxnance quote
- * 5. Apply fill/reject rule
- * 6. Delegate DB settlement to SettlementService
- * 7. Publish trade event AFTER settlement transaction commits
- */
+
 @Service
 public class OrderExecutionService {
 
@@ -61,9 +49,7 @@ public class OrderExecutionService {
         this.tradeEventPublisher = tradeEventPublisher;
     }
 
-    /**
-     * Main execution flow for ORDER_PLACED.
-     */
+
     public void executeOrder(
             EventEnvelope<OrderPlacedPayload> orderEvent) {
 
@@ -89,11 +75,7 @@ public class OrderExecutionService {
 
         try {
 
-            /*
-             * -----------------------------------------------------
-             * 1. Load order
-             * -----------------------------------------------------
-             */
+        
             OrderDto order =
                     orderMapper.findById(orderId);
 
@@ -109,11 +91,7 @@ public class OrderExecutionService {
                 );
             }
 
-            /*
-             * -----------------------------------------------------
-             * 2. Idempotency / already resolved check
-             * -----------------------------------------------------
-             */
+        
             if (!"NEW".equals(order.getStatus())) {
 
                 logger.info(
@@ -125,11 +103,7 @@ public class OrderExecutionService {
                 return;
             }
 
-            /*
-             * -----------------------------------------------------
-             * 3. Re-check account
-             * -----------------------------------------------------
-             */
+           
             AccountDto account =
                     accountMapper.findById(
                             payload.getAccountId()
@@ -176,11 +150,6 @@ public class OrderExecutionService {
                 return;
             }
 
-            /*
-             * -----------------------------------------------------
-             * 4. Re-check instrument
-             * -----------------------------------------------------
-             */
             InstrumentDto instrument =
                     instrumentMapper.findBySymbol(
                             payload.getSymbol()
@@ -208,11 +177,7 @@ public class OrderExecutionService {
                 return;
             }
 
-            /*
-             * -----------------------------------------------------
-             * 5. Fetch live quote
-             * -----------------------------------------------------
-             */
+        
             Quote quote =
                     quoteClient.fetchQuote(
                             payload.getSymbol()
@@ -233,11 +198,7 @@ public class OrderExecutionService {
                 );
             }
 
-            /*
-             * -----------------------------------------------------
-             * 6. Apply fill rule
-             * -----------------------------------------------------
-             */
+        
             logger.info(
                     "Fetched quote for FillRule decision: orderId={} symbol={} side={} limitPrice={} bid={} ask={} price={}",
                     orderId,
@@ -264,11 +225,7 @@ public class OrderExecutionService {
                     decision.getRejectReason()
             );
 
-            /*
-             * -----------------------------------------------------
-             * 7. FILL
-             * -----------------------------------------------------
-             */
+        
             if (decision.isFill()) {
 
                 BigDecimal executionPrice =
@@ -280,12 +237,7 @@ public class OrderExecutionService {
                         executionPrice
                 );
 
-                /*
-                 * fillOrder() is @Transactional.
-                 *
-                 * When this method returns, its DB transaction
-                 * has successfully committed.
-                 */
+             
                 EventEnvelope<TradeEventPayload> event =
                         settlementService.fillOrder(
                                 orderId,
@@ -301,11 +253,7 @@ public class OrderExecutionService {
                         event != null ? event.getEventType() : "null"
                 );
 
-                /*
-                 * Now publish Kafka event.
-                 *
-                 * This happens AFTER the DB transaction committed.
-                 */
+           
                 publishTradeEvent(event);
 
                 logger.info(
@@ -317,11 +265,7 @@ public class OrderExecutionService {
                 return;
             }
 
-            /*
-             * -----------------------------------------------------
-             * 8. Pricing unavailable
-             * -----------------------------------------------------
-             */
+         
             String rejectReason =
                     decision.getRejectReason();
 
@@ -349,11 +293,7 @@ public class OrderExecutionService {
                 );
             }
 
-            /*
-             * -----------------------------------------------------
-             * 9. Permanent rejection
-             * -----------------------------------------------------
-             */
+        
             EventEnvelope<TradeEventPayload> event =
                     settlementService.rejectOrder(
                             orderId,
@@ -374,26 +314,11 @@ public class OrderExecutionService {
                     e
             );
 
-            /*
-             * -----------------------------------------------------
-             * Recoverable errors
-             * -----------------------------------------------------
-             */
             if (isRecoverableExecutionException(e)) {
                 throw e;
             }
 
-            /*
-             * -----------------------------------------------------
-             * Permanent/system error
-             * -----------------------------------------------------
-             *
-             * If fillOrder() failed, its transaction has already
-             * rolled back.
-             *
-             * Therefore it is safe to reject the order in a new
-             * transaction.
-             */
+           
             try {
 
                 EventEnvelope<TradeEventPayload> event =
@@ -421,12 +346,7 @@ public class OrderExecutionService {
         }
     }
 
-    /**
-     * Publishes a trade event only when an actual event was
-     * produced by SettlementService.
-     *
-     * null means the order was already resolved.
-     */
+ 
     private void publishTradeEvent(
             EventEnvelope<TradeEventPayload> event) {
 
@@ -446,12 +366,6 @@ public class OrderExecutionService {
                 event.getEventType()
         );
 
-        /*
-         * TradeEventKafkaPublisher waits for Kafka acknowledgement.
-         *
-         * Therefore this method returns only after Kafka confirms
-         * the message.
-         */
         tradeEventPublisher.publish(event);
 
         logger.info(
@@ -462,10 +376,6 @@ public class OrderExecutionService {
         );
     }
 
-    /**
-     * Determines whether the execution exception should be
-     * retried by the Kafka consumer.
-     */
     private boolean isRecoverableExecutionException(
             Exception exception) {
 

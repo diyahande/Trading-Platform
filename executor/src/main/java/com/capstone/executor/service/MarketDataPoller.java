@@ -20,61 +20,23 @@ import java.time.Instant;
 import java.util.*;
 
 
-/**
- * Market data poller for the market-data Kafka topic.
- * 
- * Runs on a schedule inside the Trade Executor. Fetches symbols from
- * portfolio holdings, orders, and watchlists. Batches up to 25 symbols
- * per Fauxnance API call for quota efficiency. Publishes one message
- * per symbol to market-data, keyed by symbol.
- * 
- * Acceptance criteria:
- * - The poller runs on a schedule inside the Trade Executor
- * - Calls the batch quotes endpoint batching up to 25 symbols per request
- * - Publishes one message per symbol to market-data keyed by the symbol
- * - The configured interval stays inside the 2000-requests-per-day quota
- * - The arithmetic can be shown
- * - Polls only symbols someone holds or is watching
- * - Enforces the interval floor in code
- * 
- * Contract binding: kafka-topics.md
- */
+
 @Component
-@EnableScheduling
+// @EnableScheduling
 public class MarketDataPoller {
 
     private static final Logger logger =
             LoggerFactory.getLogger(MarketDataPoller.class);
 
-    /**
-     * Maximum symbols per batch request to Fauxnance.
-     * API contract limit is 25.
-     */
     private static final int MAX_SYMBOLS_PER_BATCH = 25;
 
-    /**
-     * Minimum interval floor in seconds.
-     * Enforced in code to prevent quota violations.
-     * 
-     * Calculation for 24 symbols at 60 second interval:
-     * - 1 batch per poll (24 symbols <= 25 limit)
-     * - 86400 seconds per day / 60 seconds = 1440 polls
-     * - 1440 polls * 1 batch = 1440 requests per day
-     * - Well within 2000 request/day quota with proper batching
-     * - Default 60 seconds allows for up to ~38 symbols with 1 batch per poll
-     */
+   
     private static final long MIN_INTERVAL_SECONDS = 60L;
 
-    /**
-     * Cache refresh interval in milliseconds.
-     * Queries database for symbol list every 15 minutes instead of every poll.
-     */
+ 
     private static final long CACHE_REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
-    /**
-     * Local cache file path for symbol list.
-     * Persists cached symbols to disk for inspection and recovery after restart.
-     */
+   
     private static final Path CACHE_FILE_PATH = Paths.get(".cache/symbols-cache.txt");
 
     private final FauxnanceQuoteClient fauxnanceClient;
@@ -83,10 +45,6 @@ public class MarketDataPoller {
     private final long pollIntervalSeconds;
     private long lastPollTime = 0;
 
-    /**
-     * Cached list of symbols from database.
-     * Refreshed every CACHE_REFRESH_INTERVAL_MS (15 minutes).
-     */
     private List<String> cachedSymbols = new ArrayList<>();
     private long lastCacheRefreshTime = 0;
 
@@ -128,14 +86,7 @@ public class MarketDataPoller {
         loadCacheFromFile();
     }
 
-    /**
-     * Poll market data for all watched and held symbols.
-     * 
-     * Scheduled to run at the configured interval. Fetches unique symbols
-     * from portfolio holdings, orders, and watchlists. Batches them up to
-     * MAX_SYMBOLS_PER_BATCH for efficient Fauxnance API calls. Publishes
-     * one message per symbol to the market-data topic.
-     */
+
     @Scheduled(fixedDelayString = "${POLL_INTERVAL_SECONDS:300}000")
     public void pollMarketData() {
         try {
@@ -216,16 +167,7 @@ public class MarketDataPoller {
         }
     }
 
-    /**
-     * Get cached symbols or refresh cache if stale (older than 15 minutes).
-     * 
-     * Cache optimization: Instead of querying the database every 60 seconds,
-     * we cache the symbol list and only query every 15 minutes. This reduces
-     * database load while still keeping the list relatively fresh.
-     * 
-     * @param currentTime current time in milliseconds
-     * @return list of symbols to poll
-     */
+ 
     private synchronized List<String> getOrRefreshSymbolsCache(long currentTime) {
         long timeSinceLastRefresh = currentTime - lastCacheRefreshTime;
         
@@ -270,14 +212,7 @@ public class MarketDataPoller {
         return cachedSymbols;
     }
 
-    /**
-     * Load cached symbols from disk file if it exists.
-     * Used on startup to pre-populate cache without database query.
-     * Non-fatal: If file I/O fails, continues without cache.
-     * 
-     * NOTE: Does NOT set lastCacheRefreshTime, so first pollMarketData() call
-     * will still query the database (fresh data on startup).
-     */
+ 
     private void loadCacheFromFile() {
         try {
             if (!Files.exists(CACHE_FILE_PATH)) {
@@ -288,7 +223,7 @@ public class MarketDataPoller {
             List<String> symbols = Files.readAllLines(CACHE_FILE_PATH);
             if (symbols != null && !symbols.isEmpty()) {
                 cachedSymbols = new ArrayList<>(symbols);
-                // NOTE: Do NOT set lastCacheRefreshTime here - let first poll query fresh data
+              
                 logger.info(
                         "Loaded {} symbols from cache file (will refresh on first poll): {}",
                         symbols.size(),
@@ -302,13 +237,7 @@ public class MarketDataPoller {
         }
     }
 
-    /**
-     * Save cached symbols to disk file for persistence and inspection.
-     * File location: .cache/symbols-cache.txt (one symbol per line)
-     * Non-fatal: If file I/O fails, system continues normally.
-     * 
-     * @param symbols list of symbols to cache
-     */
+ 
     private void saveCacheToFile(List<String> symbols) {
         try {
             // Create .cache directory if it doesn't exist
@@ -329,11 +258,7 @@ public class MarketDataPoller {
         }
     }
 
-    /**
-     * Publish a single quote to the market-data Kafka topic.
-     * 
-     * Creates an EventEnvelope with MarketDataQuotePayload, keyed by symbol.
-     */
+
     private void publishQuote(String symbol, Quote quote) {
         try {
             // Build payload from Quote domain model
@@ -373,12 +298,7 @@ public class MarketDataPoller {
         }
     }
 
-    /**
-     * Log quota calculation for documentation and debugging.
-     * 
-     * Calculates requests per day based on number of symbols and poll interval.
-     * Documents the arithmetic for the team to keep with its decisions.
-     */
+
     private void logQuotaCalculation() {
         logger.info(
                 "Market data poller quota calculation: "
@@ -401,21 +321,11 @@ public class MarketDataPoller {
                 86400L / pollIntervalSeconds
         );
     }
-
-    /**
-     * Return the configured poll interval in seconds.
-     * 
-     * Useful for testing.
-     */
     public long getPollIntervalSeconds() {
         return pollIntervalSeconds;
     }
 
-    /**
-     * Return the minimum interval floor in seconds.
-     * 
-     * Useful for testing.
-     */
+ 
     public long getMinIntervalFloor() {
         return MIN_INTERVAL_SECONDS;
     }

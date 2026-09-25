@@ -8,15 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Publishes market data quotes to the market-data Kafka topic.
- * 
- * Contract binding: kafka-topics.md
- * 
- * One message per symbol, keyed by symbol for per-symbol ordering guarantee.
- * The market-data topic ensures no consumer sees an older quote for a symbol
- * after a newer one.
- */
+
 @Component
 public class MarketDataKafkaPublisher {
     private static final Logger logger =
@@ -32,12 +24,6 @@ public class MarketDataKafkaPublisher {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Publish a single quote to market-data topic.
-     * 
-     * Keyed by symbol to guarantee per-symbol ordering. One message per symbol,
-     * never batched.
-     */
     public void publishQuote(EventEnvelope<MarketDataQuotePayload> event) {
         try {
             String eventJson = objectMapper.writeValueAsString(event);

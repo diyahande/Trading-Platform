@@ -70,12 +70,7 @@ public class DeadLetterQueueHandler {
                     e
             );
 
-            /*
-             * Do not swallow this exception.
-             * The caller must know that the DLQ publish failed,
-             * otherwise the original message could be acknowledged
-             * and lost.
-             */
+          
             throw new IllegalStateException(
                     "DLQ_PUBLISH_FAILED",
                     e

@@ -58,11 +58,7 @@ public class TradeEventKafkaPublisher
             String eventJson =
                     objectMapper.writeValueAsString(event);
 
-            /*
-             * Key by accountId.
-             *
-             * This preserves per-account ordering.
-             */
+        
             String key =
                     event.getPayload()
                             .getAccountId()
@@ -77,11 +73,6 @@ public class TradeEventKafkaPublisher
                     key
             );
 
-            /*
-             * Send synchronously.
-             *
-             * .get() waits until Kafka acknowledges the message.
-             */
             SendResult<String, String> result =
                     kafkaTemplate
                             .send(
@@ -115,12 +106,7 @@ public class TradeEventKafkaPublisher
                     e
             );
 
-            /*
-             * Throw the exception back to OrderExecutionService.
-             *
-             * The Kafka consumer will therefore NOT acknowledge
-             * the original orders message.
-             */
+           
             throw new RuntimeException(
                     "Trade event publish failed",
                     e

@@ -23,15 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for SettlementService.
- * Tests transactional settlement logic with optimistic locking.
- * 
- * Note: These tests use mocks WITHOUT Spring @Transactional context.
- * TransactionSynchronizationManager callbacks will fail (expected), but
- * we can still verify the database update logic was invoked.
- * Integration tests with @SpringBootTest would test the full transactional behavior.
- */
+
 @ExtendWith(MockitoExtension.class)
 public class SettlementServiceTest {
     
@@ -54,10 +46,7 @@ public class SettlementServiceTest {
         );
     }
     
-    /**
-     * Test 1: BUY order settlement - new position
-     * Verifies that order and account updates are attempted
-     */
+
     @Test
     public void testFillBuyOrderUpdatesAttempted() {
         String orderId = "order-1";
@@ -111,9 +100,7 @@ public class SettlementServiceTest {
         verify(accountMapper).updateCashWithVersionGuard(anyLong(), any(BigDecimal.class), anyLong());
     }
     
-    /**
-     * Test 2: SELL order - reduces existing position
-     */
+ 
     @Test
     public void testFillSellOrderUpdatesAttempted() {
         String orderId = "order-2";
@@ -169,9 +156,7 @@ public class SettlementServiceTest {
         verify(accountMapper).updateCashWithVersionGuard(anyLong(), any(BigDecimal.class), anyLong());
     }
     
-    /**
-     * Test 3: Insufficient funds for BUY order
-     */
+   
     @Test
     public void testFillBuyWithInsufficientFundsThrows() {
         String orderId = "order-3";
@@ -205,9 +190,7 @@ public class SettlementServiceTest {
         assertTrue(ex.getMessage().contains("Insufficient funds"));
     }
     
-    /**
-     * Test 4: Sell on non-existent position throws
-     */
+   
     @Test
     public void testFillSellWithoutPositionThrows() {
         String orderId = "order-4";
@@ -253,9 +236,7 @@ public class SettlementServiceTest {
         assertTrue(ex.getMessage().contains("Insufficient position"));
     }
     
-    /**
-     * Test 5: Reject order updates status
-     */
+ 
     @Test
     public void testRejectOrderUpdatesStatus() {
         String orderId = "order-5";
@@ -278,9 +259,7 @@ public class SettlementServiceTest {
         verify(orderMapper).updateToRejected(anyString(), anyString());
     }
     
-    /**
-     * Test 6: Idempotent BUY fill (already filled - 0 rows affected)
-     */
+  
     @Test
 public void testFillBuyIdempotentNoOp() {
     String orderId = "order-6";

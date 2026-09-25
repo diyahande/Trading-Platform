@@ -92,15 +92,19 @@ services:
     networks:
       - capstone-net
 
-  auth-stub:
+  auth-service:
     build:
-      context: ./auth-stub
+      context: ./auth-service
       dockerfile: Dockerfile
-    container_name: capstone-auth-stub
+    container_name: capstone-auth-service
     env_file:
       - ./database/.env
+    environment:
+      PORT: 3000
+      JWT_ISSUER: auth-service
+      DATABASE_URL: ${AUTH_DATABASE_URL}
     ports:
-      - "8089:8089"
+      - "3000:3000"
     depends_on:
       db-init:
         condition: service_completed_successfully
@@ -121,7 +125,7 @@ services:
     depends_on:
       db-init:
         condition: service_completed_successfully
-      auth-stub:
+      auth-service:
         condition: service_started
       kafka-init:
         condition: service_completed_successfully
