@@ -23,6 +23,14 @@ describe('TokenService', () => {
     tokenService = new TokenService(configService);
   });
 
+  beforeEach(() => {
+    console.info(`[TEST START] ${expect.getState().currentTestName}`);
+  });
+
+  afterEach(() => {
+    console.info(`[TEST END] ${expect.getState().currentTestName}`);
+  });
+
   it('issues token with contract claims and expiry', () => {
     const token = tokenService.signAccessToken(
       '11111111-1111-4111-8111-111111111111',
@@ -73,5 +81,58 @@ describe('TokenService', () => {
 
     expect(createHashSpy).not.toHaveBeenCalled();
     createHashSpy.mockRestore();
+  });
+
+  it('verifyAccessToken rejects tokens signed with a different secret', () => {
+    const token = jwt.sign(
+      {
+        sub: '11111111-1111-4111-8111-111111111111',
+        accountId: '11111111-1111-4111-8111-111111111111',
+        roles: ['CUSTOMER'],
+      },
+      'wrong-secret-which-must-fail',
+      {
+        algorithm: 'HS256',
+        issuer: 'auth-service',
+        expiresIn: 900,
+      },
+    );
+
+    expect(() => tokenService.verifyAccessToken(token)).toThrow();
+  });
+
+  it('verifyAccessToken rejects tokens with wrong issuer', () => {
+    const token = jwt.sign(
+      {
+        sub: '11111111-1111-4111-8111-111111111111',
+        accountId: '11111111-1111-4111-8111-111111111111',
+        roles: ['CUSTOMER'],
+      },
+      secret,
+      {
+        algorithm: 'HS256',
+        issuer: 'another-issuer',
+        expiresIn: 900,
+      },
+    );
+
+    expect(() => tokenService.verifyAccessToken(token)).toThrow();
+  });
+
+  it('verifyAccessToken rejects tokens with missing accountId claim', () => {
+    const token = jwt.sign(
+      {
+        sub: '11111111-1111-4111-8111-111111111111',
+        roles: ['CUSTOMER'],
+      },
+      secret,
+      {
+        algorithm: 'HS256',
+        issuer: 'auth-service',
+        expiresIn: 900,
+      },
+    );
+
+    expect(() => tokenService.verifyAccessToken(token)).toThrow();
   });
 });

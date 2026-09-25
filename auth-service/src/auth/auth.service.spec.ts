@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
 import { AuthService } from './auth.service';
@@ -41,6 +41,39 @@ describe('AuthService', () => {
     } as unknown as jest.Mocked<TokenService>;
 
     authService = new AuthService(authRepository, tokenService);
+  });
+
+  beforeEach(() => {
+    console.info(`[TEST START] ${expect.getState().currentTestName}`);
+  });
+
+  afterEach(() => {
+    console.info(`[TEST END] ${expect.getState().currentTestName}`);
+  });
+
+  it('rejects register when username already exists', async () => {
+    authRepository.findUserByUsername.mockResolvedValue(userRecord);
+
+    await expect(
+      authService.register({
+        username: userRecord.username,
+        password: 'StrongPassword#123',
+        accountId: userRecord.accountId,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects register when account reference is already linked', async () => {
+    authRepository.findUserByUsername.mockResolvedValue(null);
+    authRepository.findUserByAccountId.mockResolvedValue(userRecord);
+
+    await expect(
+      authService.register({
+        username: 'new.user',
+        password: 'StrongPassword#123',
+        accountId: userRecord.accountId,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('issues new access and refresh tokens on successful refresh', async () => {
@@ -125,6 +158,83 @@ describe('AuthService', () => {
     );
   });
 
+  it('rejects refresh when token hash is unknown', async () => {
+    authRepository.findRefreshTokenByHash.mockResolvedValue(null);
+
+    await expect(
+      authService.refresh({ refreshToken: 'missing-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects refresh when token is revoked', async () => {
+    authRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'refresh-id',
+      userId: 'user-id',
+      tokenHash: 'hash',
+      expiresOn: new Date(Date.now() + 10_000),
+      consumedOn: null,
+      revokedOn: new Date(),
+    });
+
+    await expect(
+      authService.refresh({ refreshToken: 'revoked-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(authRepository.revokeAllRefreshTokensForUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects refresh when token has expired', async () => {
+    authRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'refresh-id',
+      userId: 'user-id',
+      tokenHash: 'hash',
+      expiresOn: new Date(Date.now() - 1_000),
+      consumedOn: null,
+      revokedOn: null,
+    });
+
+    await expect(
+      authService.refresh({ refreshToken: 'expired-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(authRepository.revokeAllRefreshTokensForUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects refresh when consume step fails due to replay race', async () => {
+    authRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'refresh-id',
+      userId: 'user-id',
+      tokenHash: 'hash',
+      expiresOn: new Date(Date.now() + 10_000),
+      consumedOn: null,
+      revokedOn: null,
+    });
+    authRepository.consumeRefreshToken.mockResolvedValue(false);
+
+    await expect(
+      authService.refresh({ refreshToken: 'racy-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(authRepository.revokeAllRefreshTokensForUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects refresh when token user no longer exists', async () => {
+    authRepository.findRefreshTokenByHash.mockResolvedValue({
+      id: 'refresh-id',
+      userId: 'user-id',
+      tokenHash: 'hash',
+      expiresOn: new Date(Date.now() + 10_000),
+      consumedOn: null,
+      revokedOn: null,
+    });
+    authRepository.consumeRefreshToken.mockResolvedValue(true);
+    authRepository.findUserById.mockResolvedValue(null);
+
+    await expect(
+      authService.refresh({ refreshToken: 'orphaned-user-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('accepts login with correct password and issues tokens', async () => {
     const password = 'StrongPassword#123';
     const hash = await bcrypt.hash(password, 12);
@@ -199,5 +309,18 @@ describe('AuthService', () => {
     expect(issueTokenPairSpy).not.toHaveBeenCalled();
   });
 
-  it.todo('throttle limits repeated failed attempts from one caller');
+  it('rejects me when account from claims is not found', async () => {
+    authRepository.findUserByAccountId.mockResolvedValue(null);
+
+    await expect(
+      authService.me({
+        sub: '11111111-1111-4111-8111-111111111111',
+        accountId: '11111111-1111-4111-8111-111111111111',
+        roles: ['CUSTOMER'],
+        iat: 1,
+        exp: 2,
+        iss: 'auth-service',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });
