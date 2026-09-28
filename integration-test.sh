@@ -209,7 +209,7 @@ echo ">>> Starting Trade API..."
 (
     cd "$TRADE_API_DIR"
     export SERVER_PORT=8083
-    export DB_URL="jdbc:postgresql://localhost:5432/stock_trading_db"
+    export DB_URL="jdbc:postgresql://localhost:5432/capstone?currentSchema=stock_trading"
     export DB_USERNAME="postgres"
     export DB_PASSWORD="n3u3d4!"
     export JWT_SECRET="mission-control-shared-secret-key-32-bytes-minimum"

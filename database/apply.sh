@@ -22,6 +22,8 @@ fi
 set -a
 set +a
 
+DB_SCHEMA="${DB_SCHEMA:-stock_trading}"
+
 # Check required variables
 required_vars=(
     PGHOST
@@ -41,6 +43,7 @@ done
 echo "Connecting to database: $POSTGRES_DB"
 echo "Host: $PGHOST"
 echo "Port: $PGPORT"
+echo "Schema: $DB_SCHEMA"
 echo
 
 run_sql_files() {
@@ -60,7 +63,7 @@ run_sql_files() {
 
         echo "Running: $file"
 
-        PGPASSWORD="$PGPASSWORD" psql \
+        PGPASSWORD="$PGPASSWORD" PGOPTIONS="-c search_path=$DB_SCHEMA" psql \
             -v ON_ERROR_STOP=1 \
             -h "$PGHOST" \
             -p "$PGPORT" \

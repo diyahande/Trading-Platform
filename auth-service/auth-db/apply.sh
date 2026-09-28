@@ -25,16 +25,18 @@ else
 
   DB_HOST="${DB_HOST:-localhost}"
   DB_PORT="${DB_PORT:-5432}"
-  DB_NAME="${DB_NAME:-auth_service}"
+  DB_NAME="${DB_NAME:-capstone}"
 
   DB_CONN="postgresql://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 fi
+
+DB_SCHEMA="${DB_SCHEMA:-auth_service}"
 
 echo "Applying auth DB SQL files..."
 for file in "$SCRIPT_DIR"/*.sql; do
   [[ -f "$file" ]] || continue
   echo "Running $(basename "$file")"
-  psql -v ON_ERROR_STOP=1 "$DB_CONN" -f "$file"
+  PGOPTIONS="-c search_path=$DB_SCHEMA" psql -v ON_ERROR_STOP=1 "$DB_CONN" -f "$file"
 done
 
 echo "Auth DB setup completed successfully."
