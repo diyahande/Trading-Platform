@@ -88,7 +88,7 @@ public class AccountService {
 
         // Keep ACC-403 uniform for suspended or unreachable accounts.
         if (!requestedAccount.getAccountReference().equals(accountKey)) {
-            throw new AccountNotActiveException(requestedAccount.getAccountId(), requestedAccount.getStatus());
+            throw new AccountNotFoundException(requestedAccount.getAccountId());
         }
 
         return requestedAccount;

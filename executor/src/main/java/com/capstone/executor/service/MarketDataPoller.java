@@ -22,7 +22,7 @@ import java.util.*;
 
 
 @Component
-@EnableScheduling
+// @EnableScheduling
 public class MarketDataPoller {
 
     private static final Logger logger =
