@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generatorName": "typescript-angular",
+  "generatorVersion": "7.9.0",
+  "skipValidateSpec": true,
+  "output": "src/generated",
+  "inputSpec": "../contracts/trade-api.yaml",
+  "packageName": "api",
+  "packageVersion": "1.0.0",
+  "additionalProperties": {
+    "apiModulePrefix": "api",
+    "ngVersion": "21.2.0"
+  },
+  "templatingEngine": "handlebars",
+  "globalProperties": {
+    "skipJsonSpecValidation": true
+  }
+}
