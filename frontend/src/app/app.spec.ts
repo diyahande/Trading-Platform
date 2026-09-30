@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import { AUTH_HEADER_POLICY, bearerTokenInterceptor } from './core/interceptors/bearer-token.interceptor';
 import { App } from './app';
+import { routes } from './app.routes';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -16,6 +18,7 @@ describe('App', () => {
             unauthenticatedAuthPaths: ['/auth/login', '/auth/register', '/auth/refresh'],
           },
         },
+        provideRouter(routes),
       ],
     }).compileComponents();
   });
@@ -26,10 +29,11 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render login component', async () => {
+  it('should render router outlet host', async () => {
     const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-login')).toBeTruthy();
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });

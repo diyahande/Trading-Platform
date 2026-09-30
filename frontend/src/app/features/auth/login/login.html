@@ -1,23 +1,55 @@
-<div class="login-container">
-	<h2>Sign In</h2>
-	<div *ngIf="!signedIn">
-		<div class="form-group">
-			<label for="username">Username</label>
-			<input id="username" data-testid="signin-username" [(ngModel)]="username" />
+<section class="auth-panel" aria-label="TradeX login">
+	<div class="chart-bg" aria-hidden="true">
+		<svg viewBox="0 0 800 520" preserveAspectRatio="none">
+			<polyline points="20,430 95,390 160,410 230,350 300,370 370,300 440,335 510,255 580,275 650,210 725,235"
+				class="line" />
+			<line x1="95" y1="420" x2="95" y2="360" class="candle g" />
+			<line x1="160" y1="430" x2="160" y2="395" class="candle r" />
+			<line x1="230" y1="380" x2="230" y2="325" class="candle g" />
+			<line x1="300" y1="395" x2="300" y2="355" class="candle r" />
+			<line x1="370" y1="320" x2="370" y2="280" class="candle g" />
+			<line x1="440" y1="350" x2="440" y2="315" class="candle r" />
+			<line x1="510" y1="275" x2="510" y2="240" class="candle g" />
+			<line x1="580" y1="300" x2="580" y2="260" class="candle r" />
+			<line x1="650" y1="225" x2="650" y2="195" class="candle g" />
+		</svg>
+	</div>
+
+	<div class="brand">Trade<span>X</span></div>
+
+	<div class="auth-card">
+		<h1>Trade<span>X</span></h1>
+
+		<div class="field">
+			<label for="username">Email / Username</label>
+			<input id="username" data-testid="signin-username" placeholder="Enter your email" [(ngModel)]="username" />
 		</div>
 
-		<div class="form-group">
+		<div class="field">
 			<label for="password">Password</label>
-			<input id="password" type="password" data-testid="signin-password" [(ngModel)]="password" />
+			<div class="password-wrap">
+				<input id="password" [type]="showPassword ? 'text' : 'password'" data-testid="signin-password"
+					placeholder="Enter your password" [(ngModel)]="password" />
+				<button type="button" class="eye" (click)="togglePasswordVisibility()" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+					{{ showPassword ? 'Hide' : 'Show' }}
+				</button>
+			</div>
 		</div>
+
+		<div class="support-link">Reset password?</div>
 
 		<div *ngIf="error" class="error" data-testid="signin-error">{{error}}</div>
+		<div *ngIf="signedIn" class="success" data-testid="signin-success">Signed in successfully.</div>
 
-		<button (click)="submit()" [disabled]="loading" data-testid="signin-submit">{{loading ? 'Signing in...' : 'Sign In'}}</button>
-	</div>
+		<button class="primary" (click)="submit()" [disabled]="loading" data-testid="signin-submit">
+			{{loading ? 'Signing in...' : 'Sign In'}}
+		</button>
 
-	<div *ngIf="signedIn" class="success" data-testid="signin-success">
-		<p>Signed in successfully.</p>
-		<button (click)="signOut()" data-testid="signout-button">Sign Out</button>
+		<div class="footnote">
+			Don't have an account?
+			<a routerLink="/signup">Create Account</a>
+		</div>
+
+		<button *ngIf="signedIn" class="ghost" (click)="signOut()" data-testid="signout-button">Sign Out</button>
 	</div>
-</div>
+</section>

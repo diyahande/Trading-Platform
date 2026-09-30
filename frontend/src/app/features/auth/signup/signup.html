@@ -1,1 +1,56 @@
-<p>signup works!</p>
+<section class="auth-panel" aria-label="TradeX sign up">
+	<div class="chart-bg" aria-hidden="true">
+		<svg viewBox="0 0 800 520" preserveAspectRatio="none">
+			<polyline points="20,410 95,398 160,370 230,382 300,345 370,350 440,305 510,286 580,248 650,268 725,218"
+				class="line" />
+			<line x1="95" y1="415" x2="95" y2="385" class="candle g" />
+			<line x1="160" y1="385" x2="160" y2="355" class="candle g" />
+			<line x1="230" y1="392" x2="230" y2="365" class="candle r" />
+			<line x1="300" y1="360" x2="300" y2="332" class="candle g" />
+			<line x1="370" y1="360" x2="370" y2="338" class="candle r" />
+			<line x1="440" y1="316" x2="440" y2="292" class="candle g" />
+			<line x1="510" y1="295" x2="510" y2="275" class="candle r" />
+			<line x1="580" y1="258" x2="580" y2="240" class="candle g" />
+			<line x1="650" y1="277" x2="650" y2="255" class="candle r" />
+		</svg>
+	</div>
+
+	<div class="brand">Trade<span>X</span></div>
+
+	<div class="auth-card">
+		<h1>Trade<span>X</span></h1>
+
+		<div class="row">
+			<div class="field">
+				<label for="first-name">First Name</label>
+				<input id="first-name" placeholder="First name" [(ngModel)]="firstName" />
+			</div>
+			<div class="field">
+				<label for="last-name">Last Name</label>
+				<input id="last-name" placeholder="Last name" [(ngModel)]="lastName" />
+			</div>
+		</div>
+
+		<div class="field">
+			<label for="email">Email / Username</label>
+			<input id="email" placeholder="Enter your email" [(ngModel)]="email" />
+		</div>
+
+		<div class="field">
+			<label for="phone">Phone Number</label>
+			<input id="phone" placeholder="Enter phone number" [(ngModel)]="phone" />
+		</div>
+
+		<div class="field">
+			<label for="dob">Date of Birth</label>
+			<input id="dob" type="date" placeholder="Select date of birth" [(ngModel)]="dob" />
+		</div>
+
+		<button class="primary" type="button">Create Account</button>
+
+		<div class="footnote">
+			Already have an account?
+			<a routerLink="/login">Sign In</a>
+		</div>
+	</div>
+</section>
