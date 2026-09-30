@@ -13,7 +13,7 @@
 .chart-bg {
 	position: absolute;
 	inset: 0;
-	opacity: 0.16;
+	opacity: 0.045;
 	pointer-events: none;
 }
 
@@ -24,22 +24,15 @@
 
 .line {
 	fill: none;
-	stroke: #18d98b;
-	stroke-width: 2;
-	opacity: 0.5;
+	stroke: #9ab3a7;
+	stroke-width: 1.1;
+	opacity: 0.95;
 }
 
-.candle {
-	stroke-width: 4;
-	opacity: 0.44;
-}
-
-.candle.g {
-	stroke: #18d98b;
-}
-
-.candle.r {
-	stroke: #de5d5d;
+.segment {
+	stroke: #8fa69b;
+	stroke-width: 1;
+	opacity: 0.9;
 }
 
 .brand {
