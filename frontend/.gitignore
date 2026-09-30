@@ -1,12 +1,5 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Generated TypeScript Angular clients (these are COMMITTED, not ignored)
-# Regenerate with: npm run generate:clients
-# Never edit files inside these directories
-!src/generated/
-!src/generated/trade-api/
-!src/generated/auth-api/
-
 # Compiled output
 /dist
 /tmp
