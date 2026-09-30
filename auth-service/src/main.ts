@@ -4,9 +4,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { ERROR_INVALID_INPUT } from './auth/auth.constants';
 import { AppModule } from './app.module';
+import { AppLogger } from './common/logging/app-logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useLogger(app.get(AppLogger));
 
   app.useGlobalPipes(
     new ValidationPipe({

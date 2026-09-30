@@ -39,8 +39,6 @@
 
 | Item | Owner | Target date |
 |---|---|---|
-| Remove hard-coded JWT signing secret and sign with JWT_SECRET from environment | Auth service owners | 2026-09-27 |
-| Add login throttling/rate limiting for authentication endpoints | Auth service owners | 2026-10-02 |
-| Add structured, redacted security event logs for login fail, refresh replay, and token revocation paths | Auth service owners | 2026-10-02 |
-| Upgrade jsonwebtoken to a non-vulnerable major version and re-run test/build | Auth service owners | 2026-09-29 |
-| Harden container runtime to non-root user and document CORS allowlist policy | Auth service owners | 2026-10-03 |
+| Add structured, redacted security event logs for login fail, refresh replay, and token revocation paths | Team 4 | 2026-10-02 |
+| Upgrade jsonwebtoken to a non-vulnerable major version and re-run test/build | Team 4 | 2026-09-29 |
+| Harden container runtime to non-root user and document CORS allowlist policy | Team 4 | 2026-10-03 |

@@ -13,6 +13,7 @@ import {
   ERROR_UNAUTHORISED,
 } from './auth.constants';
 import { AuthRepository } from './auth.repository';
+import { AppLogger } from '../common/logging/app-logger.service';
 import type {
   AccessTokenClaims,
   AuthUserRecord,
@@ -30,16 +31,25 @@ export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly tokenService: TokenService,
+    private readonly logger: AppLogger,
   ) {}
 
   async register(request: RegisterRequestDto): Promise<UserResponseDto> {
     const existing = await this.authRepository.findUserByUsername(request.username);
     if (existing) {
+      this.logger.warn('Registration rejected: username already exists', {
+        event: 'auth.register.rejected.username_exists',
+        username: request.username,
+      });
       throw new ConflictException(ERROR_REGISTRATION_FAILED);
     }
 
     const existingAccountId = await this.authRepository.findUserByAccountId(request.accountId);
     if (existingAccountId) {
+      this.logger.warn('Registration rejected: account already linked', {
+        event: 'auth.register.rejected.account_exists',
+        accountId: request.accountId,
+      });
       throw new ConflictException(ERROR_REGISTRATION_FAILED);
     }
 
@@ -48,6 +58,13 @@ export class AuthService {
       passwordHash: await bcrypt.hash(request.password, 12),
       accountId: request.accountId,
       roles: ['CUSTOMER'],
+    });
+
+    this.logger.log('Registration completed', {
+      event: 'auth.register.success',
+      userId: user.id,
+      username: user.username,
+      accountId: user.accountId,
     });
 
     return this.toUserResponse(user);
@@ -59,8 +76,18 @@ export class AuthService {
     const isValidPassword = await bcrypt.compare(request.password, passwordHash);
 
     if (!user || !isValidPassword) {
+      this.logger.warn('Login failed', {
+        event: 'auth.login.failed',
+        username: request.username,
+      });
       throw new UnauthorizedException(ERROR_UNAUTHORISED);
     }
+
+    this.logger.log('Login accepted', {
+      event: 'auth.login.success',
+      userId: user.id,
+      username: user.username,
+    });
 
     return this.issueTokenPair(user);
   }
@@ -71,6 +98,9 @@ export class AuthService {
     const refreshToken = await this.authRepository.findRefreshTokenByHash(tokenHash);
 
     if (!refreshToken) {
+      this.logger.warn('Refresh rejected: token not found', {
+        event: 'auth.refresh.failed.token_not_found',
+      });
       this.throwUnauthorised();
     }
 
@@ -79,20 +109,38 @@ export class AuthService {
       refreshToken.revokedOn ||
       refreshToken.expiresOn.getTime() <= now.getTime()
     ) {
+      this.logger.warn('Refresh rejected: token invalid state', {
+        event: 'auth.refresh.failed.invalid_state',
+        userId: refreshToken.userId,
+      });
       await this.authRepository.revokeAllRefreshTokensForUser(refreshToken.userId, now);
       this.throwUnauthorised();
     }
 
     const consumed = await this.authRepository.consumeRefreshToken(refreshToken.id, now);
     if (!consumed) {
+      this.logger.warn('Refresh rejected: consume race', {
+        event: 'auth.refresh.failed.consume_race',
+        userId: refreshToken.userId,
+      });
       await this.authRepository.revokeAllRefreshTokensForUser(refreshToken.userId, now);
       this.throwUnauthorised();
     }
 
     const user = await this.authRepository.findUserById(refreshToken.userId);
     if (!user) {
+      this.logger.warn('Refresh rejected: user not found', {
+        event: 'auth.refresh.failed.user_not_found',
+        userId: refreshToken.userId,
+      });
       this.throwUnauthorised();
     }
+
+    this.logger.log('Refresh accepted', {
+      event: 'auth.refresh.success',
+      userId: user.id,
+      username: user.username,
+    });
 
     return this.issueTokenPair(user);
   }
@@ -100,6 +148,10 @@ export class AuthService {
   async me(claims: AccessTokenClaims): Promise<UserResponseDto> {
     const user = await this.authRepository.findUserByAccountId(claims.sub);
     if (!user) {
+      this.logger.warn('Profile lookup failed', {
+        event: 'auth.me.failed.user_not_found',
+        subject: claims.sub,
+      });
       throw new UnauthorizedException(ERROR_UNAUTHORISED);
     }
 

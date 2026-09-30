@@ -3,6 +3,7 @@ import * as bcrypt from 'bcryptjs';
 
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
+import { AppLogger } from '../common/logging/app-logger.service';
 import { TokenService } from './token.service';
 import type { Role } from './types/auth.types';
 
@@ -10,6 +11,7 @@ describe('AuthService', () => {
   let authService: AuthService;
   let authRepository: jest.Mocked<AuthRepository>;
   let tokenService: jest.Mocked<TokenService>;
+  let logger: jest.Mocked<Pick<AppLogger, 'log' | 'warn' | 'error' | 'debug' | 'verbose'>>;
 
   const userRecord = {
     id: 'user-id',
@@ -40,7 +42,15 @@ describe('AuthService', () => {
       refreshTtlSeconds: 604800,
     } as unknown as jest.Mocked<TokenService>;
 
-    authService = new AuthService(authRepository, tokenService);
+    logger = {
+      log: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    };
+
+    authService = new AuthService(authRepository, tokenService, logger as AppLogger);
   });
 
   beforeEach(() => {
