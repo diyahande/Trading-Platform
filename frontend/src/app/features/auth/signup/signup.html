@@ -45,7 +45,12 @@
 			<input id="dob" type="date" placeholder="Select date of birth" [(ngModel)]="dob" />
 		</div>
 
-		<button class="primary" type="button">Create Account</button>
+		<p class="message success" *ngIf="success">{{ success }}</p>
+		<p class="message error" *ngIf="error">{{ error }}</p>
+
+		<button class="primary" type="button" [disabled]="loading" (click)="submit()">
+			{{ loading ? 'Submitting...' : 'Create Account' }}
+		</button>
 
 		<div class="footnote">
 			Already have an account?

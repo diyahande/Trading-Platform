@@ -1,0 +1,65 @@
+<section class="admin-page" aria-label="Signup request administration">
+  <header class="hero">
+    <h1>Signup Requests</h1>
+    <button type="button" (click)="loadRequests()" [disabled]="loading">Refresh</button>
+  </header>
+
+  <p class="status ok" *ngIf="statusMessage">{{ statusMessage }}</p>
+  <p class="status err" *ngIf="error">{{ error }}</p>
+
+  <div class="empty" *ngIf="!loading && requests.length === 0">No pending signup requests.</div>
+
+  <article class="card" *ngFor="let request of requests">
+    <div class="row title">
+      <h2>{{ request.firstName }} {{ request.lastName }}</h2>
+      <span>{{ request.createdOn | date : 'medium' }}</span>
+    </div>
+
+    <div class="details">
+      <p><strong>Username:</strong> {{ request.username }}</p>
+      <p><strong>Phone:</strong> {{ request.phone }}</p>
+      <p><strong>DOB:</strong> {{ request.dob }}</p>
+    </div>
+
+    <div class="form-grid">
+      <label>
+        Account ID (UUID)
+        <input
+          type="text"
+          [disabled]="processing[request.id]"
+          [(ngModel)]="accountIds[request.id]"
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        />
+      </label>
+
+      <label>
+        Rejection Reason
+        <input
+          type="text"
+          [disabled]="processing[request.id]"
+          [(ngModel)]="rejectReasons[request.id]"
+          placeholder="Reason for rejection"
+        />
+      </label>
+
+      <label class="wide">
+        Review Notes (optional)
+        <textarea
+          rows="3"
+          [disabled]="processing[request.id]"
+          [(ngModel)]="reviewNotes[request.id]"
+          placeholder="Internal notes"
+        ></textarea>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="approve" [disabled]="processing[request.id]" (click)="approve(request)">
+        Approve + Register
+      </button>
+      <button type="button" class="reject" [disabled]="processing[request.id]" (click)="reject(request)">
+        Reject
+      </button>
+    </div>
+  </article>
+</section>

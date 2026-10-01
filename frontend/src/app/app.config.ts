@@ -15,7 +15,7 @@ export const appConfig: ApplicationConfig = {
       provide: AUTH_HEADER_POLICY,
       useValue: {
         allowedOrigins: ['http://localhost:3000', 'http://localhost:8080'],
-        unauthenticatedAuthPaths: ['/auth/login', '/auth/register', '/auth/refresh'],
+        unauthenticatedAuthPaths: ['/auth/login', '/auth/register', '/auth/refresh', '/auth/signup-request'],
       },
     },
     // adjust basePath as needed for your running backend (example localhost:3333)
