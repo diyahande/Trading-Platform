@@ -9,6 +9,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { EmailService } from '../email/email.service';
+
 import { AuthService } from './auth.service';
 import { AuthUser } from './decorators/auth-user.decorator';
 import { ErrorResponseDto } from './dto/error-response.dto';
@@ -24,7 +26,10 @@ import type { AccessTokenClaims } from './types/auth.types';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly emailService: EmailService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a user' })
@@ -34,6 +39,16 @@ export class AuthController {
   @ApiResponse({ status: 422, type: ErrorResponseDto })
   register(@Body() request: RegisterRequestDto): Promise<UserResponseDto> {
     return this.authService.register(request);
+  }
+
+  @Get('send-temporary-password')
+  async sendTemporaryPassword(): Promise<void> {
+    const temporaryPassword = Math.random().toString(36).slice(-8);
+    await this.emailService.sendTemporaryPassword(
+      "kaushikvijay9911@gmail.com",
+      "kaushikvijay9911@gmail.com",
+      temporaryPassword,
+    );
   }
 
   @Post('login')

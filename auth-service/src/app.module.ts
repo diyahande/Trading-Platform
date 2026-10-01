@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 import { RequestLoggingMiddleware } from './common/logging/request-logging.middleware';
 
 
@@ -11,6 +12,7 @@ import { RequestLoggingMiddleware } from './common/logging/request-logging.middl
       isGlobal: true,
     }),
     AuthModule,
+    EmailModule
   ],
   controllers: [],
   providers: [RequestLoggingMiddleware],
