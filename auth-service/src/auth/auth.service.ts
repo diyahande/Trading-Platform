@@ -5,12 +5,14 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
 import {
   DUMMY_PASSWORD_HASH,
+  ERROR_INVALID_INPUT,
   ERROR_REGISTRATION_FAILED,
   ERROR_UNAUTHORISED,
 } from './auth.constants';
@@ -27,6 +29,8 @@ import type {
 import { TokenService } from './token.service';
 import type { ApproveSignupRequestDto } from './dto/approve-signup-request.dto';
 import type { ApproveSignupRequestResponseDto } from './dto/approve-signup-request-response.dto';
+import type { ChangePasswordRequestDto } from './dto/change-password-request.dto';
+import type { ChangePasswordResponseDto } from './dto/change-password-response.dto';
 import type { CreateSignupRequestDto } from './dto/create-signup-request.dto';
 import type { LoginRequestDto } from './dto/login-request.dto';
 import type { RejectSignupRequestDto } from './dto/reject-signup-request.dto';
@@ -39,6 +43,9 @@ import type { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class AuthService {
+  private static readonly CHANGE_PASSWORD_SUCCESS_MESSAGE =
+    'Password changed successfully. Please sign in again.';
+
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly tokenService: TokenService,
@@ -353,6 +360,48 @@ export class AuthService {
     });
 
     return this.issueTokenPair(user);
+  }
+
+  async changePassword(
+    claims: AccessTokenClaims,
+    request: ChangePasswordRequestDto,
+  ): Promise<ChangePasswordResponseDto> {
+    if (request.newPassword !== request.confirmNewPassword) {
+      throw new UnprocessableEntityException(ERROR_INVALID_INPUT);
+    }
+
+    if (request.oldPassword === request.newPassword) {
+      throw new UnprocessableEntityException(ERROR_INVALID_INPUT);
+    }
+
+    const user = await this.authRepository.findUserByAccountId(claims.accountId);
+    if (!user) {
+      this.throwUnauthorised();
+    }
+
+    const isValidOldPassword = await bcrypt.compare(request.oldPassword, user.passwordHash);
+    if (!isValidOldPassword) {
+      this.throwUnauthorised();
+    }
+
+    const passwordHash = await bcrypt.hash(request.newPassword, 12);
+    const updated = await this.authRepository.updateUserPasswordHash(user.id, passwordHash);
+
+    if (!updated) {
+      this.throwUnauthorised();
+    }
+
+    await this.authRepository.revokeAllRefreshTokensForUser(user.id, new Date());
+
+    this.logger.log('Password changed for authenticated user', {
+      event: 'auth.change_password.success',
+      userId: user.id,
+      accountId: user.accountId,
+    });
+
+    return {
+      message: AuthService.CHANGE_PASSWORD_SUCCESS_MESSAGE,
+    };
   }
 
   async me(claims: AccessTokenClaims): Promise<UserResponseDto> {

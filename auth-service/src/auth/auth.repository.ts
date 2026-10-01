@@ -216,6 +216,17 @@ export class AuthRepository implements OnModuleDestroy {
     return user;
   }
 
+  async updateUserPasswordHash(userId: string, passwordHash: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `UPDATE auth_users
+       SET password_hash = $2
+       WHERE id = $1`,
+      [userId, passwordHash],
+    );
+
+    return result.rowCount === 1;
+  }
+
   async storeRefreshToken(input: {
     userId: string;
     tokenHash: string;

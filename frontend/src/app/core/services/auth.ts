@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, Optional } from '@angular/core';
 import { BehaviorSubject, Observable, firstValueFrom, timeout } from 'rxjs';
 import { TokenResponseDto } from '../../generated/api-client/model/tokenResponseDto';
+import { Configuration } from '../../generated/api-client/configuration';
 import { AuthService as ApiAuthService } from '../../generated/api-client/api/auth.service';
 
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -16,7 +18,11 @@ export class Auth {
   private _token$ = new BehaviorSubject<string | null>(this.getStoredAccessToken());
   private refreshInFlight: Promise<TokenResponseDto | null> | null = null;
 
-  constructor(private apiAuth: ApiAuthService) {}
+  constructor(
+    private apiAuth: ApiAuthService,
+    private http: HttpClient,
+    @Optional() private apiConfiguration?: Configuration,
+  ) {}
 
   get token$(): Observable<string | null> {
     return this._token$.asObservable();
@@ -63,6 +69,24 @@ export class Auth {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY);
     this._token$.next(null);
+  }
+
+  public async changePassword(
+    oldPassword: string,
+    newPassword: string,
+    confirmNewPassword: string,
+  ): Promise<{ message: string }> {
+    const basePath = this.apiConfiguration?.basePath ?? '';
+    const response = await firstValueFrom(
+      this.http
+        .post<{ message: string }>(`${basePath}/auth/change-password`, {
+          oldPassword,
+          newPassword,
+          confirmNewPassword,
+        })
+        .pipe(timeout(AUTH_REQUEST_TIMEOUT_MS)),
+    );
+    return response;
   }
 
   private storeTokens(tokens: TokenResponseDto) {

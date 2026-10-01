@@ -31,8 +31,7 @@
 			</div>
 		</div>
 
-		<div class="support-link">Reset password?</div>
-
+		<div *ngIf="notice" class="notice">{{notice}}</div>
 		<div *ngIf="error" class="error" data-testid="signin-error">{{error}}</div>
 		<div *ngIf="signedIn" class="success" data-testid="signin-success">Signed in successfully.</div>
 

@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { AppLogger } from '../common/logging/app-logger.service';
+import { EmailService } from '../email/email.service';
 import { TokenService } from './token.service';
 import type { Role } from './types/auth.types';
 
@@ -11,6 +12,7 @@ describe('AuthService', () => {
   let authService: AuthService;
   let authRepository: jest.Mocked<AuthRepository>;
   let tokenService: jest.Mocked<TokenService>;
+  let emailService: jest.Mocked<Pick<EmailService, 'sendTemporaryPassword' | 'sendRejectionEmail'>>;
   let logger: jest.Mocked<Pick<AppLogger, 'log' | 'warn' | 'error' | 'debug' | 'verbose'>>;
 
   const userRecord = {
@@ -27,7 +29,14 @@ describe('AuthService', () => {
       findUserByUsername: jest.fn(),
       findUserById: jest.fn(),
       findUserByAccountId: jest.fn(),
+      findSignupRequestById: jest.fn(),
+      findActiveSignupRequestByUsername: jest.fn(),
+      createSignupRequest: jest.fn(),
+      listSignupRequests: jest.fn(),
+      markSignupRequestApproved: jest.fn(),
+      markSignupRequestRejected: jest.fn(),
       createUser: jest.fn(),
+      updateUserPasswordHash: jest.fn(),
       storeRefreshToken: jest.fn(),
       findRefreshTokenByHash: jest.fn(),
       consumeRefreshToken: jest.fn(),
@@ -50,7 +59,17 @@ describe('AuthService', () => {
       verbose: jest.fn(),
     };
 
-    authService = new AuthService(authRepository, tokenService, logger as AppLogger);
+    emailService = {
+      sendTemporaryPassword: jest.fn(),
+      sendRejectionEmail: jest.fn(),
+    };
+
+    authService = new AuthService(
+      authRepository,
+      tokenService,
+      emailService as EmailService,
+      logger as AppLogger,
+    );
   });
 
   beforeEach(() => {
@@ -332,5 +351,83 @@ describe('AuthService', () => {
         iss: 'auth-service',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('change password rejects mismatched confirm password with validation error', async () => {
+    await expect(
+      authService.changePassword(
+        {
+          sub: userRecord.accountId,
+          accountId: userRecord.accountId,
+          roles: ['CUSTOMER'],
+          iat: 1,
+          exp: 2,
+          iss: 'auth-service',
+        },
+        {
+          oldPassword: 'OldPassword#123',
+          newPassword: 'NewPassword#123',
+          confirmNewPassword: 'DifferentPassword#123',
+        },
+      ),
+    ).rejects.toEqual(expect.objectContaining({ response: expect.objectContaining({ errorCode: 'VAL-422' }) }));
+  });
+
+  it('change password rejects incorrect old password', async () => {
+    const hash = await bcrypt.hash('CurrentPassword#123', 12);
+    authRepository.findUserByAccountId.mockResolvedValue({
+      ...userRecord,
+      passwordHash: hash,
+    });
+
+    await expect(
+      authService.changePassword(
+        {
+          sub: userRecord.accountId,
+          accountId: userRecord.accountId,
+          roles: ['CUSTOMER'],
+          iat: 1,
+          exp: 2,
+          iss: 'auth-service',
+        },
+        {
+          oldPassword: 'WrongPassword#123',
+          newPassword: 'NextPassword#123',
+          confirmNewPassword: 'NextPassword#123',
+        },
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('change password succeeds and revokes refresh tokens', async () => {
+    const hash = await bcrypt.hash('CurrentPassword#123', 12);
+    authRepository.findUserByAccountId.mockResolvedValue({
+      ...userRecord,
+      passwordHash: hash,
+    });
+    authRepository.updateUserPasswordHash.mockResolvedValue(true);
+
+    const result = await authService.changePassword(
+      {
+        sub: userRecord.accountId,
+        accountId: userRecord.accountId,
+        roles: ['CUSTOMER'],
+        iat: 1,
+        exp: 2,
+        iss: 'auth-service',
+      },
+      {
+        oldPassword: 'CurrentPassword#123',
+        newPassword: 'NewPassword#456',
+        confirmNewPassword: 'NewPassword#456',
+      },
+    );
+
+    expect(result.message).toContain('Please sign in again');
+    expect(authRepository.updateUserPasswordHash).toHaveBeenCalledWith(userRecord.id, expect.any(String));
+    expect(authRepository.revokeAllRefreshTokensForUser).toHaveBeenCalledWith(
+      userRecord.id,
+      expect.any(Date),
+    );
   });
 });

@@ -15,7 +15,11 @@ describe('App', () => {
           provide: AUTH_HEADER_POLICY,
           useValue: {
             allowedOrigins: ['http://localhost:3000', 'http://localhost:8080'],
-            unauthenticatedAuthPaths: ['/auth/login', '/auth/register', '/auth/refresh'],
+            unauthenticatedAuthPaths: [
+              '/auth/login',
+              '/auth/register',
+              '/auth/refresh',
+            ],
           },
         },
         provideRouter(routes),

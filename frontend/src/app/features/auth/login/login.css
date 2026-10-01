@@ -173,6 +173,16 @@ input:focus {
 	background: rgba(93, 45, 53, 0.18);
 }
 
+.notice {
+	color: #8ae5bd;
+	font-size: 0.88rem;
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border: 1px solid rgba(24, 217, 139, 0.45);
+	border-radius: 9px;
+	background: rgba(24, 217, 139, 0.12);
+}
+
 .success {
 	font-size: 0.86rem;
 	margin-bottom: 10px;

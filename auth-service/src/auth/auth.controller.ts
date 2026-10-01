@@ -9,12 +9,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { EmailService } from '../email/email.service';
-
 import { AuthService } from './auth.service';
 import { AuthUser } from './decorators/auth-user.decorator';
 import { ApproveSignupRequestDto } from './dto/approve-signup-request.dto';
 import { ApproveSignupRequestResponseDto } from './dto/approve-signup-request-response.dto';
+import { ChangePasswordRequestDto } from './dto/change-password-request.dto';
+import { ChangePasswordResponseDto } from './dto/change-password-response.dto';
 import { CreateSignupRequestDto } from './dto/create-signup-request.dto';
 import { ErrorResponseDto } from './dto/error-response.dto';
 import { ListSignupRequestsQueryDto } from './dto/list-signup-requests-query.dto';
@@ -33,10 +33,7 @@ import type { AccessTokenClaims } from './types/auth.types';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly emailService: EmailService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a user' })
@@ -108,16 +105,6 @@ export class AuthController {
     return this.authService.rejectSignupRequest(user, id, request);
   }
 
-  @Get('send-temporary-password')
-  async sendTemporaryPassword(): Promise<void> {
-    const temporaryPassword = Math.random().toString(36).slice(-8);
-    await this.emailService.sendTemporaryPassword(
-      "kaushikvijay9911@gmail.com",
-      "kaushikvijay9911@gmail.com",
-      temporaryPassword,
-    );
-  }
-
   @Post('login')
   @HttpCode(200)
   @UseGuards(LoginThrottleGuard)
@@ -140,6 +127,22 @@ export class AuthController {
   @ApiResponse({ status: 422, type: ErrorResponseDto })
   refresh(@Body() request: RefreshRequestDto): Promise<TokenResponseDto> {
     return this.authService.refresh(request);
+  }
+
+  @Post('change-password')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({ summary: 'Change password for the authenticated user' })
+  @ApiBody({ type: ChangePasswordRequestDto })
+  @ApiOkResponse({ type: ChangePasswordResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 422, type: ErrorResponseDto })
+  changePassword(
+    @AuthUser() user: AccessTokenClaims,
+    @Body() request: ChangePasswordRequestDto,
+  ): Promise<ChangePasswordResponseDto> {
+    return this.authService.changePassword(user, request);
   }
 
   @Get('me')
