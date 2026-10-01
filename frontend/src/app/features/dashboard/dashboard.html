@@ -1,0 +1,30 @@
+<section class="dash-panel" aria-label="TradeX dashboard">
+  <div class="chart-bg" aria-hidden="true">
+    <svg viewBox="0 0 900 560" preserveAspectRatio="none">
+      <polyline points="20,460 100,430 180,440 260,385 340,405 420,352 500,365 580,300 660,315 740,268 820,290"
+        class="line" />
+      <line x1="100" y1="445" x2="100" y2="415" class="candle g" />
+      <line x1="180" y1="450" x2="180" y2="430" class="candle r" />
+      <line x1="260" y1="398" x2="260" y2="372" class="candle g" />
+      <line x1="340" y1="416" x2="340" y2="392" class="candle r" />
+      <line x1="420" y1="365" x2="420" y2="338" class="candle g" />
+      <line x1="500" y1="378" x2="500" y2="356" class="candle r" />
+      <line x1="580" y1="312" x2="580" y2="288" class="candle g" />
+      <line x1="660" y1="326" x2="660" y2="304" class="candle r" />
+      <line x1="740" y1="278" x2="740" y2="258" class="candle g" />
+    </svg>
+  </div>
+
+  <header class="brand">Trade<span>X</span></header>
+
+  <main class="dash-card">
+    <p class="kicker">Dashboard</p>
+    <h1>Welcome "{{ username }}"</h1>
+    <p class="subtle">Placeholder page after sign in.</p>
+
+    <div class="actions">
+      <a routerLink="/login" class="ghost">Back To Login</a>
+      <button type="button" class="primary" (click)="signOut()">Sign Out</button>
+    </div>
+  </main>
+</section>

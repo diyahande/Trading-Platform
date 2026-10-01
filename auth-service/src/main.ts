@@ -38,6 +38,14 @@ async function bootstrap() {
     jsonDocumentUrl: '/docs/json',
   });
 
+  // enable CORS for local frontend during development
+  app.enableCors({
+    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

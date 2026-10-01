@@ -1,1 +1,55 @@
-<p>signup works!</p>
+<section class="auth-panel" aria-label="TradeX sign up">
+	<div class="chart-bg" aria-hidden="true">
+		<svg viewBox="0 0 800 520" preserveAspectRatio="none">
+			<polyline points="26,402 80,414 134,398 188,410 242,392" class="line" />
+			<polyline points="558,356 612,340 666,352 720,338 776,346" class="line" />
+
+			<line x1="88" y1="420" x2="88" y2="400" class="segment" />
+			<line x1="166" y1="410" x2="166" y2="390" class="segment" />
+			<line x1="220" y1="404" x2="220" y2="386" class="segment" />
+
+			<line x1="610" y1="352" x2="610" y2="334" class="segment" />
+			<line x1="694" y1="346" x2="694" y2="328" class="segment" />
+			<line x1="758" y1="340" x2="758" y2="322" class="segment" />
+		</svg>
+	</div>
+
+	<div class="brand">Trade<span>X</span></div>
+
+	<div class="auth-card">
+		<h1>Trade<span>X</span></h1>
+
+		<div class="row">
+			<div class="field">
+				<label for="first-name">First Name</label>
+				<input id="first-name" placeholder="First name" [(ngModel)]="firstName" />
+			</div>
+			<div class="field">
+				<label for="last-name">Last Name</label>
+				<input id="last-name" placeholder="Last name" [(ngModel)]="lastName" />
+			</div>
+		</div>
+
+		<div class="field">
+			<label for="email">Email / Username</label>
+			<input id="email" placeholder="Enter your email" [(ngModel)]="email" />
+		</div>
+
+		<div class="field">
+			<label for="phone">Phone Number</label>
+			<input id="phone" placeholder="Enter phone number" [(ngModel)]="phone" />
+		</div>
+
+		<div class="field">
+			<label for="dob">Date of Birth</label>
+			<input id="dob" type="date" placeholder="Select date of birth" [(ngModel)]="dob" />
+		</div>
+
+		<button class="primary" type="button">Create Account</button>
+
+		<div class="footnote">
+			Already have an account?
+			<a routerLink="/login">Sign In</a>
+		</div>
+	</div>
+</section>
