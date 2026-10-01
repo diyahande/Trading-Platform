@@ -44,4 +44,23 @@ export class EmailService {
       `,
     });
   }
+
+  async sendRejectionEmail(email: string, firstName: string, reason: string): Promise<void> {
+    await this.transporter.sendMail({
+      from: `"Trading Platform" <${process.env.MAIL_FROM}>`,
+      to: email,
+      subject: 'Your account request status',
+      html: `
+        <h2>Account Request Update</h2>
+
+        <p>Hello ${firstName},</p>
+
+        <p>Your account request has been reviewed and was not approved at this time.</p>
+
+        <p><strong>Reason:</strong> ${reason}</p>
+
+        <p>You may submit a fresh request with corrected details.</p>
+      `,
+    });
+  }
 }

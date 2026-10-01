@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -13,10 +13,17 @@ import { EmailService } from '../email/email.service';
 
 import { AuthService } from './auth.service';
 import { AuthUser } from './decorators/auth-user.decorator';
+import { ApproveSignupRequestDto } from './dto/approve-signup-request.dto';
+import { ApproveSignupRequestResponseDto } from './dto/approve-signup-request-response.dto';
+import { CreateSignupRequestDto } from './dto/create-signup-request.dto';
 import { ErrorResponseDto } from './dto/error-response.dto';
+import { ListSignupRequestsQueryDto } from './dto/list-signup-requests-query.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
+import { RejectSignupRequestDto } from './dto/reject-signup-request.dto';
+import { RejectSignupRequestResponseDto } from './dto/reject-signup-request-response.dto';
 import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
+import { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -39,6 +46,66 @@ export class AuthController {
   @ApiResponse({ status: 422, type: ErrorResponseDto })
   register(@Body() request: RegisterRequestDto): Promise<UserResponseDto> {
     return this.authService.register(request);
+  }
+
+  @Post('signup-request')
+  @ApiOperation({ summary: 'Submit user signup request' })
+  @ApiBody({ type: CreateSignupRequestDto })
+  @ApiCreatedResponse({ type: SignupRequestResponseDto })
+  @ApiResponse({ status: 409, type: ErrorResponseDto })
+  @ApiResponse({ status: 422, type: ErrorResponseDto })
+  signupRequest(@Body() request: CreateSignupRequestDto): Promise<SignupRequestResponseDto> {
+    return this.authService.submitSignupRequest(request);
+  }
+
+  @Get('admin/signup-requests')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({ summary: 'List signup requests for admin review' })
+  @ApiOkResponse({ type: SignupRequestResponseDto, isArray: true })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 403, type: ErrorResponseDto })
+  listSignupRequests(
+    @AuthUser() user: AccessTokenClaims,
+    @Query() query: ListSignupRequestsQueryDto,
+  ): Promise<SignupRequestResponseDto[]> {
+    return this.authService.listSignupRequests(user, query.status);
+  }
+
+  @Patch('admin/signup-requests/:id/approve-and-register')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({ summary: 'Approve request and register user with admin provided account id' })
+  @ApiBody({ type: ApproveSignupRequestDto })
+  @ApiOkResponse({ type: ApproveSignupRequestResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 403, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  @ApiResponse({ status: 409, type: ErrorResponseDto })
+  approveAndRegisterSignupRequest(
+    @AuthUser() user: AccessTokenClaims,
+    @Param('id') id: string,
+    @Body() request: ApproveSignupRequestDto,
+  ): Promise<ApproveSignupRequestResponseDto> {
+    return this.authService.approveAndRegisterSignupRequest(user, id, request);
+  }
+
+  @Patch('admin/signup-requests/:id/reject')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({ summary: 'Reject a signup request and notify the applicant' })
+  @ApiBody({ type: RejectSignupRequestDto })
+  @ApiOkResponse({ type: RejectSignupRequestResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 403, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  @ApiResponse({ status: 409, type: ErrorResponseDto })
+  rejectSignupRequest(
+    @AuthUser() user: AccessTokenClaims,
+    @Param('id') id: string,
+    @Body() request: RejectSignupRequestDto,
+  ): Promise<RejectSignupRequestResponseDto> {
+    return this.authService.rejectSignupRequest(user, id, request);
   }
 
   @Get('send-temporary-password')

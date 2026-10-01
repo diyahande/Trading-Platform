@@ -2,7 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
@@ -14,15 +16,24 @@ import {
 } from './auth.constants';
 import { AuthRepository } from './auth.repository';
 import { AppLogger } from '../common/logging/app-logger.service';
+import { EmailService } from '../email/email.service';
 import type {
   AccessTokenClaims,
   AuthUserRecord,
   Role,
+  SignupRequestRecord,
+  SignupRequestStatus,
 } from './types/auth.types';
 import { TokenService } from './token.service';
+import type { ApproveSignupRequestDto } from './dto/approve-signup-request.dto';
+import type { ApproveSignupRequestResponseDto } from './dto/approve-signup-request-response.dto';
+import type { CreateSignupRequestDto } from './dto/create-signup-request.dto';
 import type { LoginRequestDto } from './dto/login-request.dto';
+import type { RejectSignupRequestDto } from './dto/reject-signup-request.dto';
+import type { RejectSignupRequestResponseDto } from './dto/reject-signup-request-response.dto';
 import type { RefreshRequestDto } from './dto/refresh-request.dto';
 import type { RegisterRequestDto } from './dto/register-request.dto';
+import type { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import type { TokenResponseDto } from './dto/token-response.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
 
@@ -31,8 +42,207 @@ export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly tokenService: TokenService,
+    private readonly emailService: EmailService,
     private readonly logger: AppLogger,
   ) {}
+
+  async submitSignupRequest(request: CreateSignupRequestDto): Promise<SignupRequestResponseDto> {
+    const normalizedUsername = request.username.trim().toLowerCase();
+
+    const existingUser = await this.authRepository.findUserByUsername(normalizedUsername);
+    if (existingUser) {
+      this.logger.warn('Signup request rejected: username already exists as user', {
+        event: 'auth.signup_request.rejected.username_exists',
+        username: normalizedUsername,
+      });
+      throw new ConflictException(ERROR_REGISTRATION_FAILED);
+    }
+
+    const activeRequest = await this.authRepository.findActiveSignupRequestByUsername(normalizedUsername);
+    if (activeRequest) {
+      this.logger.warn('Signup request rejected: active request exists', {
+        event: 'auth.signup_request.rejected.active_exists',
+        username: normalizedUsername,
+        signupRequestId: activeRequest.id,
+      });
+      throw new ConflictException({
+        errorCode: 'AUTH-409',
+        message: 'Signup request already exists',
+      });
+    }
+
+    const created = await this.authRepository.createSignupRequest({
+      firstName: request.firstName.trim(),
+      lastName: request.lastName.trim(),
+      username: normalizedUsername,
+      phone: request.phone.trim(),
+      dob: new Date(request.dob),
+    });
+
+    this.logger.log('Signup request created', {
+      event: 'auth.signup_request.created',
+      signupRequestId: created.id,
+      username: created.username,
+    });
+
+    return this.toSignupRequestResponse(created);
+  }
+
+  async listSignupRequests(
+    claims: AccessTokenClaims,
+    status?: SignupRequestStatus,
+  ): Promise<SignupRequestResponseDto[]> {
+    this.assertAdmin(claims);
+    const requests = await this.authRepository.listSignupRequests(status);
+    return requests.map((item) => this.toSignupRequestResponse(item));
+  }
+
+  async approveAndRegisterSignupRequest(
+    claims: AccessTokenClaims,
+    requestId: string,
+    request: ApproveSignupRequestDto,
+  ): Promise<ApproveSignupRequestResponseDto> {
+    this.assertAdmin(claims);
+
+    const signupRequest = await this.authRepository.findSignupRequestById(requestId);
+    if (!signupRequest) {
+      throw new NotFoundException({
+        errorCode: 'AUTH-404',
+        message: 'Signup request not found',
+      });
+    }
+
+    if (signupRequest.status !== 'NEW') {
+      throw new ConflictException({
+        errorCode: 'AUTH-409',
+        message: `Signup request is already ${signupRequest.status.toLowerCase()}`,
+      });
+    }
+
+    const temporaryPassword = this.generateTemporaryPassword();
+    const createdUser = await this.register({
+      username: signupRequest.username,
+      password: temporaryPassword,
+      accountId: request.accountId,
+      roles: ['CUSTOMER'],
+    });
+
+    const reviewedOn = new Date();
+    const updated = await this.authRepository.markSignupRequestApproved({
+      id: signupRequest.id,
+      reviewNotes: this.cleanOptionalText(request.reviewNotes),
+      approvedAccountId: request.accountId,
+      approvedAuthUserId: createdUser.id,
+      reviewedBy: claims.accountId,
+      reviewedOn,
+    });
+
+    if (!updated) {
+      throw new ConflictException({
+        errorCode: 'AUTH-409',
+        message: 'Signup request can no longer be approved',
+      });
+    }
+
+    let emailSent = true;
+    try {
+      await this.emailService.sendTemporaryPassword(
+        signupRequest.username,
+        signupRequest.username,
+        temporaryPassword,
+      );
+    } catch (error) {
+      emailSent = false;
+      this.logger.error('Approval email failed', {
+        event: 'auth.signup_request.approved.email_failed',
+        signupRequestId: signupRequest.id,
+        username: signupRequest.username,
+        error,
+      });
+    }
+
+    this.logger.log('Signup request approved and registered', {
+      event: 'auth.signup_request.approved',
+      signupRequestId: signupRequest.id,
+      userId: createdUser.id,
+      accountId: request.accountId,
+      emailSent,
+    });
+
+    return {
+      requestId: signupRequest.id,
+      authUserId: createdUser.id,
+      accountId: request.accountId,
+      emailSent,
+    };
+  }
+
+  async rejectSignupRequest(
+    claims: AccessTokenClaims,
+    requestId: string,
+    request: RejectSignupRequestDto,
+  ): Promise<RejectSignupRequestResponseDto> {
+    this.assertAdmin(claims);
+
+    const signupRequest = await this.authRepository.findSignupRequestById(requestId);
+    if (!signupRequest) {
+      throw new NotFoundException({
+        errorCode: 'AUTH-404',
+        message: 'Signup request not found',
+      });
+    }
+
+    if (signupRequest.status !== 'NEW') {
+      throw new ConflictException({
+        errorCode: 'AUTH-409',
+        message: `Signup request is already ${signupRequest.status.toLowerCase()}`,
+      });
+    }
+
+    const updated = await this.authRepository.markSignupRequestRejected({
+      id: signupRequest.id,
+      rejectionReason: request.rejectionReason.trim(),
+      reviewNotes: this.cleanOptionalText(request.reviewNotes),
+      reviewedBy: claims.accountId,
+      reviewedOn: new Date(),
+    });
+
+    if (!updated) {
+      throw new ConflictException({
+        errorCode: 'AUTH-409',
+        message: 'Signup request can no longer be rejected',
+      });
+    }
+
+    let emailSent = true;
+    try {
+      await this.emailService.sendRejectionEmail(
+        signupRequest.username,
+        signupRequest.firstName,
+        request.rejectionReason.trim(),
+      );
+    } catch (error) {
+      emailSent = false;
+      this.logger.error('Rejection email failed', {
+        event: 'auth.signup_request.rejected.email_failed',
+        signupRequestId: signupRequest.id,
+        username: signupRequest.username,
+        error,
+      });
+    }
+
+    this.logger.log('Signup request rejected', {
+      event: 'auth.signup_request.rejected',
+      signupRequestId: signupRequest.id,
+      reviewedBy: claims.accountId,
+      emailSent,
+    });
+
+    return {
+      requestId: signupRequest.id,
+      emailSent,
+    };
+  }
 
   async register(request: RegisterRequestDto): Promise<UserResponseDto> {
     const existing = await this.authRepository.findUserByUsername(request.username);
@@ -179,6 +389,10 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
+  private generateTemporaryPassword(): string {
+    return randomBytes(18).toString('base64url').slice(0, 16);
+  }
+
   private toUserResponse(user: AuthUserRecord): UserResponseDto {
     return {
       id: user.id,
@@ -187,6 +401,43 @@ export class AuthService {
       roles: user.roles,
       createdOn: user.createdOn.toISOString(),
     };
+  }
+
+  private toSignupRequestResponse(request: SignupRequestRecord): SignupRequestResponseDto {
+    return {
+      id: request.id,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      username: request.username,
+      phone: request.phone,
+      dob: request.dob.toISOString().slice(0, 10),
+      status: request.status,
+      reviewNotes: request.reviewNotes,
+      rejectionReason: request.rejectionReason,
+      approvedAccountId: request.approvedAccountId,
+      approvedAuthUserId: request.approvedAuthUserId,
+      reviewedBy: request.reviewedBy,
+      reviewedOn: request.reviewedOn ? request.reviewedOn.toISOString() : null,
+      createdOn: request.createdOn.toISOString(),
+      updatedOn: request.updatedOn.toISOString(),
+    };
+  }
+
+  private cleanOptionalText(value?: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private assertAdmin(claims: AccessTokenClaims): void {
+    if (!claims.roles.includes('ADMIN')) {
+      throw new ForbiddenException({
+        errorCode: 'AUTH-403',
+        message: 'Admin access required',
+      });
+    }
   }
 
   private throwUnauthorised(): never {
