@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsEmail,
   IsOptional,
   IsString,
   IsUUID,
@@ -12,10 +13,11 @@ import {
 import type { Role } from '../types/auth.types';
 
 export class RegisterRequestDto {
-  @ApiProperty({ minLength: 3, maxLength: 64 })
+  @ApiProperty({
+    example: 'vijay@example.com',
+  })
   @IsString()
-  @Length(3, 64)
-  @Matches(/^[a-zA-Z0-9._-]+$/)
+  @IsEmail()
   username!: string;
 
   @ApiProperty({ minLength: 12, maxLength: 128 })
