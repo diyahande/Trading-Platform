@@ -2,7 +2,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/services/auth';
 import { Subscription } from 'rxjs';
 
@@ -20,13 +20,22 @@ export class Login {
   error: string | null = null;
   loading = false;
   signedIn = false;
+  notice: string | null = null;
   private sub: Subscription | null = null;
 
-  constructor(private auth: Auth, private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private auth: Auth,
+    private router: Router,
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit() {
     // Success message is shown only for sign-in performed in this page session.
     this.signedIn = false;
+    if (this.route.snapshot.queryParamMap.get('passwordChanged') === '1') {
+      this.notice = 'Password changed successfully. Please sign in with your new password.';
+    }
     this.sub = this.auth.token$.subscribe((t) => {
       if (!t) {
         this.signedIn = false;
@@ -40,6 +49,7 @@ export class Login {
 
   async submit() {
     this.error = null;
+    this.notice = null;
     if (!this.username || !this.password) {
       this.error = 'Username and password are required';
       return;
