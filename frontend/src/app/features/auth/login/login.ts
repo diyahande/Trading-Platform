@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Auth } from '../../../core/services/auth';
 import { Subscription } from 'rxjs';
+import { DEFAULT_POST_LOGIN_PATH, toSafeReturnPath } from '../../../core/guards/auth-guard';
 
 @Component({
   selector: 'app-login',
@@ -60,7 +61,14 @@ export class Login {
       const res = await this.auth.signIn(this.username, this.password);
       console.log('[Login] signIn result', res);
       this.signedIn = true;
-      void this.router.navigate(['/dashboard'], { queryParams: { username: this.username } });
+      const requestedReturnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      const safeReturnUrl = toSafeReturnPath(requestedReturnUrl, DEFAULT_POST_LOGIN_PATH);
+
+      if (safeReturnUrl === DEFAULT_POST_LOGIN_PATH) {
+        void this.router.navigate([safeReturnUrl]);
+      } else {
+        void this.router.navigateByUrl(safeReturnUrl);
+      }
     } catch (e: any) {
       this.signedIn = false;
       this.error = this.getReadableErrorMessage(e);

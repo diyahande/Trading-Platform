@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { vi } from 'vitest';
 import { of } from 'rxjs';
@@ -11,8 +11,18 @@ describe('Login', () => {
   let component: Login;
   let fixture: ComponentFixture<Login>;
   let authSpy: { signIn: ReturnType<typeof vi.fn>; signOut: ReturnType<typeof vi.fn> };
+  let queryParams: Record<string, string>;
+
+  const makeActivatedRoute = () => ({
+    snapshot: {
+      queryParamMap: {
+        get: (key: string) => queryParams[key] ?? null,
+      },
+    },
+  });
 
   beforeEach(async () => {
+    queryParams = {};
     authSpy = {
       signIn: vi.fn(),
       signOut: vi.fn(),
@@ -24,6 +34,7 @@ describe('Login', () => {
       imports: [Login, RouterTestingModule.withRoutes([])],
       providers: [
         { provide: Auth, useValue: authSpy },
+        { provide: ActivatedRoute, useFactory: makeActivatedRoute },
       ]
     })
     .compileComponents();
@@ -37,13 +48,45 @@ describe('Login', () => {
   it('valid credentials sign in and redirect', async () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true as any);
     authSpy.signIn.mockResolvedValue({ accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 } as any);
     component.username = 'user';
     component.password = 'pass';
     await component.submit();
     expect(authSpy.signIn).toHaveBeenCalledWith('user', 'pass');
     expect(component.signedIn).toBeTruthy();
-    expect(navigateSpy).toHaveBeenCalledWith(['/dashboard'], { queryParams: { username: 'user' } });
+    expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
+    expect(navigateByUrlSpy).not.toHaveBeenCalled();
+  });
+
+  it('after sign in user is redirected to requested in-origin return path', async () => {
+    queryParams = { returnUrl: '/admin?tab=users' };
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true as any);
+    authSpy.signIn.mockResolvedValue({ accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 } as any);
+
+    component.username = 'user';
+    component.password = 'pass';
+    await component.submit();
+
+    expect(navigateByUrlSpy).toHaveBeenCalledWith('/admin?tab=users');
+    expect(navigateSpy).not.toHaveBeenCalledWith(['/dashboard'], { queryParams: { username: 'user' } });
+  });
+
+  it('off-origin return address is refused and falls back to dashboard', async () => {
+    queryParams = { returnUrl: 'https://evil.example/phish' };
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true as any);
+    authSpy.signIn.mockResolvedValue({ accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 } as any);
+
+    component.username = 'user';
+    component.password = 'pass';
+    await component.submit();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
+    expect(navigateByUrlSpy).not.toHaveBeenCalled();
   });
 
   it('invalid credentials show a readable error', async () => {
