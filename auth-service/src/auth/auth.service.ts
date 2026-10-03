@@ -290,7 +290,15 @@ export class AuthService {
   async login(request: LoginRequestDto): Promise<TokenResponseDto> {
     const user = await this.authRepository.findUserByUsername(request.username);
     const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
-    const isValidPassword = await bcrypt.compare(request.password, passwordHash);
+    const rawPassword = request.password;
+    let isValidPassword = await bcrypt.compare(rawPassword, passwordHash);
+
+    if (!isValidPassword) {
+      const trimmedPassword = rawPassword.trim();
+      if (trimmedPassword !== rawPassword) {
+        isValidPassword = await bcrypt.compare(trimmedPassword, passwordHash);
+      }
+    }
 
     if (!user || !isValidPassword) {
       this.logger.warn('Login failed', {

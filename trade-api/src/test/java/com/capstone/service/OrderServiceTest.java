@@ -10,6 +10,7 @@ import com.capstone.enums.OrderSide;
 import com.capstone.enums.OrderStatus;
 import com.capstone.exception.DuplicateOrderException;
 import com.capstone.exception.InsufficientFundsException;
+import com.capstone.exception.InsufficientHoldingsException;
 import com.capstone.exception.InvalidOrderException;
 import com.capstone.exception.OrderNotCancellableException;
 import com.capstone.kafka.OrderPlacedEventPublisher;
@@ -45,6 +46,8 @@ class OrderServiceTest {
     private OrderPlacedEventPublisher orderPlacedEventPublisher;
     @Mock
     private TransactionCommitHook transactionCommitHook;
+    @Mock
+    private FxConversionService fxConversionService;
 
     private OrderService orderService;
 
@@ -55,7 +58,8 @@ class OrderServiceTest {
                 accountService,
                 instrumentService,
                 orderPlacedEventPublisher,
-                transactionCommitHook
+                transactionCommitHook,
+                fxConversionService
         );
     }
 
@@ -97,6 +101,7 @@ class OrderServiceTest {
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
         when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("50.00"), 3L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
+        when(fxConversionService.convert(new BigDecimal("200.00"), "USD", "USD")).thenReturn(new BigDecimal("200.00"));
 
         assertThrows(InsufficientFundsException.class, () -> orderService.placeOrder(request, "idem-12345"));
     }
@@ -107,6 +112,7 @@ class OrderServiceTest {
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
         when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
+        when(fxConversionService.convert(new BigDecimal("20.00"), "USD", "USD")).thenReturn(new BigDecimal("20.00"));
 
         Order created = orderService.placeOrder(request, "idem-12345");
 
@@ -138,6 +144,7 @@ class OrderServiceTest {
                 .thenReturn(account(new BigDecimal("100.00"), 7L));
         when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
+        when(fxConversionService.convert(new BigDecimal("20.00"), "USD", "USD")).thenReturn(new BigDecimal("20.00"));
 
         OrderResponse response = orderService.placeOrderForAuthorizedAccount(request, "11111111-1111-4111-8111-111111111111");
 
@@ -159,6 +166,7 @@ class OrderServiceTest {
         when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
         when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
         when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
+        when(orderMapper.findHoldingQuantityForUpdate(1L, 200L)).thenReturn(Optional.of(new BigDecimal("5")));
 
         Order created = orderService.placeOrder(request, "idem-12345");
 
@@ -166,6 +174,18 @@ class OrderServiceTest {
         verify(accountService, never()).updateCashBalance(anyLong(), any(), anyLong());
         verify(transactionCommitHook).runAfterCommit(any());
         assertEquals(OrderSide.SELL, created.getSide());
+    }
+
+    @Test
+    void placeOrder_sellWithoutHoldings_throwsInsufficientHoldings() {
+        PlaceOrderRequest request = request(OrderSide.SELL, 2, new BigDecimal("10.00"));
+        when(orderMapper.findOrderByIdempotencyKey("idem-12345")).thenReturn(Optional.empty());
+        when(accountService.getAccountByReferenceStrict("11111111-1111-4111-8111-111111111111")).thenReturn(account(new BigDecimal("100.00"), 7L));
+        when(instrumentService.validateAndGetInstrument("AAPL")).thenReturn(instrument());
+        when(orderMapper.findHoldingQuantityForUpdate(1L, 200L)).thenReturn(Optional.empty());
+
+        assertThrows(InsufficientHoldingsException.class, () -> orderService.placeOrder(request, "idem-12345"));
+        verify(orderMapper, never()).insertOrder(any(Order.class));
     }
 
     @Test

@@ -41,6 +41,7 @@ public class OrderService {
     private final InstrumentService instrumentService;
     private final OrderPlacedEventPublisher orderPlacedEventPublisher;
     private final TransactionCommitHook transactionCommitHook;
+    private final FxConversionService fxConversionService;
 
  
     @Transactional
@@ -113,12 +114,19 @@ public class OrderService {
         validateOrderParameters(request);
 
         // Validate sufficient funds/holdings (rules 6-7)
-        validateFunds(request, account, instrument.getInstrumentId());
+        validateFunds(request, account, instrument);
 
         // For BUY orders, reserve (deduct) the cash balance immediately via AccountService
         if (request.getSide() == OrderSide.BUY) {
-            BigDecimal requiredCash = new BigDecimal(request.getQuantity()).multiply(request.getPrice());
-            BigDecimal newBalance = account.getCashBalance().subtract(requiredCash).setScale(4);
+            BigDecimal tradeNotional = new BigDecimal(request.getQuantity()).multiply(request.getPrice());
+            BigDecimal requiredCash = fxConversionService.convert(
+                    tradeNotional,
+                    instrument.getQuoteCurrency(),
+                    account.getCurrency()
+            );
+                BigDecimal newBalance = account.getCashBalance()
+                    .subtract(requiredCash)
+                    .setScale(4, java.math.RoundingMode.HALF_UP);
             accountService.updateCashBalance(account.getAccountId(), newBalance, account.getVersion());
         }
 
@@ -186,13 +194,17 @@ public class OrderService {
         }
     }
 
-    private void validateFunds(PlaceOrderRequest request, Account account, Long instrumentId) {
+        private void validateFunds(PlaceOrderRequest request, Account account, com.capstone.entity.Instrument instrument) {
         OrderSide side = request.getSide();
 
         if (side == OrderSide.BUY) {
             // Check cash balance for buy orders
-            BigDecimal requiredCash = new BigDecimal(request.getQuantity())
-                    .multiply(request.getPrice());
+            BigDecimal tradeNotional = new BigDecimal(request.getQuantity()).multiply(request.getPrice());
+            BigDecimal requiredCash = fxConversionService.convert(
+                tradeNotional,
+                instrument.getQuoteCurrency(),
+                account.getCurrency()
+            );
 
             if (account.getCashBalance().compareTo(requiredCash) < 0) {
                 throw new InsufficientFundsException(
@@ -206,21 +218,25 @@ public class OrderService {
         } else if (side == OrderSide.SELL) {
             BigDecimal requiredQuantity = new BigDecimal(request.getQuantity());
             java.util.Optional<BigDecimal> availableOpt = orderMapper
-                    .findHoldingQuantityForUpdate(account.getAccountId(), instrumentId);
+                    .findHoldingQuantityForUpdate(account.getAccountId(), instrument.getInstrumentId());
 
-            if (availableOpt.isPresent()) {
-                BigDecimal availableQuantity = availableOpt.get();
-                if (availableQuantity.compareTo(requiredQuantity) < 0) {
-                    throw new InsufficientHoldingsException(
-                            account.getAccountId(),
-                            request.getSymbol(),
-                            requiredQuantity,
-                            availableQuantity
-                    );
-                }
-            } else {
-                // No holdings info returned by mapper (mocked tests); assume validation passes.
-                return;
+            if (availableOpt.isEmpty()) {
+                throw new InsufficientHoldingsException(
+                        account.getAccountId(),
+                        request.getSymbol(),
+                        requiredQuantity,
+                        BigDecimal.ZERO
+                );
+            }
+
+            BigDecimal availableQuantity = availableOpt.get();
+            if (availableQuantity.compareTo(requiredQuantity) < 0) {
+                throw new InsufficientHoldingsException(
+                        account.getAccountId(),
+                        request.getSymbol(),
+                        requiredQuantity,
+                        availableQuantity
+                );
             }
 
             return;
