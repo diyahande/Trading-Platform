@@ -3,13 +3,14 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideApi } from './generated/api-client/provide-api';
 import { AUTH_HEADER_POLICY, bearerTokenInterceptor } from './core/interceptors/bearer-token.interceptor';
+import { basePathInterceptor } from './core/interceptors/base-path.interceptor';
 
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([bearerTokenInterceptor])),
+    provideHttpClient(withInterceptors([basePathInterceptor, bearerTokenInterceptor])),
     provideRouter(routes),
     {
       provide: AUTH_HEADER_POLICY,
@@ -23,7 +24,7 @@ export const appConfig: ApplicationConfig = {
         ],
       },
     },
-    // Use relative basePath so Angular dev proxy can split auth and trade API calls.
+    // Use relative paths; basePathInterceptor will route to correct service
     provideApi({ basePath: '' })
   ]
 };

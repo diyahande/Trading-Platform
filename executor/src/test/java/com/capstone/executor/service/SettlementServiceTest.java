@@ -32,6 +32,7 @@ public class SettlementServiceTest {
     @Mock private PortfolioMapper portfolioMapper;
     @Mock private PortfolioHoldingsMapper portfolioHoldingsMapper;
     @Mock private TransactionMapper transactionMapper;
+    @Mock private FxConversionService fxConversionService;
     
     private SettlementService settlementService;
     
@@ -42,7 +43,8 @@ public class SettlementServiceTest {
             accountMapper,
             portfolioMapper,
             portfolioHoldingsMapper,
-            transactionMapper
+            transactionMapper,
+            fxConversionService
         );
     }
     

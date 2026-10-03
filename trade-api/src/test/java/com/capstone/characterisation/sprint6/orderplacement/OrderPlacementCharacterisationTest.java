@@ -17,6 +17,7 @@ import com.capstone.mapper.OrderMapper;
 import com.capstone.service.AccountService;
 import com.capstone.service.InstrumentService;
 import com.capstone.service.OrderService;
+import com.capstone.service.FxConversionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -61,13 +62,15 @@ class OrderPlacementCharacterisationTest {
         instrumentService = mock(InstrumentService.class);
         OrderPlacedEventPublisher orderPlacedEventPublisher = mock(OrderPlacedEventPublisher.class);
         TransactionCommitHook transactionCommitHook = mock(TransactionCommitHook.class);
+        FxConversionService fxConversionService = mock(FxConversionService.class);
 
         OrderService orderService = new OrderService(
                 orderMapper,
                 accountService,
                 instrumentService,
                 orderPlacedEventPublisher,
-                transactionCommitHook
+                transactionCommitHook,
+                fxConversionService
         );
         OrderController controller = new OrderController(orderService);
 

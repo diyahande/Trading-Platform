@@ -62,6 +62,13 @@ export class Login {
       console.log('[Login] signIn result', res);
       this.signedIn = true;
       const requestedReturnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      
+      // If no return URL and user is admin, go to admin page
+      if (!requestedReturnUrl && this.auth.isAdmin()) {
+        void this.router.navigate(['/admin']);
+        return;
+      }
+
       const safeReturnUrl = toSafeReturnPath(requestedReturnUrl, DEFAULT_POST_LOGIN_PATH);
 
       if (safeReturnUrl === DEFAULT_POST_LOGIN_PATH) {

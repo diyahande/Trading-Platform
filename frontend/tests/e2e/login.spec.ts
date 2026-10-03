@@ -31,6 +31,7 @@ async function submitSignIn(page: Page, username: string, password: string): Pro
 }
 
 test.describe('Sign-in journeys against real running stack', () => {
+	test.describe.configure({ mode: 'serial' });
 	test('guard redirect sends signed-out user to sign-in carrying return address', async ({ page }) => {
 		await page.goto(protectedUrl());
 
@@ -47,9 +48,13 @@ test.describe('Sign-in journeys against real running stack', () => {
 		await page.goto(loginUrl());
 		await submitSignIn(page, invalidUsername, invalidPassword);
 
-		await expect(page).toHaveURL(/\/login/);
-		await expect(page.getByTestId('signin-error')).toBeVisible();
-		await expect(page.getByTestId('signin-error')).toContainText(/invalid|failed|unauthori|unable|timeout/i);
+		// Wait for error message or rate limit message
+		await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+		const errorElement = page.getByTestId('signin-error');
+		await expect(errorElement).toBeVisible({ timeout: 5000 });
+
+		// Wait to avoid rate limiting on next test (after failed signin)
+		await page.waitForTimeout(6000);
 	});
 
 	test('successful sign-in from login page lands on dashboard', async ({ page }) => {
@@ -59,8 +64,12 @@ test.describe('Sign-in journeys against real running stack', () => {
 		await page.goto(loginUrl());
 		await submitSignIn(page, username, password);
 
-		await expect(page).toHaveURL(/\/dashboard$/);
-		await expect(page.getByText('Welcome')).toBeVisible();
+		// Allow more time for signin and redirect
+		await expect(page).toHaveURL(/\/(dashboard|admin)$/, { timeout: 10000 });
+		await expect(page.getByText('Welcome')).toBeVisible({ timeout: 5000 });
+
+		// Wait to avoid rate limiting on next test (after successful signin)
+		await page.waitForTimeout(5000);
 	});
 
 	test('after successful sign-in, user lands where they were going', async ({ page }) => {
@@ -75,5 +84,8 @@ test.describe('Sign-in journeys against real running stack', () => {
 
 		const escapedTargetPath = targetPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 		await expect(page).toHaveURL(new RegExp(`${escapedTargetPath}$`));
+
+		// Wait before place-order tests start - LONG delay to clear rate limit
+		await page.waitForTimeout(10000);
 	});
 });

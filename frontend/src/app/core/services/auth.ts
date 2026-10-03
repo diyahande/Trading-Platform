@@ -89,6 +89,27 @@ export class Auth {
     return response;
   }
 
+  public getRoles(): string[] {
+    const token = this.getStoredAccessToken();
+    if (!token) {
+      return [];
+    }
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return [];
+      }
+      const payload = JSON.parse(atob(parts[1]));
+      return Array.isArray(payload.roles) ? payload.roles : [];
+    } catch {
+      return [];
+    }
+  }
+
+  public isAdmin(): boolean {
+    return this.getRoles().includes('ADMIN');
+  }
+
   private storeTokens(tokens: TokenResponseDto) {
     if (tokens?.accessToken) {
       localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
