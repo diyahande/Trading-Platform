@@ -1,0 +1,100 @@
+<section class="ticket-panel" aria-label="TradeX orders">
+  <div class="chart-bg" aria-hidden="true">
+    <svg viewBox="0 0 900 560" preserveAspectRatio="none">
+      <polyline points="20,450 100,415 180,430 260,370 340,396 420,336 500,350 580,292 660,312 740,258 820,280" class="line" />
+      <line x1="100" y1="428" x2="100" y2="402" class="candle g" />
+      <line x1="180" y1="438" x2="180" y2="420" class="candle r" />
+      <line x1="260" y1="384" x2="260" y2="356" class="candle g" />
+      <line x1="340" y1="408" x2="340" y2="388" class="candle r" />
+      <line x1="420" y1="352" x2="420" y2="326" class="candle g" />
+      <line x1="500" y1="360" x2="500" y2="342" class="candle r" />
+      <line x1="580" y1="306" x2="580" y2="286" class="candle g" />
+    </svg>
+  </div>
+
+  <header class="brand">Trade<span>X</span></header>
+
+  <form class="ticket-card" (submit)="$event.preventDefault(); submit();">
+    <h1>Trade<span>X</span> Orders</h1>
+    <p class="subtle">Create and place an order.</p>
+
+    <div class="grid">
+      <div class="field">
+        <label for="accountId">Account</label>
+        <input id="accountId" [value]="accountId()" readonly aria-readonly="true" />
+      </div>
+
+      <div class="field">
+        <label for="symbol">Instrument</label>
+        <input
+          id="symbol"
+          [ngModel]="symbol()"
+          (ngModelChange)="onSymbolInput($event)"
+          name="symbol"
+          placeholder="AAPL, INFY.NS, FX:EURUSD"
+        />
+        <!-- <p class="field-hint">Examples: <strong>AAPL</strong> (US), <strong>INFY.NS</strong> (NSE), <strong>RELIANCE.BO</strong> (BSE), <strong>FX:EURUSD</strong> (FX pair), <strong>X:BTCUSD</strong> (crypto pair).</p> -->
+      </div>
+
+      <div class="field">
+        <label for="side">Side</label>
+        <select id="side" [ngModel]="side()" (ngModelChange)="onSideInput($event)" name="side">
+          <option value="BUY">BUY</option>
+          <option value="SELL">SELL</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="quantity">Quantity</label>
+        <input
+          id="quantity"
+          [ngModel]="quantity()"
+          (ngModelChange)="onQuantityInput($event)"
+          name="quantity"
+          inputmode="numeric"
+          placeholder="100"
+        />
+        <p class="field-error" *ngIf="quantityFieldError()">{{ quantityFieldError() }}</p>
+      </div>
+
+      <div class="field">
+        <label for="price">Price</label>
+        <input
+          id="price"
+          [ngModel]="price()"
+          (ngModelChange)="onPriceInput($event)"
+          name="price"
+          inputmode="decimal"
+          placeholder="245.50"
+        />
+        <p class="field-error" *ngIf="priceFieldError()">{{ priceFieldError() }}</p>
+      </div>
+    </div>
+
+    <div class="estimate" *ngIf="estimateVisible()">
+      <p>Trade currency total: {{ orderTotal() | number: '1.2-2' }} {{ tradeCurrency() }}</p>
+      <p *ngIf="conversionLoading()">Estimating USD equivalent...</p>
+      <p *ngIf="usdEstimate() as estimate">Estimated USD total: {{ formatMoney(estimate.usdTotal) }}</p>
+      <p *ngIf="conversionNote()" class="hint">{{ conversionNote() }}</p>
+    </div>
+
+    <p class="error" *ngIf="validationMessage()">{{ validationMessage() }}</p>
+
+    <div class="actions">
+      <button type="submit" class="primary" [disabled]="submitting()">
+        {{ submitting() ? 'Placing order...' : 'Place Order' }}
+      </button>
+      <a routerLink="/dashboard" class="ghost">Back to Dashboard</a>
+    </div>
+  </form>
+
+  <div class="popup-backdrop" *ngIf="resultPopupOpen()">
+    <section class="popup" role="dialog" aria-modal="true" aria-label="Order status">
+      <h2>{{ resultPopupTitle() }}</h2>
+      <p class="popup-code" *ngIf="resultPopupCode() as code">{{ code }}</p>
+      <p>{{ resultPopupMessage() }}</p>
+      <p class="popup-detail" *ngIf="resultPopupDetail()">{{ resultPopupDetail() }}</p>
+      <button type="button" class="primary" (click)="closeResultPopup()">Close</button>
+    </section>
+  </div>
+</section>

@@ -34,19 +34,22 @@ public class SettlementService {
     private final PortfolioMapper portfolioMapper;
     private final PortfolioHoldingsMapper portfolioHoldingsMapper;
     private final TransactionMapper transactionMapper;
+        private final FxConversionService fxConversionService;
 
     public SettlementService(
             OrderMapper orderMapper,
             AccountMapper accountMapper,
             PortfolioMapper portfolioMapper,
             PortfolioHoldingsMapper portfolioHoldingsMapper,
-            TransactionMapper transactionMapper) {
+            TransactionMapper transactionMapper,
+            FxConversionService fxConversionService) {
 
         this.orderMapper = orderMapper;
         this.accountMapper = accountMapper;
         this.portfolioMapper = portfolioMapper;
         this.portfolioHoldingsMapper = portfolioHoldingsMapper;
         this.transactionMapper = transactionMapper;
+        this.fxConversionService = fxConversionService;
     }
 
    
@@ -106,12 +109,7 @@ public class SettlementService {
         BigDecimal quantity =
                 BigDecimal.valueOf(payload.getQuantity());
 
-        BigDecimal cashDelta =
-                normalizedPrice.multiply(quantity);
-
-        if ("BUY".equalsIgnoreCase(payload.getSide())) {
-            cashDelta = cashDelta.negate();
-        }
+        BigDecimal cashDelta = BigDecimal.ZERO;
 
         final int MAX_RETRIES = 3;
 
@@ -144,18 +142,24 @@ public class SettlementService {
                 );
             }
 
+            BigDecimal tradeNotional = normalizedPrice.multiply(quantity);
+            BigDecimal requiredInAccountCurrency = fxConversionService.convert(
+                    tradeNotional,
+                    instrument.getQuoteCurrency(),
+                    currentAccount.getCurrency()
+            );
+            BigDecimal cashDeltaForAttempt = "BUY".equalsIgnoreCase(payload.getSide())
+                    ? requiredInAccountCurrency.negate()
+                    : requiredInAccountCurrency;
+
             if ("BUY".equalsIgnoreCase(payload.getSide())) {
-
-                BigDecimal required =
-                        normalizedPrice.multiply(quantity);
-
                 if (currentAccount.getCashBalance()
-                        .compareTo(required) < 0) {
+                        .compareTo(requiredInAccountCurrency) < 0) {
 
                     throw new IllegalStateException(
                             "Insufficient funds at settlement: orderId="
                                     + orderId
-                                    + " required=" + required
+                                    + " required=" + requiredInAccountCurrency
                                     + " available="
                                     + currentAccount.getCashBalance()
                     );
@@ -173,7 +177,7 @@ public class SettlementService {
             int cashUpdated =
                     accountMapper.updateCashWithVersionGuard(
                             payload.getAccountId(),
-                            cashDelta,
+                            cashDeltaForAttempt,
                             currentAccount.getVersion()
                     );
 
@@ -200,8 +204,10 @@ public class SettlementService {
             logger.debug(
                     "Account cash updated: orderId={} delta={}",
                     orderId,
-                    cashDelta
+                    cashDeltaForAttempt
             );
+
+            cashDelta = cashDeltaForAttempt;
 
             PortfolioDto portfolio =
                     portfolioMapper.findByAccountId(

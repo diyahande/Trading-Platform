@@ -285,6 +285,44 @@ describe('AuthService', () => {
     expect(result.expiresIn).toBe(900);
   });
 
+  it('accepts login when accidental surrounding spaces are included around a valid password', async () => {
+    const password = 'StrongPassword#123';
+    const hash = await bcrypt.hash(password, 12);
+
+    authRepository.findUserByUsername.mockResolvedValue({
+      ...userRecord,
+      passwordHash: hash,
+    });
+    tokenService.signAccessToken.mockReturnValue('access-token');
+
+    const result = await authService.login({
+      username: userRecord.username,
+      password: `  ${password}  `,
+    });
+
+    expect(result.accessToken).toBe('access-token');
+    expect(result.tokenType).toBe('Bearer');
+  });
+
+  it('accepts login when the stored password intentionally includes surrounding spaces', async () => {
+    const passwordWithSpaces = '  StrongPassword#123  ';
+    const hash = await bcrypt.hash(passwordWithSpaces, 12);
+
+    authRepository.findUserByUsername.mockResolvedValue({
+      ...userRecord,
+      passwordHash: hash,
+    });
+    tokenService.signAccessToken.mockReturnValue('access-token');
+
+    const result = await authService.login({
+      username: userRecord.username,
+      password: passwordWithSpaces,
+    });
+
+    expect(result.accessToken).toBe('access-token');
+    expect(result.tokenType).toBe('Bearer');
+  });
+
   it('rejects login with incorrect password', async () => {
     const hash = await bcrypt.hash('CorrectPassword#123', 12);
     authRepository.findUserByUsername.mockResolvedValue({

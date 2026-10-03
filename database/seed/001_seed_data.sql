@@ -138,6 +138,38 @@ VALUES
     '2025-11-01 09:00:00+00'
 ),
 (
+    'INFY.NS',
+    'Infosys Limited (NSE)',
+    'EQUITY',
+    'INR',
+    TRUE,
+    '2025-12-11 09:00:00+00'
+),
+(
+    'INFY.BO',
+    'Infosys Limited (BSE)',
+    'EQUITY',
+    'INR',
+    TRUE,
+    '2025-12-11 09:05:00+00'
+),
+(
+    'RELIANCE.NS',
+    'Reliance Industries Limited (NSE)',
+    'EQUITY',
+    'INR',
+    TRUE,
+    '2025-12-11 09:10:00+00'
+),
+(
+    'RELIANCE.BO',
+    'Reliance Industries Limited (BSE)',
+    'EQUITY',
+    'INR',
+    TRUE,
+    '2025-12-11 09:15:00+00'
+),
+(
     'MSFT',
     'Microsoft Corporation',
     'EQUITY',
