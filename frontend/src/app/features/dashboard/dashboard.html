@@ -74,25 +74,45 @@
                 <div class="market-header">
                     <h2>Market Overview</h2>
 
-                    <div class="market-value">
-                        <strong>24,821.30</strong>
-                        <span>▲ 142.65 (0.58%)</span>
+                    <div class="market-value" *ngIf="getCurrentIndexQuote(); let quote">
+                        <strong>{{ quote.price | number:'1.2-2' }}</strong>
+                        <span [ngClass]="changeClass(quote.changePercent || 0)">
+                            {{ quote.changePercent && quote.changePercent >= 0 ? '▲' : '▼' }}
+                            {{ quote.change | number:'1.2-2' }} ({{ quote.changePercent | number:'1.2-2' }}%)
+                        </span>
+                    </div>
+
+                    <div class="market-value" *ngIf="!getCurrentIndexQuote() && marketOverviewError">
+                        <span class="error">{{ marketOverviewError }}</span>
                     </div>
                 </div>
 
                 <div class="market-tabs">
-                    <button class="selected">NIFTY 50</button>
-                    <button>SENSEX</button>
-                    <button>NASDAQ</button>
-                    <button>S&P 500</button>
+                    <button 
+                        [class.selected]="selectedIndex === 'NIFTY_50'"
+                        (click)="selectIndex('NIFTY_50')">
+                        NIFTY 50
+                    </button>
+                    <button 
+                        [class.selected]="selectedIndex === 'SENSEX'"
+                        (click)="selectIndex('SENSEX')">
+                        SENSEX
+                    </button>
+                    <button 
+                        [class.selected]="selectedIndex === 'NASDAQ'"
+                        (click)="selectIndex('NASDAQ')">
+                        NASDAQ
+                    </button>
+                    <button 
+                        [class.selected]="selectedIndex === 'SP500'"
+                        (click)="selectIndex('SP500')">
+                        S&P 500
+                    </button>
                 </div>
 
                 <div class="chart">
                     <div class="y-axis">
-                        <span>24,900</span>
-                        <span>24,800</span>
-                        <span>24,700</span>
-                        <span>24,600</span>
+                        <span *ngFor="let label of chartYAxisLabels">{{ label }}</span>
                     </div>
 
                     <svg viewBox="0 0 1000 220" preserveAspectRatio="none">
@@ -109,48 +129,16 @@
                         <line x1="0" y1="190" x2="1000" y2="190"/>
 
                         <path
+                            *ngIf="chartPathData"
                             class="chart-area"
-                            d="M0,180
-                            L15,170 L25,150 L38,145 L48,120 L60,135
-                            L72,115 L85,125 L98,110 L110,145
-                            L125,130 L138,155 L150,140 L165,145
-                            L180,120 L195,135 L210,115 L225,125
-                            L240,100 L255,110 L270,95 L285,115
-                            L300,145 L315,125 L330,115 L345,120
-                            L360,105 L375,115 L390,95 L405,105
-                            L420,90 L435,100 L450,85 L465,95
-                            L480,75 L495,85 L510,65 L525,75
-                            L540,55 L555,70 L570,50 L585,75
-                            L600,65 L615,80 L630,70 L645,90
-                            L660,75 L675,95 L690,80 L705,100
-                            L720,90 L735,105 L750,85 L765,95
-                            L780,80 L795,70 L810,75 L825,60
-                            L840,55 L855,45 L870,60 L885,50
-                            L900,45 L915,35 L930,45 L945,25
-                            L960,35 L975,20 L990,30 L1000,15
-                            L1000,220 L0,220 Z">
+                            [attr.d]="chartPathData + ' L1000,220 L0,220 Z'"
+                            fill="url(#chartFill)">
                         </path>
 
                         <path
+                            *ngIf="chartPathData"
                             class="chart-line"
-                            d="M0,180
-                            L15,170 L25,150 L38,145 L48,120 L60,135
-                            L72,115 L85,125 L98,110 L110,145
-                            L125,130 L138,155 L150,140 L165,145
-                            L180,120 L195,135 L210,115 L225,125
-                            L240,100 L255,110 L270,95 L285,115
-                            L300,145 L315,125 L330,115 L345,120
-                            L360,105 L375,115 L390,95 L405,105
-                            L420,90 L435,100 L450,85 L465,95
-                            L480,75 L495,85 L510,65 L525,75
-                            L540,55 L555,70 L570,50 L585,75
-                            L600,65 L615,80 L630,70 L645,90
-                            L660,75 L675,95 L690,80 L705,100
-                            L720,90 L735,105 L750,85 L765,95
-                            L780,80 L795,70 L810,75 L825,60
-                            L840,55 L855,45 L870,60 L885,50
-                            L900,45 L915,35 L930,45 L945,25
-                            L960,35 L975,20 L990,30 L1000,15">
+                            [attr.d]="chartPathData">
                         </path>
                     </svg>
 
@@ -210,8 +198,24 @@
             </div>
 
             <div class="mover-tabs">
-                <button class="selected">Gainers</button>
-                <button>Losers</button>
+                <button 
+                    [class.selected]="topMoversTab === 'gainers'"
+                    (click)="selectTopMoversTab('gainers')">
+                    Gainers
+                </button>
+                <button 
+                    [class.selected]="topMoversTab === 'losers'"
+                    (click)="selectTopMoversTab('losers')">
+                    Losers
+                </button>
+            </div>
+
+            <div *ngIf="topMoversError" style="color: #ff9d9d; padding: 10px;">
+                {{ topMoversError }}
+            </div>
+
+            <div *ngIf="!topMoversError && getTopMovers().length === 0" style="padding: 10px; text-align: center; color: #999;">
+                No movers data available
             </div>
 
             <div class="movers-heading">
@@ -220,49 +224,15 @@
                 <span>Change</span>
             </div>
 
-            <div class="mover-row">
+            <div *ngFor="let mover of getTopMovers()" class="mover-row">
                 <div>
-                    <strong>NVDA</strong>
-                    <small>NVIDIA Corp.</small>
+                    <strong>{{ mover.symbol }}</strong>
+                    <small>{{ mover.displayName }}</small>
                 </div>
-                <span>946.32</span>
-                <span class="positive">▲ 3.14%</span>
-            </div>
-
-            <div class="mover-row">
-                <div>
-                    <strong>META</strong>
-                    <small>Meta Platforms Inc.</small>
-                </div>
-                <span>612.21</span>
-                <span class="positive">▲ 2.76%</span>
-            </div>
-
-            <div class="mover-row">
-                <div>
-                    <strong>TSLA</strong>
-                    <small>Tesla Inc.</small>
-                </div>
-                <span>248.50</span>
-                <span class="positive">▲ 1.98%</span>
-            </div>
-
-            <div class="mover-row">
-                <div>
-                    <strong>AMD</strong>
-                    <small>Advanced Micro Devices</small>
-                </div>
-                <span>164.37</span>
-                <span class="positive">▲ 1.65%</span>
-            </div>
-
-            <div class="mover-row">
-                <div>
-                    <strong>MSFT</strong>
-                    <small>Microsoft Corp.</small>
-                </div>
-                <span>415.32</span>
-                <span class="positive">▲ 1.42%</span>
+                <span>{{ mover.price | number:'1.2-2' }}</span>
+                <span [ngClass]="getTopMoverChangeClass(mover.changePercent)">
+                    {{ mover.changePercent >= 0 ? '▲' : '▼' }} {{ (mover.changePercent < 0 ? -mover.changePercent : mover.changePercent) | number:'1.2-2' }}%
+                </span>
             </div>
 
         </div>

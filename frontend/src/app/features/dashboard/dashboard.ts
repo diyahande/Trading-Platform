@@ -41,6 +41,39 @@ type PortfolioAllocation = {
   allocationByAssetClass: { [key: string]: number };
 };
 
+type MarketIndexQuote = {
+  indexKey: string;
+  price: number;
+  change: number | null;
+  changePercent: number | null;
+  currency: string;
+};
+
+type MarketOverview = {
+  indices: { [key: string]: MarketIndexQuote };
+};
+
+type MarketIndexHistory = {
+  indexKey: string;
+  history: Array<{ price: number; timestamp: number }>;
+};
+
+type ChartPoint = {
+  x: number;
+  y: number;
+};
+
+type TopMover = {
+  symbol: string;
+  displayName: string;
+  assetClass: string;
+  price: number;
+  change: number;
+  changePercent: number;
+};
+
+type TopMoversTab = 'gainers' | 'losers';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -59,6 +92,15 @@ export class Dashboard {
   recentActivityError: string | null = null;
   portfolioAllocation: PortfolioAllocation | null = null;
   portfolioAllocationError: string | null = null;
+  marketOverview: MarketOverview | null = null;
+  marketOverviewError: string | null = null;
+  selectedIndex: string = 'NIFTY_50';
+  chartData: ChartPoint[] = [];
+  chartYAxisLabels: string[] = [];
+  topMoversTab: TopMoversTab = 'gainers';
+  topGainers: TopMover[] = [];
+  topLosers: TopMover[] = [];
+  topMoversError: string | null = null;
 
   constructor(private route: ActivatedRoute, private auth: Auth, private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {
     const routeUsername = this.route.snapshot.queryParamMap.get('username');
@@ -70,6 +112,8 @@ export class Dashboard {
     void this.loadWatchlist();
     void this.loadRecentActivity();
     void this.loadPortfolioAllocation();
+    void this.loadMarketOverview();
+    void this.loadTopMovers();
   }
 
   signOut() {
@@ -248,5 +292,122 @@ export class Dashboard {
       this.portfolioAllocation = null;
       this.cdr.markForCheck();
     }
+  }
+
+  private async loadMarketOverview(): Promise<void> {
+    this.marketOverviewError = null;
+    try {
+      const response = await firstValueFrom(this.http.get<MarketOverview>('/api/market-overview'));
+      this.marketOverview = response;
+      // Load chart data for the selected index
+      await this.updateChartData(this.selectedIndex);
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.marketOverviewError = 'Session expired. Please sign in again.';
+      } else if (status === 503) {
+        this.marketOverviewError = 'Market data is unavailable.';
+      } else {
+        this.marketOverviewError = 'Market overview could not be loaded.';
+      }
+      this.marketOverview = null;
+      this.cdr.markForCheck();
+    }
+  }
+
+  selectIndex(indexKey: string): void {
+    this.selectedIndex = indexKey;
+    void this.updateChartData(indexKey);
+  }
+
+  private async updateChartData(indexKey: string): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<MarketIndexHistory>(`/api/market-overview/${indexKey}/history`)
+      );
+
+      if (!response.history || response.history.length === 0) {
+        this.chartData = [];
+        this.chartYAxisLabels = [];
+        return;
+      }
+
+      // Convert to chart points with normalized x coordinates (0 to 1000)
+      const minPrice = Math.min(...response.history.map(h => h.price));
+      const maxPrice = Math.max(...response.history.map(h => h.price));
+      const priceRange = maxPrice - minPrice || 1;
+
+      this.chartData = response.history.map((point, index) => ({
+        x: (index / (response.history.length - 1 || 1)) * 1000,
+        y: 220 - ((point.price - minPrice) / priceRange) * 180,
+      }));
+
+      // Generate SVG path data
+      const pathData = this.chartData
+        .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+        .join(' ');
+
+      // Store the path for SVG rendering
+      this.chartPathData = pathData;
+
+      // Generate Y-axis labels
+      const labelCount = 4;
+      this.chartYAxisLabels = [];
+      for (let i = 0; i < labelCount; i++) {
+        const price = minPrice + (priceRange * (labelCount - 1 - i)) / (labelCount - 1);
+        this.chartYAxisLabels.push(price.toFixed(0));
+      }
+
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      console.error('Failed to load chart data:', error);
+      this.chartData = [];
+      this.chartYAxisLabels = [];
+    }
+  }
+
+  chartPathData: string = '';
+
+  getCurrentIndexQuote(): MarketIndexQuote | undefined {
+    return this.marketOverview?.indices[this.selectedIndex];
+  }
+
+  private async loadTopMovers(): Promise<void> {
+    this.topMoversError = null;
+    try {
+      const [gainersResponse, losersResponse] = await Promise.all([
+        firstValueFrom(this.http.get<TopMover[]>('/api/top-movers/gainers')),
+        firstValueFrom(this.http.get<TopMover[]>('/api/top-movers/losers')),
+      ]);
+      this.topGainers = gainersResponse;
+      this.topLosers = losersResponse;
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.topMoversError = 'Session expired. Please sign in again.';
+      } else if (status === 503) {
+        this.topMoversError = 'Market data is unavailable.';
+      } else {
+        this.topMoversError = 'Top movers could not be loaded.';
+      }
+      this.topGainers = [];
+      this.topLosers = [];
+      this.cdr.markForCheck();
+    }
+  }
+
+  selectTopMoversTab(tab: TopMoversTab): void {
+    this.topMoversTab = tab;
+    this.cdr.markForCheck();
+  }
+
+  getTopMovers(): TopMover[] {
+    return this.topMoversTab === 'gainers' ? this.topGainers : this.topLosers;
+  }
+
+  getTopMoverChangeClass(changePercent: number): string {
+    return changePercent >= 0 ? 'positive' : 'negative';
   }
 }

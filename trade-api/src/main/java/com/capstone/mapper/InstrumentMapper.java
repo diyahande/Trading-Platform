@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.ResultMap;
 
+import java.util.List;
 import java.util.Optional;
 
 @Mapper
@@ -50,4 +51,20 @@ public interface InstrumentMapper {
             """)
     @ResultMap("instrumentMap")
     Optional<Instrument> findById(Long instrumentId);
+
+    @Select("""
+            SELECT 
+                instrument_id,
+                symbol,
+                display_name,
+                asset_class,
+                quote_currency,
+                is_tradable,
+                created_at
+            FROM instruments
+            WHERE is_tradable = TRUE
+            ORDER BY symbol ASC
+            """)
+    @ResultMap("instrumentMap")
+    List<Instrument> findTradableInstruments();
 }
