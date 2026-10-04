@@ -35,6 +35,12 @@ type RecentActivity = {
   createdOn: string;
 };
 
+type PortfolioAllocation = {
+  totalPortfolioValue: number;
+  cashValue: number;
+  allocationByAssetClass: { [key: string]: number };
+};
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -51,6 +57,8 @@ export class Dashboard {
   watchlistError: string | null = null;
   recentActivity: RecentActivity[] = [];
   recentActivityError: string | null = null;
+  portfolioAllocation: PortfolioAllocation | null = null;
+  portfolioAllocationError: string | null = null;
 
   constructor(private route: ActivatedRoute, private auth: Auth, private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {
     const routeUsername = this.route.snapshot.queryParamMap.get('username');
@@ -61,6 +69,7 @@ export class Dashboard {
     void this.loadDashboard();
     void this.loadWatchlist();
     void this.loadRecentActivity();
+    void this.loadPortfolioAllocation();
   }
 
   signOut() {
@@ -221,5 +230,23 @@ export class Dashboard {
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
     const days = Math.floor(hours / 24);
     return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+
+  private async loadPortfolioAllocation(): Promise<void> {
+    this.portfolioAllocationError = null;
+    try {
+      const response = await firstValueFrom(this.http.get<PortfolioAllocation>('/api/portfolio-allocation'));
+      this.portfolioAllocation = response;
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.portfolioAllocationError = 'Session expired. Please sign in again.';
+      } else {
+        this.portfolioAllocationError = 'Portfolio allocation could not be loaded.';
+      }
+      this.portfolioAllocation = null;
+      this.cdr.markForCheck();
+    }
   }
 }

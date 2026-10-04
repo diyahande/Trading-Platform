@@ -277,34 +277,40 @@
 
                 <div class="donut">
                     <div class="donut-center">
-                        <strong>$0.00</strong>
+                        <strong>{{ portfolioAllocation ? ('$' + portfolioAllocation.totalPortfolioValue.toFixed(2)) : '$0.00' }}</strong>
                         <span>Total Value</span>
                     </div>
                 </div>
 
                 <div class="allocation-legend">
-                    <div>
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['EQUITY']">
                         <span class="legend-dot stocks"></span>
                         <span>Stocks</span>
-                        <strong>0.0%</strong>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['EQUITY'] }}%</strong>
                     </div>
 
-                    <div>
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['ETF']">
                         <span class="legend-dot etfs"></span>
                         <span>ETFs</span>
-                        <strong>0.0%</strong>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['ETF'] }}%</strong>
                     </div>
 
-                    <div>
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CRYPTO']">
                         <span class="legend-dot crypto"></span>
                         <span>Crypto</span>
-                        <strong>0.0%</strong>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CRYPTO'] }}%</strong>
                     </div>
 
-                    <div>
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CASH']">
                         <span class="legend-dot cash"></span>
                         <span>Cash</span>
-                        <strong>0.0%</strong>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CASH'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['FOREX']">
+                        <span class="legend-dot forex"></span>
+                        <span>Forex</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['FOREX'] }}%</strong>
                     </div>
                 </div>
 

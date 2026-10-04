@@ -1,6 +1,7 @@
 package com.capstone.controller;
 
 import com.capstone.dto.DashboardResponse;
+import com.capstone.dto.PortfolioAllocationResponse;
 import com.capstone.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,21 @@ public class DashboardController {
 
     @GetMapping("/dashboard")
     public ResponseEntity<DashboardResponse> getDashboard(Authentication authentication) {
+        String accountReference = extractAccountReference(authentication);
+        return ResponseEntity.ok(
+                dashboardService.getDashboardSummaryForAuthorizedAccount(accountReference)
+        );
+    }
+
+    @GetMapping("/portfolio-allocation")
+    public ResponseEntity<PortfolioAllocationResponse> getPortfolioAllocation(Authentication authentication) {
+        String accountReference = extractAccountReference(authentication);
+        return ResponseEntity.ok(
+                dashboardService.getPortfolioAllocationForAuthorizedAccount(accountReference)
+        );
+    }
+
+    private String extractAccountReference(Authentication authentication) {
         String accountReference = authentication.getName();
 
         Object principal = authentication.getPrincipal();
@@ -29,8 +45,6 @@ public class DashboardController {
             }
         }
 
-        return ResponseEntity.ok(
-                dashboardService.getDashboardSummaryForAuthorizedAccount(accountReference)
-        );
+        return accountReference;
     }
 }
