@@ -180,49 +180,21 @@
                 <span>Change</span>
             </div>
 
-            <div class="stock-row">
-                <div>
-                    <strong>AAPL</strong>
-                    <small>Apple Inc.</small>
-                </div>
-                <span>182.45</span>
-                <span class="positive">▲ 1.24%</span>
+            <div *ngIf="watchlistError" class="watchlist-error" style="color: #ff9d9d; padding: 10px;">
+                {{ watchlistError }}
             </div>
 
-            <div class="stock-row">
-                <div>
-                    <strong>MSFT</strong>
-                    <small>Microsoft Corp.</small>
-                </div>
-                <span>415.32</span>
-                <span class="positive">▲ 0.87%</span>
+            <div *ngIf="!watchlistError && watchlist.length === 0" style="padding: 10px; text-align: center; color: #999;">
+                No watchlist items
             </div>
 
-            <div class="stock-row">
+            <div *ngFor="let item of watchlist" class="stock-row">
                 <div>
-                    <strong>GOOGL</strong>
-                    <small>Alphabet Inc.</small>
+                    <strong>{{ item.symbol }}</strong>
+                    <small>{{ item.displayName }}</small>
                 </div>
-                <span>168.21</span>
-                <span class="positive">▲ 1.12%</span>
-            </div>
-
-            <div class="stock-row">
-                <div>
-                    <strong>TSLA</strong>
-                    <small>Tesla Inc.</small>
-                </div>
-                <span>248.50</span>
-                <span class="negative">▼ 0.65%</span>
-            </div>
-
-            <div class="stock-row">
-                <div>
-                    <strong>AMZN</strong>
-                    <small>Amazon.com Inc.</small>
-                </div>
-                <span>178.32</span>
-                <span class="positive">▲ 0.93%</span>
+                <span>${{ item.currentPrice.toFixed(2) }}</span>
+                <span [class]="changeClass(item.changePercent)">{{ formatChangePercent(item.changePercent) }}</span>
             </div>
 
         </div>
