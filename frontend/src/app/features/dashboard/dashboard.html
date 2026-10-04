@@ -24,8 +24,19 @@
     </nav>
 
     <div class="profile">
-        <div class="profile-icon">◯</div>
-        <span class="dropdown">⌄</span>
+        <button
+            class="profile-trigger"
+            type="button"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="isProfileMenuOpen"
+            (click)="toggleProfileMenu($event)">
+            <div class="profile-icon" aria-hidden="true">&#128100;</div>
+        </button>
+
+        <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+            <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+            <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+        </div>
     </div>
 </header>
 

@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
+import { Auth } from '../../core/services/auth';
 import { SignupRequest, SignupRequests } from '../../core/services/signup-requests';
 
 @Component({
@@ -25,7 +27,14 @@ export class Admin implements OnInit {
   constructor(
     private readonly signupRequests: SignupRequests,
     private readonly cdr: ChangeDetectorRef,
+    private readonly auth: Auth,
+    private readonly router: Router,
   ) {}
+
+  signOut(): void {
+    this.auth.signOut();
+    void this.router.navigate(['/login']);
+  }
 
   ngOnInit(): void {
     void this.loadRequests();

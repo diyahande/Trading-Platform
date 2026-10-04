@@ -20,6 +20,12 @@
   margin-bottom: 18px;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 h1 {
   margin: 0;
   font-size: 1.85rem;
@@ -32,6 +38,12 @@ h1 {
   border-radius: 10px;
   padding: 10px 14px;
   cursor: pointer;
+}
+
+.hero button.logout {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(248, 113, 113, 0.14);
+  color: #ffd0d0;
 }
 
 .status {
