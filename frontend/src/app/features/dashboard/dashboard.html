@@ -319,35 +319,19 @@
                 <a href="#">View all</a>
             </div>
 
-            <div class="activity-row">
-                <div class="activity-icon buy">↗</div>
-                <div>
-                    <strong>Bought 10 shares of AAPL</strong>
-                    <small>2 hours ago</small>
-                </div>
+            <div *ngIf="recentActivityError" style="color: #ff9d9d; padding: 10px;">
+                {{ recentActivityError }}
             </div>
 
-            <div class="activity-row">
-                <div class="activity-icon sell">↘</div>
-                <div>
-                    <strong>Sold 5 shares of TSLA</strong>
-                    <small>4 hours ago</small>
-                </div>
+            <div *ngIf="!recentActivityError && recentActivity.length === 0" style="padding: 10px; text-align: center; color: #999;">
+                No recent activity
             </div>
 
-            <div class="activity-row">
-                <div class="activity-icon buy">↗</div>
+            <div *ngFor="let activity of recentActivity" class="activity-row">
+                <div [class]="'activity-icon ' + getActivityIcon(activity)">{{ getActivityIconSymbol(activity) }}</div>
                 <div>
-                    <strong>Bought 15 shares of NVDA</strong>
-                    <small>1 day ago</small>
-                </div>
-            </div>
-
-            <div class="activity-row">
-                <div class="activity-icon sell">↘</div>
-                <div>
-                    <strong>Sold 8 shares of MSFT</strong>
-                    <small>1 day ago</small>
+                    <strong>{{ getActivityDescription(activity) }}</strong>
+                    <small>{{ getRelativeTime(activity.createdOn) }}</small>
                 </div>
             </div>
 

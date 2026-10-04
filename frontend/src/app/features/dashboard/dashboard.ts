@@ -23,6 +23,18 @@ type WatchlistItem = {
   addedAt: string;
 };
 
+type RecentActivity = {
+  orderId: string;
+  accountId: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+  price: number;
+  executedPrice: number;
+  status: string;
+  createdOn: string;
+};
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -32,10 +44,13 @@ type WatchlistItem = {
 })
 export class Dashboard {
   username = 'Trader';
+  accountReference: string | null = null;
   summary: DashboardSummary | null = null;
   summaryError: string | null = null;
   watchlist: WatchlistItem[] = [];
   watchlistError: string | null = null;
+  recentActivity: RecentActivity[] = [];
+  recentActivityError: string | null = null;
 
   constructor(private route: ActivatedRoute, private auth: Auth, private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {
     const routeUsername = this.route.snapshot.queryParamMap.get('username');
@@ -45,6 +60,7 @@ export class Dashboard {
 
     void this.loadDashboard();
     void this.loadWatchlist();
+    void this.loadRecentActivity();
   }
 
   signOut() {
@@ -128,5 +144,82 @@ export class Dashboard {
       this.watchlist = [];
       this.cdr.markForCheck();
     }
+  }
+
+  private async loadRecentActivity(): Promise<void> {
+    this.recentActivityError = null;
+    try {
+      // Get account reference from localStorage (stored by auth service)
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        this.recentActivityError = 'Authentication required.';
+        return;
+      }
+
+      // Decode JWT to get accountId claim
+      const accountId = this.extractAccountIdFromToken(token);
+      if (!accountId) {
+        this.recentActivityError = 'Account ID not found.';
+        return;
+      }
+
+      const response = await firstValueFrom(
+        this.http.get<RecentActivity[]>(`/api/v1/accounts/${accountId}/orders`)
+      );
+      // Sort by createdOn date (most recent first) and take last 5
+      const sorted = response.sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
+      this.recentActivity = sorted.slice(0, 5);
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.recentActivityError = 'Session expired. Please sign in again.';
+      } else {
+        this.recentActivityError = 'Recent activity could not be loaded.';
+      }
+      this.recentActivity = [];
+      this.cdr.markForCheck();
+    }
+  }
+
+  private extractAccountIdFromToken(token: string): string | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+
+      const payload = parts[1];
+      const decoded = JSON.parse(atob(payload));
+      return decoded.accountId || decoded.sub;
+    } catch (error) {
+      console.error('Failed to decode JWT:', error);
+      return null;
+    }
+  }
+
+  getActivityDescription(activity: RecentActivity): string {
+    const action = activity.side === 'BUY' ? 'Bought' : 'Sold';
+    return `${action} ${activity.quantity} shares of ${activity.symbol}`;
+  }
+
+  getActivityIcon(activity: RecentActivity): string {
+    return activity.side === 'BUY' ? 'buy' : 'sell';
+  }
+
+  getActivityIconSymbol(activity: RecentActivity): string {
+    return activity.side === 'BUY' ? '↗' : '↘';
+  }
+
+  getRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
   }
 }
