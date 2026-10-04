@@ -1,5 +1,6 @@
 package com.capstone.kafka;
 
+import com.capstone.service.StockPerformanceService;
 import com.capstone.service.TopMoversService;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -14,8 +15,9 @@ import java.math.BigDecimal;
 
 /**
  * Kafka Listener for market-data topic
- * Consumes real-time market quotes and updates TopMoversService
- * This enables the dashboard to display top gainers/losers
+ * Consumes real-time market quotes and updates:
+ * - TopMoversService for stock gainers/losers
+ * - StockPerformanceService for market performance visualization
  */
 @Component
 @RequiredArgsConstructor
@@ -23,6 +25,7 @@ public class MarketDataEventListener {
 
     private static final Logger logger = LoggerFactory.getLogger(MarketDataEventListener.class);
     private final TopMoversService topMoversService;
+    private final StockPerformanceService stockPerformanceService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -54,7 +57,7 @@ public class MarketDataEventListener {
                 return;
             }
 
-            // Update top movers service
+            // Update services
             topMoversService.updateSymbolQuote(
                     payload.getSymbol(),
                     payload.getPrice(),
@@ -62,6 +65,15 @@ public class MarketDataEventListener {
                     payload.getChangePercent(),
                     payload.getPreviousClose()
             );
+
+            // Also update stock performance service for visualization
+            if (stockPerformanceService.isMonitored(payload.getSymbol())) {
+                stockPerformanceService.updateStockQuote(
+                        payload.getSymbol(),
+                        payload.getPrice(),
+                        payload.getPreviousClose()
+                );
+            }
 
             logger.debug(
                     "Market data consumed: symbol={} price={} changePercent={}",

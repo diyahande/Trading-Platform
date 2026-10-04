@@ -74,6 +74,24 @@ type TopMover = {
 
 type TopMoversTab = 'gainers' | 'losers';
 
+type StockPerformance = {
+  symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  lastUpdated: number;
+};
+
+type StockPerformanceVisualization = {
+  stocks: StockPerformance[];
+  statistics: {
+    total: number;
+    gainers: number;
+    losers: number;
+    averageChangePercent: number;
+  };
+};
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -92,11 +110,8 @@ export class Dashboard {
   recentActivityError: string | null = null;
   portfolioAllocation: PortfolioAllocation | null = null;
   portfolioAllocationError: string | null = null;
-  marketOverview: MarketOverview | null = null;
-  marketOverviewError: string | null = null;
-  selectedIndex: string = 'NIFTY_50';
-  chartData: ChartPoint[] = [];
-  chartYAxisLabels: string[] = [];
+  stockPerformance: StockPerformanceVisualization | null = null;
+  stockPerformanceError: string | null = null;
   topMoversTab: TopMoversTab = 'gainers';
   topGainers: TopMover[] = [];
   topLosers: TopMover[] = [];
@@ -112,7 +127,7 @@ export class Dashboard {
     void this.loadWatchlist();
     void this.loadRecentActivity();
     void this.loadPortfolioAllocation();
-    void this.loadMarketOverview();
+    void this.loadStockPerformance();
     void this.loadTopMovers();
   }
 
@@ -294,83 +309,26 @@ export class Dashboard {
     }
   }
 
-  private async loadMarketOverview(): Promise<void> {
-    this.marketOverviewError = null;
+  private async loadStockPerformance(): Promise<void> {
+    this.stockPerformanceError = null;
     try {
-      const response = await firstValueFrom(this.http.get<MarketOverview>('/api/market-overview'));
-      this.marketOverview = response;
-      // Load chart data for the selected index
-      await this.updateChartData(this.selectedIndex);
+      const response = await firstValueFrom(
+        this.http.get<StockPerformanceVisualization>('/api/market-performance/visualization')
+      );
+      this.stockPerformance = response;
       this.cdr.markForCheck();
     } catch (error: any) {
       const status = typeof error?.status === 'number' ? error.status : null;
       if (status === 401) {
-        this.marketOverviewError = 'Session expired. Please sign in again.';
+        this.stockPerformanceError = 'Session expired. Please sign in again.';
       } else if (status === 503) {
-        this.marketOverviewError = 'Market data is unavailable.';
+        this.stockPerformanceError = 'Market data is unavailable.';
       } else {
-        this.marketOverviewError = 'Market overview could not be loaded.';
+        this.stockPerformanceError = 'Market performance data could not be loaded.';
       }
-      this.marketOverview = null;
+      this.stockPerformance = null;
       this.cdr.markForCheck();
     }
-  }
-
-  selectIndex(indexKey: string): void {
-    this.selectedIndex = indexKey;
-    void this.updateChartData(indexKey);
-  }
-
-  private async updateChartData(indexKey: string): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.http.get<MarketIndexHistory>(`/api/market-overview/${indexKey}/history`)
-      );
-
-      if (!response.history || response.history.length === 0) {
-        this.chartData = [];
-        this.chartYAxisLabels = [];
-        return;
-      }
-
-      // Convert to chart points with normalized x coordinates (0 to 1000)
-      const minPrice = Math.min(...response.history.map(h => h.price));
-      const maxPrice = Math.max(...response.history.map(h => h.price));
-      const priceRange = maxPrice - minPrice || 1;
-
-      this.chartData = response.history.map((point, index) => ({
-        x: (index / (response.history.length - 1 || 1)) * 1000,
-        y: 220 - ((point.price - minPrice) / priceRange) * 180,
-      }));
-
-      // Generate SVG path data
-      const pathData = this.chartData
-        .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
-        .join(' ');
-
-      // Store the path for SVG rendering
-      this.chartPathData = pathData;
-
-      // Generate Y-axis labels
-      const labelCount = 4;
-      this.chartYAxisLabels = [];
-      for (let i = 0; i < labelCount; i++) {
-        const price = minPrice + (priceRange * (labelCount - 1 - i)) / (labelCount - 1);
-        this.chartYAxisLabels.push(price.toFixed(0));
-      }
-
-      this.cdr.markForCheck();
-    } catch (error: any) {
-      console.error('Failed to load chart data:', error);
-      this.chartData = [];
-      this.chartYAxisLabels = [];
-    }
-  }
-
-  chartPathData: string = '';
-
-  getCurrentIndexQuote(): MarketIndexQuote | undefined {
-    return this.marketOverview?.indices[this.selectedIndex];
   }
 
   private async loadTopMovers(): Promise<void> {

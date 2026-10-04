@@ -164,20 +164,25 @@ body {
 }
 
 .market-card {
-    height: 296px;
-    padding: 20px 22px;
+    padding: 24px;
+    background: linear-gradient(145deg, #091620, #07131c);
+    border: 1px solid #1a303e;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .market-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .market-header h2,
 .section-header h2 {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.3px;
 }
 
 .market-value {
@@ -216,6 +221,141 @@ body {
 .mover-tabs button.selected {
     color: #00d6a3;
     border-bottom: 2px solid #00d6a3;
+}
+
+.market-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-size: 12px;
+    background: linear-gradient(135deg, rgba(0, 214, 163, 0.05), rgba(255, 100, 100, 0.05));
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 214, 163, 0.1);
+}
+
+.stat {
+    color: #8a98a7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat strong {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.stat:nth-child(1) strong {
+    color: #00d6a3;
+}
+
+.stat:nth-child(2) strong {
+    color: #ff6464;
+}
+
+.stat:nth-child(3) strong {
+    font-size: 12px;
+}
+
+.stock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.stock-tile {
+    background: linear-gradient(135deg, #0d2236, #081a28);
+    border: 1.5px solid #1a3e52;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    min-height: 105px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.stock-tile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    pointer-events: none;
+    border-radius: 8px;
+}
+
+.stock-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+    border-color: rgba(0, 214, 163, 0.3);
+}
+
+.stock-tile.gainer {
+    background: linear-gradient(135deg, rgba(0, 214, 163, 0.12), rgba(0, 214, 163, 0.04));
+    border-left: 4px solid #00d6a3;
+    border-color: rgba(0, 214, 163, 0.3);
+}
+
+.stock-tile.gainer:hover {
+    background: linear-gradient(135deg, rgba(0, 214, 163, 0.18), rgba(0, 214, 163, 0.08));
+    box-shadow: 0 12px 28px rgba(0, 214, 163, 0.15);
+}
+
+.stock-tile.loser {
+    background: linear-gradient(135deg, rgba(255, 100, 100, 0.12), rgba(255, 100, 100, 0.04));
+    border-left: 4px solid #ff6464;
+    border-color: rgba(255, 100, 100, 0.3);
+}
+
+.stock-tile.loser:hover {
+    background: linear-gradient(135deg, rgba(255, 100, 100, 0.18), rgba(255, 100, 100, 0.08));
+    box-shadow: 0 12px 28px rgba(255, 100, 100, 0.15);
+}
+
+.stock-symbol {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 7px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+}
+
+.stock-price {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0d8e0;
+    margin-bottom: 5px;
+    position: relative;
+    z-index: 1;
+}
+
+.stock-change {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    position: relative;
+    z-index: 1;
+}
+
+.stock-change.positive {
+    color: #00d6a3;
+}
+
+.stock-change.negative {
+    color: #ff6464;
 }
 
 .chart {

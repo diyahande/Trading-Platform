@@ -72,83 +72,29 @@
             <div class="market-card">
 
                 <div class="market-header">
-                    <h2>Market Overview</h2>
+                    <h2>Market Performance</h2>
 
-                    <div class="market-value" *ngIf="getCurrentIndexQuote(); let quote">
-                        <strong>{{ quote.price | number:'1.2-2' }}</strong>
-                        <span [ngClass]="changeClass(quote.changePercent || 0)">
-                            {{ quote.changePercent && quote.changePercent >= 0 ? '▲' : '▼' }}
-                            {{ quote.change | number:'1.2-2' }} ({{ quote.changePercent | number:'1.2-2' }}%)
-                        </span>
+                    <div class="market-stats" *ngIf="stockPerformance">
+                        <span class="stat">Gainers: <strong class="positive">{{ stockPerformance.statistics.gainers }}</strong></span>
+                        <span class="stat">Losers: <strong class="negative">{{ stockPerformance.statistics.losers }}</strong></span>
+                        <span class="stat">Avg: <strong [class.positive]="stockPerformance.statistics.averageChangePercent >= 0" [class.negative]="stockPerformance.statistics.averageChangePercent < 0">{{ stockPerformance.statistics.averageChangePercent | number:'1.2-2' }}%</strong></span>
                     </div>
 
-                    <div class="market-value" *ngIf="!getCurrentIndexQuote() && marketOverviewError">
-                        <span class="error">{{ marketOverviewError }}</span>
+                    <div class="error" *ngIf="stockPerformanceError">
+                        {{ stockPerformanceError }}
                     </div>
                 </div>
 
-                <div class="market-tabs">
-                    <button 
-                        [class.selected]="selectedIndex === 'NIFTY_50'"
-                        (click)="selectIndex('NIFTY_50')">
-                        NIFTY 50
-                    </button>
-                    <button 
-                        [class.selected]="selectedIndex === 'SENSEX'"
-                        (click)="selectIndex('SENSEX')">
-                        SENSEX
-                    </button>
-                    <button 
-                        [class.selected]="selectedIndex === 'NASDAQ'"
-                        (click)="selectIndex('NASDAQ')">
-                        NASDAQ
-                    </button>
-                    <button 
-                        [class.selected]="selectedIndex === 'SP500'"
-                        (click)="selectIndex('SP500')">
-                        S&P 500
-                    </button>
-                </div>
-
-                <div class="chart">
-                    <div class="y-axis">
-                        <span *ngFor="let label of chartYAxisLabels">{{ label }}</span>
-                    </div>
-
-                    <svg viewBox="0 0 1000 220" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#00d6a3" stop-opacity="0.25"/>
-                                <stop offset="100%" stop-color="#00d6a3" stop-opacity="0"/>
-                            </linearGradient>
-                        </defs>
-
-                        <line x1="0" y1="40" x2="1000" y2="40"/>
-                        <line x1="0" y1="90" x2="1000" y2="90"/>
-                        <line x1="0" y1="140" x2="1000" y2="140"/>
-                        <line x1="0" y1="190" x2="1000" y2="190"/>
-
-                        <path
-                            *ngIf="chartPathData"
-                            class="chart-area"
-                            [attr.d]="chartPathData + ' L1000,220 L0,220 Z'"
-                            fill="url(#chartFill)">
-                        </path>
-
-                        <path
-                            *ngIf="chartPathData"
-                            class="chart-line"
-                            [attr.d]="chartPathData">
-                        </path>
-                    </svg>
-
-                    <div class="x-axis">
-                        <span>09:15</span>
-                        <span>10:30</span>
-                        <span>11:45</span>
-                        <span>13:00</span>
-                        <span>14:15</span>
-                        <span>15:30</span>
+                <div class="stock-grid">
+                    <div *ngFor="let stock of stockPerformance?.stocks" 
+                         class="stock-tile"
+                         [class.gainer]="stock.changePercent >= 0"
+                         [class.loser]="stock.changePercent < 0">
+                        <div class="stock-symbol">{{ stock.symbol }}</div>
+                        <div class="stock-price">${{ stock.price | number:'1.2-2' }}</div>
+                        <div class="stock-change" [class]="stock.changePercent >= 0 ? 'positive' : 'negative'">
+                            {{ stock.changePercent >= 0 ? '▲' : '▼' }} {{ (stock.changePercent < 0 ? -stock.changePercent : stock.changePercent) | number:'1.2-2' }}%
+                        </div>
                     </div>
                 </div>
 
