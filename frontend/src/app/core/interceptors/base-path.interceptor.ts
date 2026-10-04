@@ -4,7 +4,7 @@ import { HttpInterceptorFn } from '@angular/common/http';
  * Routes API requests to the correct backend service based on the endpoint path.
  * 
  * - Auth endpoints (/auth/*) → http://localhost:3000 (auth-service)
- * - Trade endpoints (/api/v1/*) → http://localhost:8083 (trade-api)
+ * - Trade endpoints (/api/v1/*, /api/dashboard, /api/portfolio-allocation, /api/market-overview, /api/market-performance, /api/top-movers) → http://localhost:8083 (trade-api)
  */
 export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
   // Only modify relative URLs or localhost URLs
@@ -16,7 +16,7 @@ export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
       if (req.url.startsWith('/auth')) {
         // Auth endpoints go to auth-service on port 3000
         modifiedUrl = `http://localhost:3000${req.url}`;
-      } else if (req.url.startsWith('/api/v1')) {
+      } else if (req.url.startsWith('/api/v1') || req.url.startsWith('/api/dashboard') || req.url.startsWith('/api/portfolio-allocation') || req.url.startsWith('/api/market-overview') || req.url.startsWith('/api/market-performance') || req.url.startsWith('/api/top-movers')) {
         // Trade endpoints go to trade-api on port 8083
         modifiedUrl = `http://localhost:8083${req.url}`;
       }
@@ -31,7 +31,7 @@ export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
       const urlObj = new URL(req.url);
       if (urlObj.pathname.startsWith('/auth')) {
         modifiedUrl = `http://localhost:3000${urlObj.pathname}${urlObj.search}`;
-      } else if (urlObj.pathname.startsWith('/api/v1')) {
+      } else if (urlObj.pathname.startsWith('/api/v1') || urlObj.pathname.startsWith('/api/dashboard') || urlObj.pathname.startsWith('/api/portfolio-allocation') || urlObj.pathname.startsWith('/api/market-overview') || urlObj.pathname.startsWith('/api/market-performance') || urlObj.pathname.startsWith('/api/top-movers')) {
         modifiedUrl = `http://localhost:8083${urlObj.pathname}${urlObj.search}`;
       }
     }

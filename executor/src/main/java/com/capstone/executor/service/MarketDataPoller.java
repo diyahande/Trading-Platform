@@ -18,11 +18,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 
 @Component
-// @EnableScheduling
+//@EnableScheduling
 public class MarketDataPoller {
 
     private static final Logger logger =
@@ -43,10 +44,10 @@ public class MarketDataPoller {
     private final MarketDataKafkaPublisher kafkaPublisher;
     private final SymbolMapper symbolMapper;
     private final long pollIntervalSeconds;
-    private long lastPollTime = 0;
+    private final AtomicLong lastPollTime = new AtomicLong(0);
 
     private List<String> cachedSymbols = new ArrayList<>();
-    private long lastCacheRefreshTime = 0;
+    private final AtomicLong lastCacheRefreshTime = new AtomicLong(0);
 
     public MarketDataPoller(
             FauxnanceQuoteClient fauxnanceClient,
@@ -90,21 +91,8 @@ public class MarketDataPoller {
     @Scheduled(fixedDelayString = "${POLL_INTERVAL_SECONDS:300}000")
     public void pollMarketData() {
         try {
-            // Enforce interval floor at execution time
             long currentTime = System.currentTimeMillis();
-            long minElapsedMs = pollIntervalSeconds * 1000;
-
-            if (lastPollTime > 0 && (currentTime - lastPollTime) < minElapsedMs) {
-                long waitMs = minElapsedMs - (currentTime - lastPollTime);
-                logger.info(
-                        "Interval floor enforced: waiting {} ms before next poll",
-                        waitMs
-                );
-                Thread.sleep(waitMs);
-                currentTime = System.currentTimeMillis();
-            }
-
-            lastPollTime = currentTime;
+            lastPollTime.set(currentTime);
 
             logger.info("Starting market data poll cycle");
 
@@ -159,57 +147,58 @@ public class MarketDataPoller {
                     totalQuotesPublished
             );
 
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.error("Market data poller was interrupted", e);
-        } catch (Exception e) {
+        }  catch (Exception e) {
             logger.error("Market data poller failed: {}", e.getMessage(), e);
         }
     }
 
  
     private synchronized List<String> getOrRefreshSymbolsCache(long currentTime) {
-        long timeSinceLastRefresh = currentTime - lastCacheRefreshTime;
+        long lastRefreshTime = lastCacheRefreshTime.get();
+        long timeSinceLastRefresh = currentTime - lastRefreshTime;
         
         // Refresh cache if first time or stale (older than 15 minutes)
-        if (lastCacheRefreshTime == 0 || timeSinceLastRefresh >= CACHE_REFRESH_INTERVAL_MS) {
+        if (lastRefreshTime == 0 || timeSinceLastRefresh >= CACHE_REFRESH_INTERVAL_MS) {
             logger.info(
                     "Refreshing symbol cache (last refresh: {} ms ago)",
                     timeSinceLastRefresh
             );
             
             try {
-                cachedSymbols = symbolMapper.fetchWatchedAndHeldSymbols();
-                lastCacheRefreshTime = currentTime;
+                List<String> fetchedSymbols = symbolMapper.fetchWatchedAndHeldSymbols();
                 
-                if (cachedSymbols != null && !cachedSymbols.isEmpty()) {
+                if (fetchedSymbols != null && !fetchedSymbols.isEmpty()) {
+                    cachedSymbols = new ArrayList<>(fetchedSymbols);
+                    lastCacheRefreshTime.set(currentTime);
                     logger.info(
-                            "Symbol cache refreshed: {} symbols = {}",
-                            cachedSymbols.size(),
-                            cachedSymbols
+                            "Symbol cache refreshed: {} symbols from database",
+                            cachedSymbols.size()
                     );
                     // Persist cache to file
                     saveCacheToFile(cachedSymbols);
                 } else {
-                    logger.info("Symbol cache refreshed: 0 symbols (empty list)");
+                    logger.warn("Symbol cache refresh returned empty list from database");
+                    lastCacheRefreshTime.set(currentTime);
                 }
             } catch (Exception e) {
-                logger.error("Failed to refresh symbol cache: {}", e.getMessage(), e);
-                // Return cached symbols even if refresh fails, to keep system running
-                if (cachedSymbols == null) {
-                    cachedSymbols = new ArrayList<>();
+                logger.error("Failed to refresh symbol cache from database: {}", e.getMessage(), e);
+                // If we have no cache at all, log warning
+                if (cachedSymbols.isEmpty()) {
+                    logger.warn("No cached symbols available and refresh failed. Market data polling may not work");
+                } else {
+                    logger.info("Using stale cache ({} symbols) due to database error", cachedSymbols.size());
                 }
             }
         } else {
             logger.debug(
-                    "Using cached symbols ({} ms since refresh, next refresh in {} ms) = {}",
+                    "Using cached symbols ({} ms since refresh, next refresh in {} ms). Count: {}",
                     timeSinceLastRefresh,
                     CACHE_REFRESH_INTERVAL_MS - timeSinceLastRefresh,
-                    cachedSymbols
+                    cachedSymbols.size()
             );
         }
         
-        return cachedSymbols;
+        return new ArrayList<>(cachedSymbols);
     }
 
  

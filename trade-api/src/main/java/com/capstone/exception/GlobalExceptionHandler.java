@@ -80,6 +80,7 @@ public class GlobalExceptionHandler {
             case "ORD-409" -> HttpStatus.CONFLICT;
             case "VAL-422" -> HTTP_422;
             case "AUTH-401" -> HttpStatus.UNAUTHORIZED;
+            case "MKT-503" -> HttpStatus.SERVICE_UNAVAILABLE;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }
