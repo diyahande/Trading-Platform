@@ -1,32 +1,386 @@
-<section class="dash-panel" aria-label="TradeX dashboard">
-  <div class="chart-bg" aria-hidden="true">
-    <svg viewBox="0 0 900 560" preserveAspectRatio="none">
-      <polyline points="20,460 100,430 180,440 260,385 340,405 420,352 500,365 580,300 660,315 740,268 820,290"
-        class="line" />
-      <line x1="100" y1="445" x2="100" y2="415" class="candle g" />
-      <line x1="180" y1="450" x2="180" y2="430" class="candle r" />
-      <line x1="260" y1="398" x2="260" y2="372" class="candle g" />
-      <line x1="340" y1="416" x2="340" y2="392" class="candle r" />
-      <line x1="420" y1="365" x2="420" y2="338" class="candle g" />
-      <line x1="500" y1="378" x2="500" y2="356" class="candle r" />
-      <line x1="580" y1="312" x2="580" y2="288" class="candle g" />
-      <line x1="660" y1="326" x2="660" y2="304" class="candle r" />
-      <line x1="740" y1="278" x2="740" y2="258" class="candle g" />
-    </svg>
-  </div>
-
-  <header class="brand">Trade<span>X</span></header>
-
-  <main class="dash-card">
-    <p class="kicker">Dashboard</p>
-    <h1>Welcome "{{ username }}"</h1>
-    <p class="subtle">Placeholder page after sign in.</p>
-
-    <div class="actions">
-      <a routerLink="/orders" class="primary">Orders</a>
-      <a routerLink="/change-password" class="ghost">Change Password</a>
-      <a routerLink="/login" class="ghost">Back To Login</a>
-      <button type="button" class="primary" (click)="signOut()">Sign Out</button>
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-mark">X</span>
+        <span>TradeX</span>
     </div>
-  </main>
-</section>
+
+    <nav class="nav-links">
+        <a href="#" class="nav-item active">
+            <span>⌂</span>
+            Dashboard
+        </a>
+        <a href="#" class="nav-item">
+            <span>▤</span>
+            Orders
+        </a>
+        <a href="#" class="nav-item">
+            <span>♧</span>
+            Holdings
+        </a>
+        <a href="#" class="nav-item">
+            <span>☆</span>
+            Watchlists
+        </a>
+    </nav>
+
+    <div class="profile">
+        <div class="profile-icon">◯</div>
+        <span class="dropdown">⌄</span>
+    </div>
+</header>
+
+<main class="dashboard">
+
+    <section class="welcome">
+        <h1>Good morning,</h1>
+        <p>Here's what's happening in the markets today.</p>
+        <p class="summary-error" [hidden]="!summaryError">{{ summaryError }}</p>
+    </section>
+
+    <section class="top-section">
+
+        <div class="summary-area">
+
+            <div class="summary-cards">
+
+                <div class="summary-card">
+                    <span class="card-label">Portfolio Value</span>
+                    <strong>{{ formatMoney(summary?.portfolioValue) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Today's P&L</span>
+                    <strong [class]="pnlClass()">{{ formatMoney(summary?.todaysPnl) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Available Cash</span>
+                    <strong>{{ formatMoney(summary?.availableCash) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Buying Power</span>
+                    <strong>{{ formatMoney(summary?.buyingPower) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+            </div>
+
+            <div class="market-card">
+
+                <div class="market-header">
+                    <h2>Market Overview</h2>
+
+                    <div class="market-value">
+                        <strong>24,821.30</strong>
+                        <span>▲ 142.65 (0.58%)</span>
+                    </div>
+                </div>
+
+                <div class="market-tabs">
+                    <button class="selected">NIFTY 50</button>
+                    <button>SENSEX</button>
+                    <button>NASDAQ</button>
+                    <button>S&P 500</button>
+                </div>
+
+                <div class="chart">
+                    <div class="y-axis">
+                        <span>24,900</span>
+                        <span>24,800</span>
+                        <span>24,700</span>
+                        <span>24,600</span>
+                    </div>
+
+                    <svg viewBox="0 0 1000 220" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#00d6a3" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#00d6a3" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+
+                        <line x1="0" y1="40" x2="1000" y2="40"/>
+                        <line x1="0" y1="90" x2="1000" y2="90"/>
+                        <line x1="0" y1="140" x2="1000" y2="140"/>
+                        <line x1="0" y1="190" x2="1000" y2="190"/>
+
+                        <path
+                            class="chart-area"
+                            d="M0,180
+                            L15,170 L25,150 L38,145 L48,120 L60,135
+                            L72,115 L85,125 L98,110 L110,145
+                            L125,130 L138,155 L150,140 L165,145
+                            L180,120 L195,135 L210,115 L225,125
+                            L240,100 L255,110 L270,95 L285,115
+                            L300,145 L315,125 L330,115 L345,120
+                            L360,105 L375,115 L390,95 L405,105
+                            L420,90 L435,100 L450,85 L465,95
+                            L480,75 L495,85 L510,65 L525,75
+                            L540,55 L555,70 L570,50 L585,75
+                            L600,65 L615,80 L630,70 L645,90
+                            L660,75 L675,95 L690,80 L705,100
+                            L720,90 L735,105 L750,85 L765,95
+                            L780,80 L795,70 L810,75 L825,60
+                            L840,55 L855,45 L870,60 L885,50
+                            L900,45 L915,35 L930,45 L945,25
+                            L960,35 L975,20 L990,30 L1000,15
+                            L1000,220 L0,220 Z">
+                        </path>
+
+                        <path
+                            class="chart-line"
+                            d="M0,180
+                            L15,170 L25,150 L38,145 L48,120 L60,135
+                            L72,115 L85,125 L98,110 L110,145
+                            L125,130 L138,155 L150,140 L165,145
+                            L180,120 L195,135 L210,115 L225,125
+                            L240,100 L255,110 L270,95 L285,115
+                            L300,145 L315,125 L330,115 L345,120
+                            L360,105 L375,115 L390,95 L405,105
+                            L420,90 L435,100 L450,85 L465,95
+                            L480,75 L495,85 L510,65 L525,75
+                            L540,55 L555,70 L570,50 L585,75
+                            L600,65 L615,80 L630,70 L645,90
+                            L660,75 L675,95 L690,80 L705,100
+                            L720,90 L735,105 L750,85 L765,95
+                            L780,80 L795,70 L810,75 L825,60
+                            L840,55 L855,45 L870,60 L885,50
+                            L900,45 L915,35 L930,45 L945,25
+                            L960,35 L975,20 L990,30 L1000,15">
+                        </path>
+                    </svg>
+
+                    <div class="x-axis">
+                        <span>09:15</span>
+                        <span>10:30</span>
+                        <span>11:45</span>
+                        <span>13:00</span>
+                        <span>14:15</span>
+                        <span>15:30</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="watchlist card">
+
+            <div class="section-header">
+                <h2>Watchlist</h2>
+                <a href="#">View all</a>
+            </div>
+
+            <div class="watchlist-heading">
+                <span>Symbol</span>
+                <span>Last Price</span>
+                <span>Change</span>
+            </div>
+
+            <div class="stock-row">
+                <div>
+                    <strong>AAPL</strong>
+                    <small>Apple Inc.</small>
+                </div>
+                <span>182.45</span>
+                <span class="positive">▲ 1.24%</span>
+            </div>
+
+            <div class="stock-row">
+                <div>
+                    <strong>MSFT</strong>
+                    <small>Microsoft Corp.</small>
+                </div>
+                <span>415.32</span>
+                <span class="positive">▲ 0.87%</span>
+            </div>
+
+            <div class="stock-row">
+                <div>
+                    <strong>GOOGL</strong>
+                    <small>Alphabet Inc.</small>
+                </div>
+                <span>168.21</span>
+                <span class="positive">▲ 1.12%</span>
+            </div>
+
+            <div class="stock-row">
+                <div>
+                    <strong>TSLA</strong>
+                    <small>Tesla Inc.</small>
+                </div>
+                <span>248.50</span>
+                <span class="negative">▼ 0.65%</span>
+            </div>
+
+            <div class="stock-row">
+                <div>
+                    <strong>AMZN</strong>
+                    <small>Amazon.com Inc.</small>
+                </div>
+                <span>178.32</span>
+                <span class="positive">▲ 0.93%</span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="bottom-section">
+
+        <div class="movers card">
+
+            <div class="section-header">
+                <h2>Top Movers</h2>
+            </div>
+
+            <div class="mover-tabs">
+                <button class="selected">Gainers</button>
+                <button>Losers</button>
+            </div>
+
+            <div class="movers-heading">
+                <span>Symbol</span>
+                <span>Last Price</span>
+                <span>Change</span>
+            </div>
+
+            <div class="mover-row">
+                <div>
+                    <strong>NVDA</strong>
+                    <small>NVIDIA Corp.</small>
+                </div>
+                <span>946.32</span>
+                <span class="positive">▲ 3.14%</span>
+            </div>
+
+            <div class="mover-row">
+                <div>
+                    <strong>META</strong>
+                    <small>Meta Platforms Inc.</small>
+                </div>
+                <span>612.21</span>
+                <span class="positive">▲ 2.76%</span>
+            </div>
+
+            <div class="mover-row">
+                <div>
+                    <strong>TSLA</strong>
+                    <small>Tesla Inc.</small>
+                </div>
+                <span>248.50</span>
+                <span class="positive">▲ 1.98%</span>
+            </div>
+
+            <div class="mover-row">
+                <div>
+                    <strong>AMD</strong>
+                    <small>Advanced Micro Devices</small>
+                </div>
+                <span>164.37</span>
+                <span class="positive">▲ 1.65%</span>
+            </div>
+
+            <div class="mover-row">
+                <div>
+                    <strong>MSFT</strong>
+                    <small>Microsoft Corp.</small>
+                </div>
+                <span>415.32</span>
+                <span class="positive">▲ 1.42%</span>
+            </div>
+
+        </div>
+
+        <div class="allocation card">
+
+            <div class="section-header">
+                <h2>Portfolio Allocation</h2>
+            </div>
+
+            <div class="allocation-content">
+
+                <div class="donut">
+                    <div class="donut-center">
+                        <strong>$0.00</strong>
+                        <span>Total Value</span>
+                    </div>
+                </div>
+
+                <div class="allocation-legend">
+                    <div>
+                        <span class="legend-dot stocks"></span>
+                        <span>Stocks</span>
+                        <strong>0.0%</strong>
+                    </div>
+
+                    <div>
+                        <span class="legend-dot etfs"></span>
+                        <span>ETFs</span>
+                        <strong>0.0%</strong>
+                    </div>
+
+                    <div>
+                        <span class="legend-dot crypto"></span>
+                        <span>Crypto</span>
+                        <strong>0.0%</strong>
+                    </div>
+
+                    <div>
+                        <span class="legend-dot cash"></span>
+                        <span>Cash</span>
+                        <strong>0.0%</strong>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="activity card">
+
+            <div class="section-header">
+                <h2>Recent Activity</h2>
+                <a href="#">View all</a>
+            </div>
+
+            <div class="activity-row">
+                <div class="activity-icon buy">↗</div>
+                <div>
+                    <strong>Bought 10 shares of AAPL</strong>
+                    <small>2 hours ago</small>
+                </div>
+            </div>
+
+            <div class="activity-row">
+                <div class="activity-icon sell">↘</div>
+                <div>
+                    <strong>Sold 5 shares of TSLA</strong>
+                    <small>4 hours ago</small>
+                </div>
+            </div>
+
+            <div class="activity-row">
+                <div class="activity-icon buy">↗</div>
+                <div>
+                    <strong>Bought 15 shares of NVDA</strong>
+                    <small>1 day ago</small>
+                </div>
+            </div>
+
+            <div class="activity-row">
+                <div class="activity-icon sell">↘</div>
+                <div>
+                    <strong>Sold 8 shares of MSFT</strong>
+                    <small>1 day ago</small>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+</main>

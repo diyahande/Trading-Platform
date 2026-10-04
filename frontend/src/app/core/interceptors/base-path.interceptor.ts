@@ -16,7 +16,7 @@ export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
       if (req.url.startsWith('/auth')) {
         // Auth endpoints go to auth-service on port 3000
         modifiedUrl = `http://localhost:3000${req.url}`;
-      } else if (req.url.startsWith('/api/v1')) {
+      } else if (req.url.startsWith('/api/v1') || req.url.startsWith('/api/dashboard')) {
         // Trade endpoints go to trade-api on port 8083
         modifiedUrl = `http://localhost:8083${req.url}`;
       }
@@ -31,7 +31,7 @@ export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
       const urlObj = new URL(req.url);
       if (urlObj.pathname.startsWith('/auth')) {
         modifiedUrl = `http://localhost:3000${urlObj.pathname}${urlObj.search}`;
-      } else if (urlObj.pathname.startsWith('/api/v1')) {
+      } else if (urlObj.pathname.startsWith('/api/v1') || urlObj.pathname.startsWith('/api/dashboard')) {
         modifiedUrl = `http://localhost:8083${urlObj.pathname}${urlObj.search}`;
       }
     }
