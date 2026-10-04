@@ -1,9 +1,10 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
+import { AiChat } from '../../shared/components/ai-chat/ai-chat';
 
 type DashboardSummary = {
   portfolioValue: number | null;
@@ -95,7 +96,7 @@ type StockPerformanceVisualization = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [CommonModule, AiChat],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })

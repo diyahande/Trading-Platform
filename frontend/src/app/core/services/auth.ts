@@ -65,6 +65,7 @@ export class Auth {
   }
 
   public signOut(): void {
+    this.clearAiChatHistory();
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY);
@@ -125,6 +126,20 @@ export class Auth {
 
   private getStoredAccessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
+  }
+
+  private clearAiChatHistory(): void {
+    const keysToRemove: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key && key.startsWith('aiChat:')) {
+        keysToRemove.push(key);
+      }
+    }
+
+    for (const key of keysToRemove) {
+      localStorage.removeItem(key);
+    }
   }
 
   private getStoredRefreshToken(): string | null {
