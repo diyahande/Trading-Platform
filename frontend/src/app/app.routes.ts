@@ -7,6 +7,7 @@ import { Admin } from './features/admin/admin';
 import { authGuard } from './core/guards/auth-guard';
 import { Orders } from './features/orders/orders';
 import { Blotter } from './features/blotter/blotter';
+import { Holdings } from './features/holdings/holdings';
 
 export const routes: Routes = [
 	{ path: 'login', component: Login },
@@ -16,5 +17,6 @@ export const routes: Routes = [
 	{ path: 'dashboard', component: Dashboard, canActivate: [authGuard] },
 	{ path: 'orders', component: Orders, canActivate: [authGuard] },
 	{ path: 'blotter', component: Blotter, canActivate: [authGuard] },
+	{ path: 'holdings', component: Holdings, canActivate: [authGuard] },
 	{ path: '', redirectTo: 'login', pathMatch: 'full' },
 ];

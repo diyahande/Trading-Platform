@@ -1,4 +1,6 @@
 <section class="blotter" aria-label="Order blotter">
+  <header class="brand">Trade<span>X</span></header>
+
   <header class="blotter-header">
     <div>
       <h1>Order Blotter</h1>
@@ -10,7 +12,6 @@
       <button type="button" class="refresh" (click)="refreshNow()" [disabled]="loading()">
         {{ loading() ? 'Refreshing...' : 'Refresh' }}
       </button>
-      <a routerLink="/orders" class="action-button primary-outline">Place Order</a>
       <a routerLink="/dashboard" class="action-button secondary">Back to Dashboard</a>
     </div>
   </header>
@@ -27,7 +28,7 @@
           <th>Symbol</th>
           <th>Side</th>
           <th>Quantity</th>
-          <th>Price</th>
+          <th>Executed Price</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -38,7 +39,7 @@
           <td>{{ order.symbol || '--' }}</td>
           <td>{{ order.side || '--' }}</td>
           <td>{{ formatQuantity(order.quantity) }}</td>
-          <td>{{ formatPrice(order.price) }}</td>
+          <td>{{ formatPrice(order.executedPrice) }}</td>
           <td>
             <span class="badge" [ngClass]="statusClass(order)">{{ statusText(order) }}</span>
           </td>

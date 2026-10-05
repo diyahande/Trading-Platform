@@ -1,0 +1,90 @@
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-mark">X</span>
+        <span>TradeX</span>
+    </div>
+
+    <nav class="nav-links">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+            <span>⌂</span>
+            Dashboard
+        </a>
+        <a routerLink="/orders" routerLinkActive="active" class="nav-item">
+            <span>▤</span>
+            Orders
+        </a>
+
+        <a routerLink="/holdings" routerLinkActive="active" class="nav-item">
+            <span>♧</span>
+            Holdings
+        </a>
+        <a routerLink="/blotter" routerLinkActive="active" class="nav-item">
+            <span>☆</span>
+            Blotter
+        </a>
+    </nav>
+
+    <div class="profile">
+        <button
+            class="profile-trigger"
+            type="button"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="isProfileMenuOpen()"
+            (click)="toggleProfileMenu($event)">
+            <div class="profile-icon" aria-hidden="true">&#128100;</div>
+        </button>
+
+        <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
+            <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+            <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+        </div>
+    </div>
+</header>
+
+<main class="holdings-page">
+  <section class="holdings" aria-label="Portfolio holdings">
+    <header class="holdings-header">
+      <div>
+        <h1>Portfolio Holdings</h1>
+        <p>Current positions in your portfolio.</p>
+        <p class="account">Account: <strong>{{ accountId() || '--' }}</strong></p>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="refresh" (click)="refreshNow()" [disabled]="loading()">
+          {{ loading() ? 'Refreshing...' : 'Refresh' }}
+        </button>
+      </div>
+    </header>
+
+    <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+    <div class="table-wrap" *ngIf="!errorMessage()">
+      <table *ngIf="holdings().length > 0; else emptyState">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Average Cost</th>
+            <th>Total Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let holding of holdings()">
+            <td class="symbol">{{ holding.symbol || '--' }}</td>
+            <td class="quantity">{{ formatNumber(holding.quantity) }}</td>
+            <td class="price">{{ formatMoney(holding.averageCost) }}</td>
+            <td class="value">{{ formatMoney(holding.totalValue) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #emptyState>
+        <div class="empty">
+          <h2>No holdings</h2>
+          <p>You currently don't hold any positions.</p>
+        </div>
+      </ng-template>
+    </div>
+  </section>
+</main>
