@@ -44,7 +44,7 @@
 <main class="dashboard">
 
     <section class="welcome">
-        <h1>Good morning,</h1>
+        <h1>Hello,</h1>
         <p>Here's what's happening in the markets today.</p>
         <p class="summary-error" [hidden]="!summaryError">{{ summaryError }}</p>
     </section>
@@ -201,47 +201,71 @@
                 <h2>Portfolio Allocation</h2>
             </div>
 
-            <div class="allocation-content">
+            <div *ngIf="portfolioAllocationError" style="color: #ff9d9d; padding: 10px; text-align: center;">
+                {{ portfolioAllocationError }}
+            </div>
 
-                <div class="donut">
+            <div *ngIf="!portfolioAllocationError && portfolioAllocation" class="allocation-content">
+
+                <div class="donut" [style.background]="getDonutGradient()">
                     <div class="donut-center">
-                        <strong>{{ portfolioAllocation ? ('$' + portfolioAllocation.totalPortfolioValue.toFixed(2)) : '$0.00' }}</strong>
-                        <span>Total Value</span>
+                        <div *ngIf="hoveredAssetClass" class="donut-hover">
+                            <span>{{ hoveredAssetValueInMoney | currency:'USD':'symbol':'1.0-2' }}</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="allocation-legend">
-                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['EQUITY']">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['EQUITY']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('EQUITY')"
+                         (mouseleave)="onAssetLeave()">
                         <span class="legend-dot stocks"></span>
                         <span>Stocks</span>
                         <strong>{{ portfolioAllocation?.allocationByAssetClass?.['EQUITY'] }}%</strong>
                     </div>
 
-                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['ETF']">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['ETF']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('ETF')"
+                         (mouseleave)="onAssetLeave()">
                         <span class="legend-dot etfs"></span>
                         <span>ETFs</span>
                         <strong>{{ portfolioAllocation?.allocationByAssetClass?.['ETF'] }}%</strong>
                     </div>
 
-                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CRYPTO']">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CRYPTO']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('CRYPTO')"
+                         (mouseleave)="onAssetLeave()">
                         <span class="legend-dot crypto"></span>
                         <span>Crypto</span>
                         <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CRYPTO'] }}%</strong>
                     </div>
 
-                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CASH']">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CASH']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('CASH')"
+                         (mouseleave)="onAssetLeave()">
                         <span class="legend-dot cash"></span>
                         <span>Cash</span>
                         <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CASH'] }}%</strong>
                     </div>
 
-                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['FOREX']">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['FOREX']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('FOREX')"
+                         (mouseleave)="onAssetLeave()">
                         <span class="legend-dot forex"></span>
                         <span>Forex</span>
                         <strong>{{ portfolioAllocation?.allocationByAssetClass?.['FOREX'] }}%</strong>
                     </div>
                 </div>
 
+            </div>
+
+            <div *ngIf="!portfolioAllocationError && !portfolioAllocation" style="padding: 20px; text-align: center; color: #999;">
+                Loading portfolio allocation...
             </div>
 
         </div>
