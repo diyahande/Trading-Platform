@@ -6,6 +6,7 @@ import { Dashboard } from './features/dashboard/dashboard';
 import { Admin } from './features/admin/admin';
 import { authGuard } from './core/guards/auth-guard';
 import { Orders } from './features/orders/orders';
+import { Blotter } from './features/blotter/blotter';
 
 export const routes: Routes = [
 	{ path: 'login', component: Login },
@@ -14,5 +15,6 @@ export const routes: Routes = [
 	{ path: 'admin', component: Admin, canActivate: [authGuard] },
 	{ path: 'dashboard', component: Dashboard, canActivate: [authGuard] },
 	{ path: 'orders', component: Orders, canActivate: [authGuard] },
+	{ path: 'blotter', component: Blotter, canActivate: [authGuard] },
 	{ path: '', redirectTo: 'login', pathMatch: 'full' },
 ];

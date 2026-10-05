@@ -23,7 +23,7 @@ export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
     } else if (req.url.startsWith('http://localhost:3000')) {
       // Already routed to auth-service, keep as is
       modifiedUrl = req.url;
-    } else if (req.url.startsWith('http://localhost:8083')) {
+    } else if (req.url.startsWith('http://localhost:8082') || req.url.startsWith('http://localhost:8083')) {
       // Already routed to trade-api, keep as is
       modifiedUrl = req.url;
     } else {

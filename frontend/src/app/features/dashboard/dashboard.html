@@ -5,14 +5,15 @@
     </div>
 
     <nav class="nav-links">
-        <a href="#" class="nav-item active">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
             <span>⌂</span>
             Dashboard
         </a>
-        <a href="#" class="nav-item">
+        <a routerLink="/orders" routerLinkActive="active" class="nav-item">
             <span>▤</span>
             Orders
         </a>
+
         <a href="#" class="nav-item">
             <span>♧</span>
             Holdings

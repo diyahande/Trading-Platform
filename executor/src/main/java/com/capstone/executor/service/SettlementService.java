@@ -15,6 +15,7 @@ import com.capstone.executor.mapper.PortfolioMapper;
 import com.capstone.executor.mapper.TransactionMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -215,11 +216,23 @@ public class SettlementService {
                     );
 
             if (portfolio == null) {
-
-                throw new IllegalStateException(
-                        "Portfolio not found for account: orderId="
-                                + orderId
+                logger.warn(
+                        "Portfolio not found for account (creating now): orderId={} accountId={}",
+                        orderId,
+                        payload.getAccountId()
                 );
+                portfolioMapper.insert(payload.getAccountId());
+                
+                portfolio = portfolioMapper.findByAccountId(
+                        payload.getAccountId()
+                );
+                
+                if (portfolio == null) {
+                    throw new IllegalStateException(
+                            "Failed to create portfolio for account: orderId="
+                                    + orderId
+                    );
+                }
             }
 
         
@@ -235,25 +248,99 @@ public class SettlementService {
 
                 if (holding == null) {
 
-                 
-                    portfolioHoldingsMapper.insert(
-                            portfolio.getPortfolioId(),
-                            instrument.getInstrumentId(),
-                            quantity,
-                            normalizedPrice
-                    );
+                    try {
+                        portfolioHoldingsMapper.insert(
+                                portfolio.getPortfolioId(),
+                                instrument.getInstrumentId(),
+                                quantity,
+                                normalizedPrice
+                        );
 
-                    positionQuantityAfter = quantity;
-                    averageCostAfter = normalizedPrice;
+                        positionQuantityAfter = quantity;
+                        averageCostAfter = normalizedPrice;
 
-                    logger.debug(
-                            "New position created: orderId={} "
-                                    + "symbol={} qty={} avgPrice={}",
-                            orderId,
-                            payload.getSymbol(),
-                            quantity,
-                            normalizedPrice
-                    );
+                        logger.debug(
+                                "New position created: orderId={} "
+                                        + "symbol={} qty={} avgPrice={}",
+                                orderId,
+                                payload.getSymbol(),
+                                quantity,
+                                normalizedPrice
+                        );
+
+                    } catch (DataIntegrityViolationException e) {
+                        logger.warn(
+                                "Position insert failed (likely duplicate from concurrent order), "
+                                        + "refetching: orderId={} symbol={}",
+                                orderId,
+                                payload.getSymbol(),
+                                e
+                        );
+
+                        holding = portfolioHoldingsMapper
+                                .findByPortfolioAndInstrument(
+                                        portfolio.getPortfolioId(),
+                                        instrument.getInstrumentId()
+                                );
+
+                        if (holding != null) {
+                            BigDecimal oldQuantity =
+                                    holding.getQuantity();
+
+                            BigDecimal oldAveragePrice =
+                                    holding.getAveragePrice();
+
+                            BigDecimal totalCost =
+                                    oldAveragePrice
+                                            .multiply(oldQuantity)
+                                            .add(
+                                                    normalizedPrice
+                                                            .multiply(quantity)
+                                            );
+
+                            BigDecimal newQuantity =
+                                    oldQuantity.add(quantity);
+
+                            BigDecimal newAveragePrice =
+                                    totalCost.divide(
+                                            newQuantity,
+                                            8,
+                                            java.math.RoundingMode.HALF_UP
+                                    );
+
+                            int positionUpdated =
+                                    portfolioHoldingsMapper.update(
+                                            portfolio.getPortfolioId(),
+                                            instrument.getInstrumentId(),
+                                            newQuantity,
+                                            newAveragePrice
+                                    );
+
+                            if (positionUpdated == 0) {
+                                throw new IllegalStateException(
+                                        "Position update failed after concurrent insert: orderId="
+                                                + orderId
+                                );
+                            }
+
+                            positionQuantityAfter = newQuantity;
+                            averageCostAfter = newAveragePrice;
+
+                            logger.debug(
+                                    "Position updated (after concurrent insert): orderId={} "
+                                            + "symbol={} qty={} avgPrice={}",
+                                    orderId,
+                                    payload.getSymbol(),
+                                    newQuantity,
+                                    newAveragePrice
+                            );
+                        } else {
+                            throw new IllegalStateException(
+                                    "Position not found after concurrent insert: orderId="
+                                            + orderId
+                            );
+                        }
+                    }
 
                 } else {
 

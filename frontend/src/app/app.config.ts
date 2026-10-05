@@ -15,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: AUTH_HEADER_POLICY,
       useValue: {
-        allowedOrigins: ['http://localhost:4200', 'http://localhost:3000', 'http://localhost:8083'],
+        allowedOrigins: ['http://localhost:4200', 'http://localhost:3000', 'http://localhost:8082', 'http://localhost:8083'],
         unauthenticatedAuthPaths: [
           '/auth/login',
           '/auth/register',

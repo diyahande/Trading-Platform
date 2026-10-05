@@ -15,8 +15,13 @@
   <header class="brand">Trade<span>X</span></header>
 
   <form class="ticket-card" (submit)="$event.preventDefault(); submit();">
-    <h1>Trade<span>X</span> Orders</h1>
-    <p class="subtle">Create and place an order.</p>
+    <div class="card-header">
+      <div>
+        <h1>Trade<span>X</span> Orders</h1>
+        <p class="subtle">Create and place an order.</p>
+      </div>
+      <a routerLink="/blotter" class="view-blotter-btn">View Blotter</a>
+    </div>
 
     <div class="grid">
       <div class="field">
@@ -84,7 +89,6 @@
       <button type="submit" class="primary" [disabled]="submitting()">
         {{ submitting() ? 'Placing order...' : 'Place Order' }}
       </button>
-      <a routerLink="/dashboard" class="ghost">Back to Dashboard</a>
     </div>
   </form>
 

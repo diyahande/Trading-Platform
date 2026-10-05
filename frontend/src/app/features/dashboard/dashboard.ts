@@ -1,7 +1,7 @@
 import { Component, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { AiChat } from '../../shared/components/ai-chat/ai-chat';
@@ -97,7 +97,7 @@ type StockPerformanceVisualization = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AiChat],
+  imports: [CommonModule, AiChat, RouterLink, RouterLinkActive],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })
