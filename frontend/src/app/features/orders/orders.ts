@@ -139,7 +139,7 @@ export class Orders {
       this.resultPopupDetail.set(backendMessage || null);
       this.resultPopupOpen.set(true);
     } catch (error: any) {
-      const mappedError = this.mapErrorToMessage(error);
+      const mappedError = await this.mapErrorToMessage(error);
       this.apiError.set(mappedError);
       this.resultPopupTitle.set('Order Not Placed');
       this.resultPopupMessage.set(mappedError.message);
@@ -279,7 +279,7 @@ export class Orders {
     }
   }
 
-  private mapErrorToMessage(error: any): UiError {
+  private async mapErrorToMessage(error: any): Promise<UiError> {
     if (error?.status === 0) {
       return {
         code: 'NETWORK-0',
@@ -288,12 +288,13 @@ export class Orders {
       };
     }
 
+    const parsedError = await this.parseErrorPayload(error?.error);
     const backendMessage =
-      typeof error?.error?.message === 'string' && error.error.message.trim().length > 0
-        ? error.error.message.trim()
+      typeof parsedError?.message === 'string' && parsedError.message.trim().length > 0
+        ? parsedError.message.trim()
         : null;
 
-    const code = error?.error?.errorCode;
+    const code = typeof parsedError?.errorCode === 'string' ? parsedError.errorCode : null;
     if (typeof code === 'string' && ORDER_ERROR_MESSAGES[code]) {
       return {
         code,
@@ -307,6 +308,44 @@ export class Orders {
       message: 'The order could not be placed right now.',
       detail: backendMessage,
     };
+  }
+
+  private async parseErrorPayload(payload: unknown): Promise<{ errorCode?: string; message?: string } | null> {
+    if (!payload) {
+      return null;
+    }
+
+    if (payload instanceof Blob) {
+      try {
+        const text = await payload.text();
+        return this.parseErrorPayload(text);
+      } catch {
+        return null;
+      }
+    }
+
+    if (typeof payload === 'string') {
+      const trimmed = payload.trim();
+      if (!trimmed) {
+        return null;
+      }
+      try {
+        const parsed = JSON.parse(trimmed) as { errorCode?: string; message?: string };
+        return parsed;
+      } catch {
+        return { message: trimmed };
+      }
+    }
+
+    if (typeof payload === 'object') {
+      const obj = payload as { errorCode?: unknown; message?: unknown };
+      return {
+        errorCode: typeof obj.errorCode === 'string' ? obj.errorCode : undefined,
+        message: typeof obj.message === 'string' ? obj.message : undefined,
+      };
+    }
+
+    return null;
   }
 
   private readAccountIdFromToken(): string {
