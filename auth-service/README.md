@@ -1,132 +1,165 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Auth Service (NestJS)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Authentication and account-onboarding backend for the capstone platform.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The service owns:
+- User login and JWT issuance
+- Refresh-token rotation and replay protection
+- Password change flow with token revocation
+- Signup request workflow with admin approval/rejection
+- Email notifications for onboarding outcomes
 
-## Description
+## Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- NestJS 12
+- TypeScript (strict mode)
+- PostgreSQL via node-postgres
+- bcryptjs password hashing
+- jsonwebtoken (HS256)
+- Swagger/OpenAPI docs
 
-## Sprint 8 security review
+## Key Endpoints
 
-This sprint uses a filled security review derived from the provided template.
+Base path: /auth
 
-- Review file: `security-review/sprint-08-auth-service-review.md`
-- Scope: OWASP Top Ten categories relevant to the auth service, with written findings and dispositions for each category
-- Evidence: command outputs and code locations captured in the review document
+- POST /register
+- POST /signup-request
+- GET /admin/signup-requests
+- PATCH /admin/signup-requests/:id/approve-and-register
+- PATCH /admin/signup-requests/:id/reject
+- POST /login
+- POST /refresh
+- POST /change-password
+- GET /me
 
-## Project setup
+Interactive API docs:
+- http://localhost:3000/docs
+- OpenAPI JSON: http://localhost:3000/docs/json
+
+## Security Highlights
+
+### 1) JWT + Role Claims
+Access tokens include sub/accountId and roles claims and are verified with issuer and algorithm checks.
+
+### 2) Refresh Token Safety
+Refresh tokens are generated as opaque random values, stored hashed, consumed once, and rotated.
+Replay attempts trigger revocation of all active refresh tokens for that user.
+
+### 3) Login Throttling
+Login endpoint is guarded with in-memory, per-IP throttling.
+Rate limits are configurable by environment variables.
+
+### 4) Input Validation
+Global ValidationPipe is enabled with:
+- whitelist
+- forbidNonWhitelisted
+- transform
+
+### 5) Redacted Structured Logging
+Custom logger and request middleware redact sensitive keys (password, token, authorization, secret, apiKey, and similar variants).
+
+## Signup Approval Workflow (Unique Feature)
+
+Unlike a plain auth service, this project includes an admin review workflow:
+
+1. User submits signup request
+2. Admin lists pending requests
+3. Admin approves (creates auth user + temp password email) or rejects (reason email)
+4. Request state is tracked in auth_signup_requests
+
+This allows account vetting before credentials become active.
+
+## Environment Variables
+
+Use auth-service/.env.example as the template.
+
+Required core values:
+- PORT
+- JWT_SECRET
+- JWT_ISSUER
+- DATABASE_URL
+
+Login throttle tuning:
+- LOGIN_THROTTLE_MAX_ATTEMPTS (default 5)
+- LOGIN_THROTTLE_WINDOW_MS (default 60000)
+- LOGIN_THROTTLE_BLOCK_MS (default 300000)
+
+Email integration:
+- MAIL_HOST
+- MAIL_PORT
+- MAIL_USER
+- MAIL_PASSWORD
+- MAIL_FROM
+
+Frontend CORS origin (optional):
+- FRONTEND_ORIGIN (default http://localhost:4200)
+
+## Database Setup
+
+Auth schema SQL lives in auth-service/auth-db.
+
+Apply schema:
 
 ```bash
-$ npm install
+cd auth-service/auth-db
+bash apply.sh
 ```
 
-## Compile and run the project
+The script uses DATABASE_URL when available. Otherwise it builds a connection from DB_* values.
+
+## Local Development
+
+Install dependencies:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm ci
 ```
 
-## Run tests
+Run service:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:dev
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Production build/start:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run build
+npm run start:prod
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Tests and Quality
 
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
+Run tests:
 
 ```bash
-$ npm install @nestjs/observe
+npm run test
+npm run test:e2e
+npm run test:cov
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+Run lint:
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+```bash
+npm run lint
+```
 
-## Resources
+## Docker
 
-Check out a few resources that may come in handy when working with NestJS:
+The Dockerfile uses a multi-stage Node 20 Alpine build:
+- Builder stage compiles TypeScript
+- Runner stage installs production deps only
+- Service exposes port 3000
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Important Notes for Integrations
 
-## Support
+- Frontend expects auth-service on port 3000 in local dev.
+- Trade API and frontend rely on JWT role/account claims from this service.
+- Changing token claim names or auth error shapes can break cross-service flows.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Security Review Artifact
 
-## Stay in touch
+Sprint security review notes are tracked in:
+- security-review/sprint-08-auth-service-review.md
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Treat this document as an audit artifact and update it when auth controls change.
