@@ -17,7 +17,12 @@ function loginUrl(): string {
 }
 
 function protectedPath(): string {
-	return process.env['E2E_PROTECTED_PATH']?.trim() || '/dashboard';
+	// Only accept paths that start with /
+	const envPath = process.env['E2E_PROTECTED_PATH']?.trim();
+	if (envPath && envPath.startsWith('/')) {
+		return envPath;
+	}
+	return '/dashboard';
 }
 
 function protectedUrl(): string {
@@ -66,7 +71,7 @@ test.describe('Sign-in journeys against real running stack', () => {
 
 		// Allow more time for signin and redirect
 		await expect(page).toHaveURL(/\/(dashboard|admin)$/, { timeout: 10000 });
-		await expect(page.getByText('Welcome')).toBeVisible({ timeout: 5000 });
+		await expect(page.getByText('Hello,')).toBeVisible({ timeout: 5000 });
 
 		// Wait to avoid rate limiting on next test (after successful signin)
 		await page.waitForTimeout(5000);

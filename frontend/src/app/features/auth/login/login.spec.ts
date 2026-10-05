@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { vi } from 'vitest';
-import { of } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 import { Login } from './login';
 import { Auth } from '../../../core/services/auth';
@@ -27,8 +27,16 @@ describe('Login', () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
     } as any;
-    (authSpy as any).token$ = of(null);
+    // Create a token$ that emits a token after signIn is called
+    const tokenSubject = new BehaviorSubject<string | null>(null);
+    (authSpy as any).token$ = tokenSubject.asObservable();
     (authSpy as any).token = null;
+    (authSpy as any).isAdmin = vi.fn().mockReturnValue(false);
+    
+    authSpy.signIn.mockImplementation(async () => {
+      tokenSubject.next('mock-token');
+      return { accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 };
+    });
 
     await TestBed.configureTestingModule({
       imports: [Login, RouterTestingModule.withRoutes([])],
@@ -49,12 +57,12 @@ describe('Login', () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true as any);
-    authSpy.signIn.mockResolvedValue({ accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 } as any);
     component.username = 'user';
     component.password = 'pass';
+    
     await component.submit();
     expect(authSpy.signIn).toHaveBeenCalledWith('user', 'pass');
-    expect(component.signedIn).toBeTruthy();
+    expect(component.signedIn).toBe(true);
     expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
     expect(navigateByUrlSpy).not.toHaveBeenCalled();
   });
@@ -64,11 +72,12 @@ describe('Login', () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true as any);
-    authSpy.signIn.mockResolvedValue({ accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 } as any);
 
     component.username = 'user';
     component.password = 'pass';
     await component.submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(navigateByUrlSpy).toHaveBeenCalledWith('/admin?tab=users');
     expect(navigateSpy).not.toHaveBeenCalledWith(['/dashboard'], { queryParams: { username: 'user' } });
@@ -79,11 +88,12 @@ describe('Login', () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true as any);
-    authSpy.signIn.mockResolvedValue({ accessToken: 'abc', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 3600 } as any);
 
     component.username = 'user';
     component.password = 'pass';
     await component.submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(navigateSpy).toHaveBeenCalledWith(['/dashboard']);
     expect(navigateByUrlSpy).not.toHaveBeenCalled();
