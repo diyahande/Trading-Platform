@@ -21,6 +21,6 @@ export const routes: Routes = [
 	{ path: 'orders', component: Orders, canActivate: [authGuard] },
 	{ path: 'blotter', component: Blotter, canActivate: [authGuard] },
 	{ path: 'holdings', component: Holdings, canActivate: [authGuard] },
-	{ path: '', redirectTo: 'login', pathMatch: 'full' },
+	{ path: '**', redirectTo: 'dashboard' },
 
 ];
