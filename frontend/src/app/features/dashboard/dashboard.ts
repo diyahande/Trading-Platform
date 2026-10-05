@@ -282,8 +282,9 @@ export class Dashboard {
       const response = await firstValueFrom(
         this.http.get<RecentActivity[]>(`/api/v1/accounts/${accountId}/orders`)
       );
-      // Sort by createdOn date (most recent first) and take last 5
-      const sorted = response.sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
+      // Filter to only FILLED orders, sort by createdOn date (most recent first) and take last 5
+      const filtered = response.filter(order => order.status === 'FILLED');
+      const sorted = filtered.sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
       this.recentActivity = sorted.slice(0, 5);
       this.cdr.markForCheck();
     } catch (error: any) {
