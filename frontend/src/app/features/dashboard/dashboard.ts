@@ -1,9 +1,11 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
+import { AiChat } from '../../shared/components/ai-chat/ai-chat';
+import { ProfileService } from '../../generated/api-client/api/profile.service';
 
 type DashboardSummary = {
   portfolioValue: number | null;
@@ -95,12 +97,13 @@ type StockPerformanceVisualization = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [CommonModule, AiChat, RouterLink, RouterLinkActive],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })
 export class Dashboard {
   username = 'Trader';
+  isProfileMenuOpen = false;
   accountReference: string | null = null;
   summary: DashboardSummary | null = null;
   summaryError: string | null = null;
@@ -117,11 +120,21 @@ export class Dashboard {
   topLosers: TopMover[] = [];
   topMoversError: string | null = null;
 
-  constructor(private route: ActivatedRoute, private auth: Auth, private router: Router, private http: HttpClient, private cdr: ChangeDetectorRef) {
+  constructor(
+    private route: ActivatedRoute,
+    private auth: Auth,
+    private router: Router,
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef,
+    private elementRef: ElementRef<HTMLElement>,
+    private profileService: ProfileService,
+  ) {
     const routeUsername = this.route.snapshot.queryParamMap.get('username');
     if (routeUsername && routeUsername.trim()) {
       this.username = routeUsername;
     }
+
+    void this.loadCurrentUser();
 
     void this.loadDashboard();
     void this.loadWatchlist();
@@ -132,8 +145,31 @@ export class Dashboard {
   }
 
   signOut() {
+    this.isProfileMenuOpen = false;
     this.auth.signOut();
     void this.router.navigate(['/login']);
+  }
+
+  toggleProfileMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  viewProfile(): void {
+    this.isProfileMenuOpen = false;
+    void this.router.navigate(['/change-password']);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isProfileMenuOpen) {
+      return;
+    }
+
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen = false;
+    }
   }
 
   formatMoney(value: number | null | undefined): string {
@@ -193,6 +229,18 @@ export class Dashboard {
       }
       this.summary = null;
       this.cdr.markForCheck();
+    }
+  }
+
+  private async loadCurrentUser(): Promise<void> {
+    try {
+      const user = await firstValueFrom(this.profileService.authControllerMe());
+      if (user?.username?.trim()) {
+        this.username = user.username.trim();
+        this.cdr.markForCheck();
+      }
+    } catch {
+      // Keep existing username fallback when profile endpoint is unavailable.
     }
   }
 

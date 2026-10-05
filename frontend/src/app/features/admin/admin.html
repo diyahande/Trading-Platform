@@ -1,7 +1,10 @@
 <section class="admin-page" aria-label="Signup request administration">
   <header class="hero">
     <h1>Signup Requests</h1>
-    <button type="button" (click)="loadRequests()" [disabled]="loading">Refresh</button>
+    <div class="hero-actions">
+      <button type="button" (click)="loadRequests()" [disabled]="loading">Refresh</button>
+      <button type="button" class="logout" (click)="signOut()">Logout</button>
+    </div>
   </header>
 
   <p class="status ok" *ngIf="statusMessage">{{ statusMessage }}</p>
