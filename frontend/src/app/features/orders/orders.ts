@@ -126,7 +126,7 @@ export class Orders {
           quantity,
           price,
           idempotencyKey: this.generateIdempotencyKey(),
-        }),
+        }, 'body', false, { httpHeaderAccept: 'application/json' as any }),
       );
 
       const returnedStatus = response?.status ?? 'UNKNOWN';
