@@ -42,6 +42,24 @@ VALUES
     'charlie.brown@example.com',
     '+1-555-0103',
     '2026-05-20 14:45:00+00'
+),
+(
+    'Dana Lee',
+    'dana.lee@example.com',
+    '+1-555-0104',
+    '2026-06-18 10:20:00+00'
+),
+(
+    'Ethan Patel',
+    'ethan.patel@example.com',
+    '+1-555-0105',
+    '2026-07-02 08:40:00+00'
+),
+(
+    'Fiona Garcia',
+    'fiona.garcia@example.com',
+    '+1-555-0106',
+    '2026-07-21 13:05:00+00'
 );
 
 
@@ -110,6 +128,45 @@ VALUES
     0.0000,
     'CLOSED',
     '2026-02-01 09:00:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'dana.lee@example.com'
+    ),
+    '55555555-5555-4555-8555-555555555555',
+    'Dana Lee',
+    'USD',
+    22000.0000,
+    'ACTIVE',
+    '2026-06-20 09:10:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'ethan.patel@example.com'
+    ),
+    '66666666-6666-4666-8666-666666666666',
+    'Ethan Patel',
+    'USD',
+    8500.0000,
+    'ACTIVE',
+    '2026-07-05 10:25:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'fiona.garcia@example.com'
+    ),
+    '77777777-7777-4777-8777-777777777777',
+    'Fiona Garcia',
+    'USD',
+    1200.0000,
+    'ACTIVE',
+    '2026-07-22 14:15:00+00'
 );
 
 
@@ -360,6 +417,46 @@ VALUES
     'USD',
     TRUE,
     '2025-12-25 09:00:00+00'
+),
+(
+    'BTC-USD',
+    'Bitcoin / US Dollar',
+    'CRYPTO_PAIR',
+    'USD',
+    TRUE,
+    '2025-12-26 09:00:00+00'
+),
+(
+    'ETH-USD',
+    'Ethereum / US Dollar',
+    'CRYPTO_PAIR',
+    'USD',
+    TRUE,
+    '2025-12-26 09:05:00+00'
+),
+(
+    'SOL-USD',
+    'Solana / US Dollar',
+    'CRYPTO_PAIR',
+    'USD',
+    TRUE,
+    '2025-12-26 09:10:00+00'
+),
+(
+    'BNB-USD',
+    'BNB / US Dollar',
+    'CRYPTO_PAIR',
+    'USD',
+    TRUE,
+    '2025-12-26 09:15:00+00'
+),
+(
+    'XRP-USD',
+    'XRP / US Dollar',
+    'CRYPTO_PAIR',
+    'USD',
+    TRUE,
+    '2025-12-26 09:20:00+00'
 );
 
 
@@ -415,6 +512,36 @@ VALUES
     1000.0000,
     1000.0000,
     '2026-08-20 16:15:00+00'
+),
+(
+    (
+        SELECT account_id
+        FROM accounts
+        WHERE account_reference = '55555555-5555-4555-8555-555555555555'
+    ),
+    27800.0000,
+    24000.0000,
+    '2026-08-20 16:20:00+00'
+),
+(
+    (
+        SELECT account_id
+        FROM accounts
+        WHERE account_reference = '66666666-6666-4666-8666-666666666666'
+    ),
+    9800.0000,
+    9000.0000,
+    '2026-08-20 16:25:00+00'
+),
+(
+    (
+        SELECT account_id
+        FROM accounts
+        WHERE account_reference = '77777777-7777-4777-8777-777777777777'
+    ),
+    1450.0000,
+    1300.0000,
+    '2026-08-20 16:30:00+00'
 );
 
 
@@ -433,6 +560,15 @@ VALUES
 --
 -- Account 44444444-4444-4444-8444-444444444444:
 --   - Historical FILLED BUY of delisted OLDCO
+--
+-- Account 55555555-5555-4555-8555-555555555555:
+--   - FILLED BUY NVDA
+--
+-- Account 66666666-6666-4666-8666-666666666666:
+--   - FILLED BUY JPM
+--
+-- Account 77777777-7777-4777-8777-777777777777:
+--   - FILLED BUY KO
 --
 -- No orders are placed for the SUSPENDED account.
 -- No orders are placed after the CLOSED account was closed.
@@ -692,6 +828,114 @@ VALUES
 );
 
 
+-- Filled NVDA BUY for Dana
+INSERT INTO orders (
+    order_id,
+    account_id,
+    account_reference,
+    instrument_id,
+    side,
+    quantity,
+    price,
+    status,
+    idempotency_key,
+    created_at
+)
+VALUES
+(
+    '55555555-5555-4555-8555-555555555008',
+    (
+        SELECT account_id
+        FROM accounts
+        WHERE account_reference = '55555555-5555-4555-8555-555555555555'
+    ),
+    '55555555-5555-4555-8555-555555555555',
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'NVDA'
+    ),
+    'BUY',
+    20.00000000,
+    300.00000000,
+    'FILLED',
+    'seed-idempotency-0008',
+    '2026-07-12 09:40:00+00'
+);
+
+
+-- Filled JPM BUY for Ethan
+INSERT INTO orders (
+    order_id,
+    account_id,
+    account_reference,
+    instrument_id,
+    side,
+    quantity,
+    price,
+    status,
+    idempotency_key,
+    created_at
+)
+VALUES
+(
+    '66666666-6666-4666-8666-666666666009',
+    (
+        SELECT account_id
+        FROM accounts
+        WHERE account_reference = '66666666-6666-4666-8666-666666666666'
+    ),
+    '66666666-6666-4666-8666-666666666666',
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'JPM'
+    ),
+    'BUY',
+    15.00000000,
+    180.00000000,
+    'FILLED',
+    'seed-idempotency-0009',
+    '2026-07-28 11:05:00+00'
+);
+
+
+-- Filled KO BUY for Fiona
+INSERT INTO orders (
+    order_id,
+    account_id,
+    account_reference,
+    instrument_id,
+    side,
+    quantity,
+    price,
+    status,
+    idempotency_key,
+    created_at
+)
+VALUES
+(
+    '77777777-7777-4777-8777-777777777010',
+    (
+        SELECT account_id
+        FROM accounts
+        WHERE account_reference = '77777777-7777-4777-8777-777777777777'
+    ),
+    '77777777-7777-4777-8777-777777777777',
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'KO'
+    ),
+    'BUY',
+    25.00000000,
+    60.00000000,
+    'FILLED',
+    'seed-idempotency-0010',
+    '2026-08-04 15:30:00+00'
+);
+
+
 -- ============================================================
 -- 6. TRANSACTIONS
 --
@@ -770,6 +1014,54 @@ VALUES
     100.00000000,
     '2026-02-25 10:01:00+00',
     'COMPLETED'
+),
+(
+    (
+        SELECT order_id
+        FROM orders
+        WHERE idempotency_key = 'seed-idempotency-0008'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'NVDA'
+    ),
+    20.00000000,
+    300.00000000,
+    '2026-07-12 09:41:00+00',
+    'COMPLETED'
+),
+(
+    (
+        SELECT order_id
+        FROM orders
+        WHERE idempotency_key = 'seed-idempotency-0009'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'JPM'
+    ),
+    15.00000000,
+    180.00000000,
+    '2026-07-28 11:06:00+00',
+    'COMPLETED'
+),
+(
+    (
+        SELECT order_id
+        FROM orders
+        WHERE idempotency_key = 'seed-idempotency-0010'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'KO'
+    ),
+    25.00000000,
+    60.00000000,
+    '2026-08-04 15:31:00+00',
+    'COMPLETED'
 );
 
 
@@ -795,6 +1087,24 @@ VALUES
 -- OLDCO:
 --   +10 BUY
 --   = 10 shares @ $100
+--
+-- 55555555-5555-4555-8555-555555555555:
+--
+-- NVDA:
+--   +20 BUY
+--   = 20 shares @ $300
+--
+-- 66666666-6666-4666-8666-666666666666:
+--
+-- JPM:
+--   +15 BUY
+--   = 15 shares @ $180
+--
+-- 77777777-7777-4777-8777-777777777777:
+--
+-- KO:
+--   +25 BUY
+--   = 25 shares @ $60
 --
 -- OLDCO is deliberately non-tradable but remains referenced
 -- by historical order and holding.
@@ -858,6 +1168,57 @@ VALUES
     10.00000000,
     100.00000000,
     '2026-08-20 16:15:00+00'
+),
+(
+    (
+        SELECT p.portfolio_id
+        FROM portfolios p
+        JOIN accounts a
+            ON a.account_id = p.account_id
+        WHERE a.account_reference = '55555555-5555-4555-8555-555555555555'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'NVDA'
+    ),
+    20.00000000,
+    300.00000000,
+    '2026-08-20 16:20:00+00'
+),
+(
+    (
+        SELECT p.portfolio_id
+        FROM portfolios p
+        JOIN accounts a
+            ON a.account_id = p.account_id
+        WHERE a.account_reference = '66666666-6666-4666-8666-666666666666'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'JPM'
+    ),
+    15.00000000,
+    180.00000000,
+    '2026-08-20 16:25:00+00'
+),
+(
+    (
+        SELECT p.portfolio_id
+        FROM portfolios p
+        JOIN accounts a
+            ON a.account_id = p.account_id
+        WHERE a.account_reference = '77777777-7777-4777-8777-777777777777'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'KO'
+    ),
+    25.00000000,
+    60.00000000,
+    '2026-08-20 16:30:00+00'
 );
 
 
@@ -1207,4 +1568,46 @@ VALUES
     ),
     'Index Funds',
     '2026-08-19 11:30:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'dana.lee@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'NVDA'
+    ),
+    'AI Growth',
+    '2026-08-20 09:00:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'ethan.patel@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'JPM'
+    ),
+    'Financial Core',
+    '2026-08-20 09:05:00+00'
+),
+(
+    (
+        SELECT user_id
+        FROM users
+        WHERE email = 'fiona.garcia@example.com'
+    ),
+    (
+        SELECT instrument_id
+        FROM instruments
+        WHERE symbol = 'KO'
+    ),
+    'Defensive Picks',
+    '2026-08-20 09:10:00+00'
 );
