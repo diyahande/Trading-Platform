@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -19,6 +20,14 @@ import java.util.stream.Collectors;
 public class TopMoversService {
 
     private final InstrumentService instrumentService;
+
+    // Same 18 symbols monitored from market-data Kafka topic
+    private static final List<String> MONITORED_SYMBOLS = Arrays.asList(
+            "AAPL", "AMZN", "CVX", "GOOGL", "IVV",
+            "JNJ", "JPM", "KO", "META", "MSFT",
+            "NFLX", "NVDA", "QQQ", "SPY", "TSLA",
+            "V", "WMT", "XOM"
+    );
 
     // In-memory cache of all symbol quotes
     private final Map<String, SymbolQuote> symbolQuotes = new ConcurrentHashMap<>();
@@ -34,43 +43,48 @@ public class TopMoversService {
     }
 
     /**
-     * Initialize service with sample data on startup
-     * This provides initial top movers until real market data arrives from Kafka
+     * Initialize service with sample data for the 18 monitored symbols
+     * Data shows realistic gains and losses for visualization
+     * Real Kafka market data will update these values dynamically
      */
     @PostConstruct
-    public void initializeWithSampleData() {
-        // Sample symbols with mock data for demo purposes
-        Map<String, double[]> sampleData = new LinkedHashMap<>();
-        sampleData.put("NVDA", new double[]{946.32, 12.45, 1.33});
-        sampleData.put("META", new double[]{612.21, 16.90, 2.84});
-        sampleData.put("TSLA", new double[]{248.50, 4.82, 1.98});
-        sampleData.put("AMD", new double[]{164.37, 2.71, 1.67});
-        sampleData.put("MSFT", new double[]{415.32, 5.90, 1.43});
-        sampleData.put("GOOGL", new double[]{145.67, -2.34, -1.58});
-        sampleData.put("AMZN", new double[]{182.45, -1.85, -1.00});
-        sampleData.put("NFLX", new double[]{287.50, -4.12, -1.41});
-        sampleData.put("JPM", new double[]{198.75, -3.21, -1.59});
-        sampleData.put("JNJ", new double[]{154.32, -2.10, -1.34});
+    public void init() {
+        // Sample data for all 18 monitored symbols with realistic prices and changes
+        Map<String, BigDecimal[]> sampleData = new LinkedHashMap<>();
+        sampleData.put("AAPL", new BigDecimal[]{BigDecimal.valueOf(230.5), BigDecimal.valueOf(228.0), BigDecimal.valueOf(2.5)});
+        sampleData.put("AMZN", new BigDecimal[]{BigDecimal.valueOf(185.2), BigDecimal.valueOf(182.0), BigDecimal.valueOf(3.2)});
+        sampleData.put("CVX", new BigDecimal[]{BigDecimal.valueOf(165.8), BigDecimal.valueOf(168.0), BigDecimal.valueOf(-2.2)});
+        sampleData.put("GOOGL", new BigDecimal[]{BigDecimal.valueOf(142.3), BigDecimal.valueOf(139.5), BigDecimal.valueOf(2.8)});
+        sampleData.put("IVV", new BigDecimal[]{BigDecimal.valueOf(578.4), BigDecimal.valueOf(575.0), BigDecimal.valueOf(3.4)});
+        sampleData.put("JNJ", new BigDecimal[]{BigDecimal.valueOf(158.9), BigDecimal.valueOf(156.0), BigDecimal.valueOf(1.9)});
+        sampleData.put("JPM", new BigDecimal[]{BigDecimal.valueOf(198.2), BigDecimal.valueOf(195.5), BigDecimal.valueOf(2.7)});
+        sampleData.put("KO", new BigDecimal[]{BigDecimal.valueOf(62.4), BigDecimal.valueOf(63.0), BigDecimal.valueOf(-0.6)});
+        sampleData.put("META", new BigDecimal[]{BigDecimal.valueOf(542.1), BigDecimal.valueOf(535.0), BigDecimal.valueOf(7.1)});
+        sampleData.put("MSFT", new BigDecimal[]{BigDecimal.valueOf(425.8), BigDecimal.valueOf(420.0), BigDecimal.valueOf(5.8)});
+        sampleData.put("NFLX", new BigDecimal[]{BigDecimal.valueOf(285.3), BigDecimal.valueOf(280.0), BigDecimal.valueOf(5.3)});
+        sampleData.put("NVDA", new BigDecimal[]{BigDecimal.valueOf(138.9), BigDecimal.valueOf(135.0), BigDecimal.valueOf(3.9)});
+        sampleData.put("QQQ", new BigDecimal[]{BigDecimal.valueOf(412.7), BigDecimal.valueOf(408.0), BigDecimal.valueOf(4.7)});
+        sampleData.put("SPY", new BigDecimal[]{BigDecimal.valueOf(589.2), BigDecimal.valueOf(585.0), BigDecimal.valueOf(4.2)});
+        sampleData.put("TSLA", new BigDecimal[]{BigDecimal.valueOf(298.5), BigDecimal.valueOf(290.0), BigDecimal.valueOf(8.5)});
+        sampleData.put("V", new BigDecimal[]{BigDecimal.valueOf(268.3), BigDecimal.valueOf(265.0), BigDecimal.valueOf(3.3)});
+        sampleData.put("WMT", new BigDecimal[]{BigDecimal.valueOf(98.7), BigDecimal.valueOf(97.0), BigDecimal.valueOf(1.7)});
+        sampleData.put("XOM", new BigDecimal[]{BigDecimal.valueOf(112.4), BigDecimal.valueOf(110.0), BigDecimal.valueOf(2.4)});
 
-        // Populate the cache with sample data
-        for (Map.Entry<String, double[]> entry : sampleData.entrySet()) {
-            String symbol = entry.getKey();
-            double[] values = entry.getValue();
-            double price = values[0];
-            double change = values[1];
-            double changePercent = values[2];
+        // Populate cache with calculated change and changePercent
+        sampleData.forEach((symbol, values) -> {
+            BigDecimal price = values[0];
+            BigDecimal previousClose = values[1];
+            BigDecimal change = price.subtract(previousClose);
+            BigDecimal changePercent = previousClose.signum() == 0 
+                ? BigDecimal.ZERO 
+                : change.multiply(BigDecimal.valueOf(100))
+                    .divide(previousClose, 2, RoundingMode.HALF_UP);
 
-            SymbolQuote quote = new SymbolQuote(
-                    symbol,
-                    BigDecimal.valueOf(price),
-                    BigDecimal.valueOf(change),
-                    BigDecimal.valueOf(changePercent),
-                    BigDecimal.valueOf(price - change)
-            );
+            SymbolQuote quote = new SymbolQuote(symbol, price, change, changePercent, previousClose);
             symbolQuotes.put(symbol, quote);
-        }
+        });
 
-        // Calculate initial top movers
+        // Calculate initial top movers from sample data
         recalculateTopMovers();
     }
 
