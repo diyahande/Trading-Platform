@@ -27,7 +27,7 @@ describe('authGuard', () => {
 
     expect(result instanceof UrlTree).toBeTruthy();
     const router = TestBed.inject(Router);
-    expect(router.serializeUrl(result as UrlTree)).toBe('/home?returnUrl=%2Fdashboard%3Ftab%3Dpositions');
+    expect(router.serializeUrl(result as UrlTree)).toBe('/login?returnUrl=%2Fdashboard%3Ftab%3Dpositions');
   });
 
   it('the guard allows authenticated navigation', async () => {
