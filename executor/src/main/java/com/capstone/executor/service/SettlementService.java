@@ -143,6 +143,7 @@ public class SettlementService {
                 );
             }
 
+            // Deduct the full executed price amount at settlement
             BigDecimal tradeNotional = normalizedPrice.multiply(quantity);
             BigDecimal requiredInAccountCurrency = fxConversionService.convert(
                     tradeNotional,
@@ -153,6 +154,7 @@ public class SettlementService {
                     ? requiredInAccountCurrency.negate()
                     : requiredInAccountCurrency;
 
+            // For BUY orders, verify available balance >= executed price
             if ("BUY".equalsIgnoreCase(payload.getSide())) {
                 if (currentAccount.getCashBalance()
                         .compareTo(requiredInAccountCurrency) < 0) {
@@ -160,7 +162,7 @@ public class SettlementService {
                     throw new IllegalStateException(
                             "Insufficient funds at settlement: orderId="
                                     + orderId
-                                    + " required=" + requiredInAccountCurrency
+                                    + " executed price required=" + requiredInAccountCurrency
                                     + " available="
                                     + currentAccount.getCashBalance()
                     );

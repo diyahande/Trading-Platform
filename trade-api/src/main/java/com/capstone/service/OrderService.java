@@ -116,19 +116,8 @@ public class OrderService {
         // Validate sufficient funds/holdings (rules 6-7)
         validateFunds(request, account, instrument);
 
-        // For BUY orders, reserve (deduct) the cash balance immediately via AccountService
-        if (request.getSide() == OrderSide.BUY) {
-            BigDecimal tradeNotional = new BigDecimal(request.getQuantity()).multiply(request.getPrice());
-            BigDecimal requiredCash = fxConversionService.convert(
-                    tradeNotional,
-                    instrument.getQuoteCurrency(),
-                    account.getCurrency()
-            );
-                BigDecimal newBalance = account.getCashBalance()
-                    .subtract(requiredCash)
-                    .setScale(4, java.math.RoundingMode.HALF_UP);
-            accountService.updateCashBalance(account.getAccountId(), newBalance, account.getVersion());
-        }
+        // Note: Cash deduction happens at settlement time (when order is executed),
+        // not at order placement. This ensures we only deduct the actual executed price.
 
         // Generate order ID from UUID
         UUID orderId = UUID.randomUUID();
