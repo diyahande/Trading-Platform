@@ -53,7 +53,7 @@ describe('Orders', () => {
     await component.submit();
 
     expect(orderApiSpy.placeOrder).toHaveBeenCalledTimes(1);
-    expect(component.successMessage()).toBe('Order accepted with status NEW.');
+    expect(component.successMessage()).toBe('Order has been placed');
     expect(component.apiError()).toBeNull();
   });
 

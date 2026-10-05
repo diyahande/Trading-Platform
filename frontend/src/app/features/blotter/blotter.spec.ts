@@ -101,8 +101,8 @@ describe('Blotter', () => {
     await flushMicrotasks();
     fixture.detectChanges();
 
-    expect(component.workingMessage()).toContain('still working');
-    expect(fixture.nativeElement.textContent as string).toContain('Order is still working');
+    expect(component.workingMessage()).toContain('Auto refreshes every');
+    expect(fixture.nativeElement.textContent as string).toContain('Auto refreshes every');
   });
 
   it('the re-read stops when nothing is at NEW', async () => {
