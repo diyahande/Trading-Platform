@@ -119,6 +119,9 @@ export class Dashboard {
   topGainers: TopMover[] = [];
   topLosers: TopMover[] = [];
   topMoversError: string | null = null;
+  hoveredAssetClass: string | null = null;
+  hoveredAssetValue: number | null = null;
+  hoveredAssetValueInMoney: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -282,8 +285,9 @@ export class Dashboard {
       const response = await firstValueFrom(
         this.http.get<RecentActivity[]>(`/api/v1/accounts/${accountId}/orders`)
       );
-      // Sort by createdOn date (most recent first) and take last 5
-      const sorted = response.sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
+      // Filter to only FILLED orders, sort by createdOn date (most recent first) and take last 5
+      const filtered = response.filter(order => order.status === 'FILLED');
+      const sorted = filtered.sort((a, b) => new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime());
       this.recentActivity = sorted.slice(0, 5);
       this.cdr.markForCheck();
     } catch (error: any) {
@@ -337,6 +341,66 @@ export class Dashboard {
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
     const days = Math.floor(hours / 24);
     return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+
+  getDonutGradient(): string {
+    if (!this.portfolioAllocation?.allocationByAssetClass) {
+      return 'conic-gradient(#475a6b 0deg 360deg)';
+    }
+
+    const allocation = this.portfolioAllocation.allocationByAssetClass;
+    const colors: { [key: string]: string } = {
+      'EQUITY': '#00c99b',
+      'ETF': '#2d82c7',
+      'CRYPTO': '#8071e8',
+      'CASH': '#718294',
+      'FOREX': '#d97706'
+    };
+
+    let gradient = 'conic-gradient(';
+    let currentDeg = 0;
+
+    const assetClasses = ['EQUITY', 'ETF', 'CRYPTO', 'CASH', 'FOREX'];
+    for (const assetClass of assetClasses) {
+      const percent = allocation[assetClass] || 0;
+      if (percent > 0) {
+        const degrees = (percent / 100) * 360;
+        const color = colors[assetClass];
+        gradient += `${color} ${currentDeg.toFixed(1)}deg ${(currentDeg + degrees).toFixed(1)}deg, `;
+        currentDeg += degrees;
+      }
+    }
+
+    gradient += `#475a6b ${currentDeg.toFixed(1)}deg 360deg)`;
+    return gradient;
+  }
+
+  onAssetHover(assetClass: string): void {
+    const allocation = this.portfolioAllocation?.allocationByAssetClass;
+    if (allocation && this.portfolioAllocation) {
+      this.hoveredAssetClass = assetClass;
+      const percentValue = allocation[assetClass] || 0;
+      this.hoveredAssetValue = percentValue;
+      // Calculate the actual money value
+      this.hoveredAssetValueInMoney = (percentValue / 100) * this.portfolioAllocation.totalPortfolioValue;
+    }
+  }
+
+  onAssetLeave(): void {
+    this.hoveredAssetClass = null;
+    this.hoveredAssetValue = null;
+    this.hoveredAssetValueInMoney = null;
+  }
+
+  getAssetLabel(assetClass: string): string {
+    const labels: { [key: string]: string } = {
+      'EQUITY': 'Stocks',
+      'ETF': 'ETFs',
+      'CRYPTO': 'Crypto',
+      'CASH': 'Cash',
+      'FOREX': 'Forex'
+    };
+    return labels[assetClass] || assetClass;
   }
 
   private async loadPortfolioAllocation(): Promise<void> {
