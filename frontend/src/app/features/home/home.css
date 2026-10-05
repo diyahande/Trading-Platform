@@ -1,0 +1,990 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.landing {
+    position: relative;
+
+    width: 100%;
+    height: 100dvh;
+
+    min-height: 600px;
+
+    overflow: hidden;
+
+    padding: 28px 52px;
+
+    background:
+        radial-gradient(
+            circle at 15% 45%,
+            rgba(29, 105, 91, 0.18),
+            transparent 38%
+        ),
+        radial-gradient(
+            circle at 85% 50%,
+            rgba(24, 96, 88, 0.13),
+            transparent 35%
+        ),
+        linear-gradient(
+            120deg,
+            #071018 0%,
+            #0a1520 50%,
+            #071119 100%
+        );
+
+    color: #edf5fb;
+
+    font-family:
+        "Space Grotesk",
+        "Outfit",
+        "Segoe UI",
+        sans-serif;
+}
+
+
+/* =========================
+   BACKGROUND
+========================= */
+
+.background-grid {
+    position: absolute;
+    inset: 0;
+
+    background-image:
+        linear-gradient(
+            to right,
+            rgba(106, 130, 148, 0.045) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(106, 130, 148, 0.04) 1px,
+            transparent 1px
+        );
+
+    background-size: 64px 64px;
+
+    mask-image:
+        linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.7),
+            transparent 90%
+        );
+
+    pointer-events: none;
+}
+
+.ambient-glow {
+    position: absolute;
+
+    width: 520px;
+    height: 520px;
+
+    right: 4%;
+    top: 18%;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(34, 211, 155, 0.08),
+            transparent 68%
+        );
+
+    filter: blur(20px);
+
+    pointer-events: none;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.topbar {
+    position: relative;
+    z-index: 5;
+
+    height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    color: #edf5fb;
+
+    text-decoration: none;
+
+    font-size: 1.8rem;
+    font-weight: 700;
+
+    letter-spacing: -0.05em;
+}
+
+.brand span {
+    color: #25d8a0;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.sign-in {
+    color: #b9c9d4;
+
+    text-decoration: none;
+
+    font-size: 0.9rem;
+    font-weight: 500;
+
+    transition: color 180ms ease;
+}
+
+.sign-in:hover {
+    color: #ffffff;
+}
+
+.create-account {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 40px;
+
+    padding: 0 18px;
+
+    border-radius: 8px;
+
+    background: #20d39b;
+    color: #031c14;
+
+    text-decoration: none;
+
+    font-size: 0.85rem;
+    font-weight: 700;
+
+    box-shadow:
+        0 10px 25px rgba(32, 211, 155, 0.15);
+
+    transition:
+        transform 180ms ease,
+        background 180ms ease,
+        box-shadow 180ms ease;
+}
+
+.create-account:hover {
+    transform: translateY(-1px);
+
+    background: #2ae4aa;
+
+    box-shadow:
+        0 14px 30px rgba(32, 211, 155, 0.22);
+}
+
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+    position: relative;
+    z-index: 2;
+
+    width: min(1220px, 100%);
+
+    height: calc(100dvh - 130px);
+
+    min-height: 500px;
+
+    margin: 0 auto;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(400px, 0.9fr)
+        minmax(450px, 1.1fr);
+
+    align-items: center;
+
+    gap: 50px;
+}
+
+
+/* =========================
+   HERO CONTENT
+========================= */
+
+.hero-content {
+    max-width: 590px;
+
+    animation:
+        fadeUp 700ms ease both;
+}
+
+.eyebrow {
+    margin: 0 0 20px;
+
+    color: #718b9b;
+
+    font-size: 0.72rem;
+    font-weight: 600;
+
+    letter-spacing: 0.22em;
+}
+
+h1 {
+    margin: 0;
+
+    max-width: 8ch;
+
+    font-family:
+        "Outfit",
+        "Space Grotesk",
+        sans-serif;
+
+    font-size: clamp(
+        4rem,
+        6.2vw,
+        6.5rem
+    );
+
+    line-height: 0.94;
+
+    font-weight: 500;
+
+    letter-spacing: -0.065em;
+
+    color: #f1f7fa;
+}
+
+h1 span {
+    display: block;
+
+    color: #25d8a0;
+
+    font-weight: 600;
+}
+
+.subtitle {
+    max-width: 500px;
+
+    margin: 28px 0 0;
+
+    color: #91a5b4;
+
+    font-size: 1.03rem;
+
+    line-height: 1.65;
+}
+
+.hero-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-top: 32px;
+}
+
+.primary-button,
+.secondary-button {
+    height: 48px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    text-decoration: none;
+
+    font-size: 0.9rem;
+    font-weight: 650;
+
+    transition:
+        transform 180ms ease,
+        background 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+}
+
+.primary-button {
+    gap: 16px;
+
+    padding: 0 20px;
+
+    background: #20d39b;
+
+    color: #031c14;
+
+    box-shadow:
+        0 12px 28px rgba(32, 211, 155, 0.18);
+}
+
+.primary-button span {
+    font-size: 1.1rem;
+
+    transition:
+        transform 180ms ease;
+}
+
+.primary-button:hover {
+    transform: translateY(-2px);
+
+    background: #2ae4aa;
+
+    box-shadow:
+        0 16px 34px rgba(32, 211, 155, 0.24);
+}
+
+.primary-button:hover span {
+    transform: translateX(3px);
+}
+
+.secondary-button {
+    padding: 0 21px;
+
+    color: #d7e2e9;
+
+    background: rgba(10, 20, 29, 0.45);
+
+    border:
+        1px solid rgba(134, 158, 175, 0.28);
+}
+
+.secondary-button:hover {
+    transform: translateY(-2px);
+
+    border-color:
+        rgba(134, 158, 175, 0.48);
+
+    background:
+        rgba(20, 34, 46, 0.72);
+}
+
+
+/* =========================
+   DECORATIVE MARKET ART
+========================= */
+
+.market-art {
+    position: relative;
+
+    width: min(590px, 100%);
+
+    height: 390px;
+
+    justify-self: end;
+
+    animation:
+        fadeIn 1000ms 100ms ease both;
+}
+
+/*
+   Large, subtle glass-like frame.
+   This is purely decorative.
+*/
+
+.market-art::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 35px 0;
+
+    border-radius: 20px;
+
+    border:
+        1px solid rgba(127, 154, 169, 0.10);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(17, 31, 42, 0.32),
+            rgba(7, 17, 26, 0.08)
+        );
+
+    box-shadow:
+        0 30px 80px rgba(0, 5, 10, 0.28);
+
+    transform:
+        perspective(900px)
+        rotateY(-5deg)
+        rotateX(2deg);
+}
+
+
+/* =========================
+   DECORATIVE GRID
+========================= */
+
+.market-art::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 65px 30px;
+
+    border-radius: 12px;
+
+    background-image:
+        linear-gradient(
+            to right,
+            rgba(119, 145, 159, 0.055) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(119, 145, 159, 0.055) 1px,
+            transparent 1px
+        );
+
+    background-size: 56px 56px;
+
+    mask-image:
+        linear-gradient(
+            to bottom,
+            transparent,
+            black 20%,
+            black 80%,
+            transparent
+        );
+}
+
+
+/* =========================
+   CANDLESTICKS
+========================= */
+
+.candles {
+    position: absolute;
+
+    z-index: 2;
+
+    left: 55px;
+    right: 55px;
+    top: 70px;
+    bottom: 75px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-around;
+
+    gap: 16px;
+}
+
+.candle {
+    position: relative;
+
+    width: 19px;
+
+    display: flex;
+
+    justify-content: center;
+
+    animation:
+        candleFloat 5s ease-in-out infinite;
+}
+
+.candle:nth-child(2) {
+    animation-delay: -0.4s;
+}
+
+.candle:nth-child(3) {
+    animation-delay: -0.8s;
+}
+
+.candle:nth-child(4) {
+    animation-delay: -1.2s;
+}
+
+.candle:nth-child(5) {
+    animation-delay: -1.6s;
+}
+
+.candle:nth-child(6) {
+    animation-delay: -2s;
+}
+
+.candle:nth-child(7) {
+    animation-delay: -2.4s;
+}
+
+.candle:nth-child(8) {
+    animation-delay: -2.8s;
+}
+
+.candle:nth-child(9) {
+    animation-delay: -3.2s;
+}
+
+.candle:nth-child(10) {
+    animation-delay: -3.6s;
+}
+
+.candle:nth-child(11) {
+    animation-delay: -4s;
+}
+
+.candle:nth-child(12) {
+    animation-delay: -4.4s;
+}
+
+
+/* Wick */
+
+.wick {
+    position: absolute;
+
+    top: -18px;
+    bottom: -18px;
+
+    width: 1px;
+
+    opacity: 0.7;
+}
+
+
+/* Body */
+
+.body {
+    position: relative;
+
+    width: 16px;
+
+    border-radius: 2px;
+}
+
+
+/* Green */
+
+.candle-green .wick {
+    background:
+        rgba(53, 222, 170, 0.75);
+}
+
+.candle-green .body {
+    background:
+        linear-gradient(
+            180deg,
+            #4de8bc,
+            #16a87e
+        );
+
+    box-shadow:
+        0 0 14px rgba(37, 216, 160, 0.14);
+}
+
+
+/* Red */
+
+.candle-red .wick {
+    background:
+        rgba(239, 105, 105, 0.68);
+}
+
+.candle-red .body {
+    background:
+        linear-gradient(
+            180deg,
+            #ef7777,
+            #b84755
+        );
+
+    box-shadow:
+        0 0 14px rgba(226, 85, 95, 0.10);
+}
+
+
+/* Heights */
+
+.short {
+    height: 65px;
+}
+
+.medium {
+    height: 105px;
+}
+
+.tall {
+    height: 145px;
+}
+
+
+/* =========================
+   DECORATIVE TREND LINE
+========================= */
+
+.trend-line {
+    position: absolute;
+
+    z-index: 3;
+
+    left: 35px;
+    right: 35px;
+
+    top: 52%;
+
+    height: 100px;
+
+    border-top:
+        2px solid rgba(83, 230, 187, 0.22);
+
+    transform:
+        rotate(-5deg)
+        skewX(-15deg);
+
+    filter:
+        drop-shadow(
+            0 0 8px rgba(37, 216, 160, 0.12)
+        );
+
+    opacity: 0.65;
+}
+
+
+/* =========================
+   SMALL DECORATIVE LINES
+========================= */
+
+.art-line {
+    position: absolute;
+
+    z-index: 4;
+
+    height: 1px;
+
+    background:
+        rgba(130, 156, 170, 0.14);
+}
+
+.line-one {
+    width: 80px;
+
+    top: 47px;
+    right: 70px;
+}
+
+.line-two {
+    width: 48px;
+
+    bottom: 47px;
+    left: 72px;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer {
+    position: absolute;
+
+    z-index: 5;
+
+    left: 52px;
+    right: 52px;
+    bottom: 18px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    color: #536a79;
+
+    font-size: 0.62rem;
+
+    letter-spacing: 0.08em;
+}
+
+.footer span:first-child {
+    color: #718897;
+
+    font-weight: 600;
+}
+
+.divider {
+    width: 28px;
+
+    height: 1px;
+
+    background:
+        rgba(113, 139, 154, 0.28);
+}
+
+
+/* =========================
+   ANIMATIONS
+========================= */
+
+@keyframes fadeUp {
+
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+}
+
+@keyframes candleFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+
+}
+
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 1000px) {
+
+    .landing {
+        padding:
+            24px 30px;
+    }
+
+    .hero {
+        grid-template-columns:
+            1fr 1fr;
+
+        gap: 30px;
+    }
+
+    h1 {
+        font-size:
+            clamp(
+                3.5rem,
+                6vw,
+                5.2rem
+            );
+    }
+
+    .market-art {
+        height: 330px;
+    }
+
+    .candles {
+        left: 40px;
+        right: 40px;
+    }
+
+    .footer {
+        left: 30px;
+        right: 30px;
+    }
+
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 720px) {
+
+    .landing {
+        height: auto;
+
+        min-height: 100dvh;
+
+        overflow-y: auto;
+
+        padding:
+            18px 18px 24px;
+    }
+
+    .topbar {
+        height: 48px;
+    }
+
+    .brand {
+        font-size: 1.55rem;
+    }
+
+    .actions {
+        gap: 14px;
+    }
+
+    .sign-in {
+        font-size: 0.8rem;
+    }
+
+    .create-account {
+        height: 36px;
+
+        padding: 0 13px;
+
+        font-size: 0.76rem;
+    }
+
+    .hero {
+        height: auto;
+
+        min-height: 0;
+
+        margin-top: 70px;
+
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        gap: 50px;
+    }
+
+    h1 {
+        font-size:
+            clamp(
+                3.6rem,
+                16vw,
+                5rem
+            );
+    }
+
+    .subtitle {
+        font-size: 0.96rem;
+    }
+
+    .market-art {
+        width: 100%;
+        height: 280px;
+    }
+
+    .candles {
+        left: 35px;
+        right: 35px;
+
+        gap: 8px;
+    }
+
+    .candle {
+        width: 13px;
+    }
+
+    .body {
+        width: 12px;
+    }
+
+    .short {
+        height: 50px;
+    }
+
+    .medium {
+        height: 82px;
+    }
+
+    .tall {
+        height: 112px;
+    }
+
+    .footer {
+        position: relative;
+
+        left: auto;
+        right: auto;
+        bottom: auto;
+
+        margin-top: 45px;
+    }
+
+}
+
+
+/* =========================
+   VERY SMALL SCREENS
+========================= */
+
+@media (max-width: 430px) {
+
+    .hero {
+        margin-top: 55px;
+    }
+
+    .hero-actions {
+        width: 100%;
+    }
+
+    .primary-button,
+    .secondary-button {
+        flex: 1;
+    }
+
+    .market-art {
+        height: 240px;
+    }
+
+    .candles {
+        left: 25px;
+        right: 25px;
+    }
+
+    .footer {
+        font-size: 0.54rem;
+    }
+
+}
+
+
+/* =========================
+   ACCESSIBILITY
+========================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .hero-content,
+    .market-art,
+    .candle {
+        animation: none;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .create-account,
+    .sign-in {
+        transition: none;
+    }
+}

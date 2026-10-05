@@ -8,8 +8,11 @@ import { authGuard } from './core/guards/auth-guard';
 import { Orders } from './features/orders/orders';
 import { Blotter } from './features/blotter/blotter';
 import { Holdings } from './features/holdings/holdings';
+import { Home, RootRedirect } from './features/home/home';
 
 export const routes: Routes = [
+	{ path: '', component: RootRedirect, pathMatch: 'full' },
+	{ path: 'home', component: Home },
 	{ path: 'login', component: Login },
 	{ path: 'change-password', component: ChangePassword, canActivate: [authGuard] },
 	{ path: 'signup', component: Signup },
@@ -19,4 +22,5 @@ export const routes: Routes = [
 	{ path: 'blotter', component: Blotter, canActivate: [authGuard] },
 	{ path: 'holdings', component: Holdings, canActivate: [authGuard] },
 	{ path: '', redirectTo: 'login', pathMatch: 'full' },
+
 ];
