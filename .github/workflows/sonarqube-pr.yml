@@ -1,0 +1,55 @@
+name: SonarQube PR Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  sonarqube:
+    name: SonarQube Analysis
+    if: github.event.pull_request.draft == false
+    runs-on: [self-hosted, sonar-local]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar-cache
+          restore-keys: |
+            ${{ runner.os }}-sonar-cache
+
+      - name: Compile Java modules
+        run: |
+          mvn -B -f backend/pom.xml -DskipTests compile
+          mvn -B -f trade-api/pom.xml -DskipTests compile
+          mvn -B -f executor/pom.xml -DskipTests compile
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.sources=analytics,auth-service,auth-stub,backend,etl,executor,trade-api,database,infra
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/target/**,**/.git/**
+            -Dsonar.java.binaries=backend/target/classes,trade-api/target/classes,executor/target/classes
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dsonar.scm.revision=${{ github.sha }}

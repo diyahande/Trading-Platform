@@ -1,0 +1,57 @@
+<section class="blotter" aria-label="Order blotter">
+  <header class="brand">Trade<span>X</span></header>
+
+  <header class="blotter-header">
+    <div>
+      <h1>Order Blotter</h1>
+      <p>All orders for your account, newest first, including rejections.</p>
+      <p class="account">Account: <strong>{{ accountId() || '--' }}</strong></p>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="refresh" (click)="refreshNow()" [disabled]="loading()">
+        {{ loading() ? 'Refreshing...' : 'Refresh' }}
+      </button>
+      <a routerLink="/dashboard" class="action-button secondary">Back to Dashboard</a>
+    </div>
+  </header>
+
+  <p class="working" *ngIf="workingMessage()">{{ workingMessage() }}</p>
+  <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+  <div class="table-wrap" *ngIf="!errorMessage()">
+    <table *ngIf="orders().length > 0; else emptyState">
+      <thead>
+        <tr>
+          <th>Placed</th>
+          <th>Order ID</th>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Quantity</th>
+          <th>Executed Price</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders()">
+          <td>{{ formatDate(order.createdOn) }}</td>
+          <td class="mono">{{ order.orderId || '--' }}</td>
+          <td>{{ order.symbol || '--' }}</td>
+          <td>{{ order.side || '--' }}</td>
+          <td>{{ formatQuantity(order.quantity) }}</td>
+          <td>{{ formatPrice(order.executedPrice) }}</td>
+          <td>
+            <span class="badge" [ngClass]="statusClass(order)">{{ statusText(order) }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #emptyState>
+      <div class="empty">
+        <h2>No orders yet</h2>
+        <p>Your order history is empty for this account.</p>
+      </div>
+    </ng-template>
+  </div>
+</section>

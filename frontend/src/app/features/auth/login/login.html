@@ -1,0 +1,49 @@
+<section class="auth-panel" aria-label="TradeX login">
+	<div class="chart-bg" aria-hidden="true">
+		<svg viewBox="0 0 800 520" preserveAspectRatio="none">
+			<polyline points="40,322 130,282 220,350 330,266 430,306 540,248 650,336 760,294" class="line" />
+
+			<line x1="126" y1="298" x2="126" y2="270" class="segment up" />
+			<line x1="326" y1="282" x2="326" y2="254" class="segment up" />
+			<line x1="536" y1="264" x2="536" y2="238" class="segment up" />
+			<line x1="648" y1="346" x2="648" y2="320" class="segment down" />
+		</svg>
+	</div>
+
+	<div class="brand">Trade<span>X</span></div>
+
+	<div class="auth-card">
+		<h1>Trade<span>X</span></h1>
+
+		<div class="field">
+			<label for="username">Email / Username</label>
+			<input id="username" data-testid="signin-username" placeholder="Enter your email" [(ngModel)]="username" />
+		</div>
+
+		<div class="field">
+			<label for="password">Password</label>
+			<div class="password-wrap">
+				<input id="password" [type]="showPassword ? 'text' : 'password'" data-testid="signin-password"
+					placeholder="Enter your password" [(ngModel)]="password" />
+				<button type="button" class="eye" (click)="togglePasswordVisibility()" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+					{{ showPassword ? 'Hide' : 'Show' }}
+				</button>
+			</div>
+		</div>
+
+		<div *ngIf="notice" class="notice">{{notice}}</div>
+		<div *ngIf="error" class="error" data-testid="signin-error">{{error}}</div>
+		<div *ngIf="signedIn" class="success" data-testid="signin-success">Signed in successfully.</div>
+
+		<button class="primary" (click)="submit()" [disabled]="loading" data-testid="signin-submit">
+			{{loading ? 'Signing in...' : 'Sign In'}}
+		</button>
+
+		<div class="footnote">
+			Don't have an account?
+			<a routerLink="/signup">Create Account</a>
+		</div>
+
+		<button *ngIf="signedIn" class="ghost" (click)="signOut()" data-testid="signout-button">Sign Out</button>
+	</div>
+</section>

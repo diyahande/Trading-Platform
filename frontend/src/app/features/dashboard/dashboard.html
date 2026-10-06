@@ -1,0 +1,302 @@
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-mark">X</span>
+        <span>TradeX</span>
+    </div>
+
+    <nav class="nav-links">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+            <span>⌂</span>
+            Dashboard
+        </a>
+        <a routerLink="/orders" routerLinkActive="active" class="nav-item">
+            <span>▤</span>
+            Orders
+        </a>
+
+        <a routerLink="/holdings" routerLinkActive="active" class="nav-item">
+            <span>♧</span>
+            Holdings
+        </a>
+        <a routerLink="/blotter" routerLinkActive="active" class="nav-item">
+            <span>☆</span>
+            Blotter
+        </a>
+    </nav>
+
+    <div class="profile">
+        <button
+            class="profile-trigger"
+            type="button"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="isProfileMenuOpen"
+            (click)="toggleProfileMenu($event)">
+            <div class="profile-icon" aria-hidden="true">&#128100;</div>
+        </button>
+
+        <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+            <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+            <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+        </div>
+    </div>
+</header>
+
+<main class="dashboard">
+
+    <section class="welcome">
+        <h1>Hello,</h1>
+        <p>Here's what's happening in the markets today.</p>
+        <p class="summary-error" [hidden]="!summaryError">{{ summaryError }}</p>
+    </section>
+
+    <section class="top-section">
+
+        <div class="summary-area">
+
+            <div class="summary-cards">
+
+                <div class="summary-card">
+                    <span class="card-label">Portfolio Value</span>
+                    <strong>{{ formatMoney(summary?.portfolioValue) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Today's P&L</span>
+                    <strong [class]="pnlClass()">{{ formatMoney(summary?.todaysPnl) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Available Cash</span>
+                    <strong>{{ formatMoney(summary?.availableCash) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Buying Power</span>
+                    <strong>{{ formatMoney(summary?.buyingPower) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+            </div>
+
+            <div class="market-card">
+
+                <div class="market-header">
+                    <h2>Market Performance</h2>
+
+                    <div class="market-stats" *ngIf="stockPerformance">
+                        <span class="stat">Gainers: <strong class="positive">{{ stockPerformance.statistics.gainers }}</strong></span>
+                        <span class="stat">Losers: <strong class="negative">{{ stockPerformance.statistics.losers }}</strong></span>
+                        <span class="stat">Avg: <strong [class.positive]="stockPerformance.statistics.averageChangePercent >= 0" [class.negative]="stockPerformance.statistics.averageChangePercent < 0">{{ stockPerformance.statistics.averageChangePercent | number:'1.2-2' }}%</strong></span>
+                    </div>
+
+                    <div class="error" *ngIf="stockPerformanceError">
+                        {{ stockPerformanceError }}
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <div *ngFor="let stock of stockPerformance?.stocks" 
+                         class="stock-tile"
+                         [class.gainer]="stock.changePercent >= 0"
+                         [class.loser]="stock.changePercent < 0">
+                        <div class="stock-symbol">{{ stock.symbol }}</div>
+                        <div class="stock-price">${{ stock.price | number:'1.2-2' }}</div>
+                        <div class="stock-change" [class]="stock.changePercent >= 0 ? 'positive' : 'negative'">
+                            {{ stock.changePercent >= 0 ? '▲' : '▼' }} {{ (stock.changePercent < 0 ? -stock.changePercent : stock.changePercent) | number:'1.2-2' }}%
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="watchlist card">
+
+            <div class="section-header">
+                <h2>Watchlist</h2>
+                <a href="#">View all</a>
+            </div>
+
+            <div class="watchlist-heading">
+                <span>Symbol</span>
+                <span>Last Price</span>
+                <span>Change</span>
+            </div>
+
+            <div *ngIf="watchlistError" class="watchlist-error" style="color: #ff9d9d; padding: 10px;">
+                {{ watchlistError }}
+            </div>
+
+            <div *ngIf="!watchlistError && watchlist.length === 0" style="padding: 10px; text-align: center; color: #999;">
+                No watchlist items
+            </div>
+
+            <div *ngFor="let item of watchlist" class="stock-row">
+                <div>
+                    <strong>{{ item.symbol }}</strong>
+                    <small>{{ item.displayName }}</small>
+                </div>
+                <span>${{ item.currentPrice.toFixed(2) }}</span>
+                <span [class]="changeClass(item.changePercent)">{{ formatChangePercent(item.changePercent) }}</span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="bottom-section">
+
+        <div class="movers card">
+
+            <div class="section-header">
+                <h2>Top Movers</h2>
+            </div>
+
+            <div class="mover-tabs">
+                <button 
+                    [class.selected]="topMoversTab === 'gainers'"
+                    (click)="selectTopMoversTab('gainers')">
+                    Gainers
+                </button>
+                <button 
+                    [class.selected]="topMoversTab === 'losers'"
+                    (click)="selectTopMoversTab('losers')">
+                    Losers
+                </button>
+            </div>
+
+            <div *ngIf="topMoversError" style="color: #ff9d9d; padding: 10px;">
+                {{ topMoversError }}
+            </div>
+
+            <div *ngIf="!topMoversError && getTopMovers().length === 0" style="padding: 10px; text-align: center; color: #999;">
+                No movers data available
+            </div>
+
+            <div class="movers-heading">
+                <span>Symbol</span>
+                <span>Last Price</span>
+                <span>Change</span>
+            </div>
+
+            <div *ngFor="let mover of getTopMovers()" class="mover-row">
+                <div>
+                    <strong>{{ mover.symbol }}</strong>
+                    <small>{{ mover.displayName }}</small>
+                </div>
+                <span>{{ mover.price | number:'1.2-2' }}</span>
+                <span [ngClass]="getTopMoverChangeClass(mover.changePercent)">
+                    {{ mover.changePercent >= 0 ? '▲' : '▼' }} {{ (mover.changePercent < 0 ? -mover.changePercent : mover.changePercent) | number:'1.2-2' }}%
+                </span>
+            </div>
+
+        </div>
+
+        <div class="allocation card">
+
+            <div class="section-header">
+                <h2>Portfolio Allocation</h2>
+            </div>
+
+            <div *ngIf="portfolioAllocationError" style="color: #ff9d9d; padding: 10px; text-align: center;">
+                {{ portfolioAllocationError }}
+            </div>
+
+            <div *ngIf="!portfolioAllocationError && portfolioAllocation" class="allocation-content">
+
+                <div class="donut" [style.background]="getDonutGradient()">
+                    <div class="donut-center">
+                        <div *ngIf="hoveredAssetClass" class="donut-hover">
+                            <span>{{ hoveredAssetValueInMoney | currency:'USD':'symbol':'1.0-2' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="allocation-legend">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['EQUITY']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('EQUITY')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot stocks"></span>
+                        <span>Stocks</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['EQUITY'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['ETF']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('ETF')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot etfs"></span>
+                        <span>ETFs</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['ETF'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CRYPTO']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('CRYPTO')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot crypto"></span>
+                        <span>Crypto</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CRYPTO'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CASH']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('CASH')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot cash"></span>
+                        <span>Cash</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CASH'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['FOREX']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('FOREX')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot forex"></span>
+                        <span>Forex</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['FOREX'] }}%</strong>
+                    </div>
+                </div>
+
+            </div>
+
+            <div *ngIf="!portfolioAllocationError && !portfolioAllocation" style="padding: 20px; text-align: center; color: #999;">
+                Loading portfolio allocation...
+            </div>
+
+        </div>
+
+        <div class="activity card">
+
+            <div class="section-header">
+                <h2>Recent Activity</h2>
+                <a href="#">View all</a>
+            </div>
+
+            <div *ngIf="recentActivityError" style="color: #ff9d9d; padding: 10px;">
+                {{ recentActivityError }}
+            </div>
+
+            <div *ngIf="!recentActivityError && recentActivity.length === 0" style="padding: 10px; text-align: center; color: #999;">
+                No recent activity
+            </div>
+
+            <div *ngFor="let activity of recentActivity" class="activity-row">
+                <div [class]="'activity-icon ' + getActivityIcon(activity)">{{ getActivityIconSymbol(activity) }}</div>
+                <div>
+                    <strong>{{ getActivityDescription(activity) }}</strong>
+                    <small>{{ getRelativeTime(activity.createdOn) }}</small>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+<app-ai-chat />

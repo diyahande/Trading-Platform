@@ -1,0 +1,156 @@
+:host {
+  display: block;
+}
+
+.admin-page {
+  min-height: 100dvh;
+  padding: 32px 20px 40px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(29, 113, 184, 0.2), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.2), transparent 35%),
+    #09111a;
+  color: #e9f0f8;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.85rem;
+}
+
+.hero button {
+  border: 1px solid #2f465f;
+  color: #dce7f5;
+  background: #132235;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.hero button.logout {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(248, 113, 113, 0.14);
+  color: #ffd0d0;
+}
+
+.status {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.status.ok {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.status.err {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.empty {
+  margin-top: 24px;
+  color: #9bb1c7;
+}
+
+.card {
+  margin-top: 14px;
+  border: 1px solid #203042;
+  background: rgba(9, 18, 29, 0.82);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.row.title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 6px 16px;
+  margin: 10px 0 12px;
+}
+
+.details p {
+  margin: 0;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+input,
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 9px;
+  border: 1px solid #334e67;
+  background: #0d1a29;
+  color: #ecf4ff;
+  padding: 10px 12px;
+}
+
+.actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actions .approve {
+  background: #21c57a;
+  color: #072312;
+}
+
+.actions .reject {
+  background: #f87171;
+  color: #3a0606;
+}
+
+@media (max-width: 760px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
