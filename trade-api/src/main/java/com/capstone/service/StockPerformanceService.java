@@ -1,7 +1,6 @@
 package com.capstone.service;
 
 import com.capstone.dto.StockPerformanceResponse;
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,39 +56,6 @@ public class StockPerformanceService {
     private final Map<String, StockQuote> stockQuotes = new ConcurrentHashMap<>();
 
     /**
-     * Initialize with sample data for demonstration
-     */
-    @PostConstruct
-    public void initializeWithSampleData() {
-        // Sample price data for visualization
-        Map<String, BigDecimal[]> sampleData = new LinkedHashMap<>();
-        sampleData.put("AAPL", new BigDecimal[]{BigDecimal.valueOf(230.5), BigDecimal.valueOf(228.0)});
-        sampleData.put("AMZN", new BigDecimal[]{BigDecimal.valueOf(185.2), BigDecimal.valueOf(182.0)});
-        sampleData.put("CVX", new BigDecimal[]{BigDecimal.valueOf(165.8), BigDecimal.valueOf(168.0)});
-        sampleData.put("GOOGL", new BigDecimal[]{BigDecimal.valueOf(142.3), BigDecimal.valueOf(139.5)});
-        sampleData.put("IVV", new BigDecimal[]{BigDecimal.valueOf(578.4), BigDecimal.valueOf(575.0)});
-        sampleData.put("JNJ", new BigDecimal[]{BigDecimal.valueOf(158.9), BigDecimal.valueOf(156.0)});
-        sampleData.put("JPM", new BigDecimal[]{BigDecimal.valueOf(198.2), BigDecimal.valueOf(195.5)});
-        sampleData.put("KO", new BigDecimal[]{BigDecimal.valueOf(62.4), BigDecimal.valueOf(63.0)});
-        sampleData.put("META", new BigDecimal[]{BigDecimal.valueOf(542.1), BigDecimal.valueOf(535.0)});
-        sampleData.put("MSFT", new BigDecimal[]{BigDecimal.valueOf(425.8), BigDecimal.valueOf(420.0)});
-        sampleData.put("NFLX", new BigDecimal[]{BigDecimal.valueOf(285.3), BigDecimal.valueOf(280.0)});
-        sampleData.put("NVDA", new BigDecimal[]{BigDecimal.valueOf(138.9), BigDecimal.valueOf(135.0)});
-        sampleData.put("QQQ", new BigDecimal[]{BigDecimal.valueOf(412.7), BigDecimal.valueOf(408.0)});
-        sampleData.put("SPY", new BigDecimal[]{BigDecimal.valueOf(589.2), BigDecimal.valueOf(585.0)});
-        sampleData.put("TSLA", new BigDecimal[]{BigDecimal.valueOf(298.5), BigDecimal.valueOf(290.0)});
-        sampleData.put("V", new BigDecimal[]{BigDecimal.valueOf(268.3), BigDecimal.valueOf(265.0)});
-        sampleData.put("WMT", new BigDecimal[]{BigDecimal.valueOf(98.7), BigDecimal.valueOf(97.0)});
-        sampleData.put("XOM", new BigDecimal[]{BigDecimal.valueOf(112.4), BigDecimal.valueOf(110.0)});
-
-        sampleData.forEach((symbol, prices) ->
-            stockQuotes.put(symbol, new StockQuote(symbol, prices[0], prices[1]))
-        );
-
-        logger.info("Initialized StockPerformanceService with {} symbols", stockQuotes.size());
-    }
-
-    /**
      * Update stock quote from market data
      * Called by Kafka listener on each QUOTE event
      */
@@ -126,6 +92,17 @@ public class StockPerformanceService {
         Map<String, Object> result = new LinkedHashMap<>();
         
         List<StockPerformanceResponse> allStocks = getAllStockPerformance();
+
+        if (allStocks.isEmpty()) {
+            result.put("stocks", allStocks);
+            result.put("statistics", Map.of(
+                    "total", 0,
+                    "gainers", 0,
+                    "losers", 0,
+                    "averageChangePercent", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+            ));
+            return result;
+        }
         
         // Calculate statistics
         BigDecimal avgChangePercent = allStocks.stream()

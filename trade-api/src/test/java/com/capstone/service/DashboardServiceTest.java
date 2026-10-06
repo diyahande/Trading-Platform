@@ -30,13 +30,13 @@ class DashboardServiceTest {
     @Mock
     private FxConversionService fxConversionService;
     @Mock
-    private MarketQuoteService marketQuoteService;
+    private KafkaMarketQuoteService kafkaMarketQuoteService;
 
     private DashboardService dashboardService;
 
     @BeforeEach
     void setUp() {
-        dashboardService = new DashboardService(accountService, instrumentService, fxConversionService, marketQuoteService);
+        dashboardService = new DashboardService(accountService, instrumentService, fxConversionService, kafkaMarketQuoteService);
     }
 
     @Test
@@ -51,11 +51,25 @@ class DashboardServiceTest {
         when(instrumentService.getInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument("AAPL", "USD")));
         when(instrumentService.getInstrumentBySymbol("NVDA")).thenReturn(Optional.of(instrument("NVDA", "USD")));
 
-        when(marketQuoteService.getQuote("AAPL")).thenReturn(
-                new MarketQuoteService.QuoteSnapshot("AAPL", new BigDecimal("182.00"), new BigDecimal("176.00"), "USD")
+        when(kafkaMarketQuoteService.getQuote("AAPL")).thenReturn(
+            new KafkaMarketQuoteService.QuoteSnapshot(
+                "AAPL",
+                new BigDecimal("182.00"),
+                new BigDecimal("176.00"),
+                "USD",
+                "kafka:market-data",
+                Instant.parse("2024-01-01T10:00:00Z")
+            )
         );
-        when(marketQuoteService.getQuote("NVDA")).thenReturn(
-                new MarketQuoteService.QuoteSnapshot("NVDA", new BigDecimal("946.00"), new BigDecimal("940.00"), "USD")
+        when(kafkaMarketQuoteService.getQuote("NVDA")).thenReturn(
+            new KafkaMarketQuoteService.QuoteSnapshot(
+                "NVDA",
+                new BigDecimal("946.00"),
+                new BigDecimal("940.00"),
+                "USD",
+                "kafka:market-data",
+                Instant.parse("2024-01-01T10:00:00Z")
+            )
         );
 
         DashboardResponse result = dashboardService.getDashboardSummaryForAuthorizedAccount("acc-ref");
@@ -89,8 +103,15 @@ class DashboardServiceTest {
         ));
 
         when(instrumentService.getInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument("AAPL", "USD")));
-        when(marketQuoteService.getQuote("AAPL")).thenReturn(
-                new MarketQuoteService.QuoteSnapshot("AAPL", new BigDecimal("182.00"), null, "USD")
+        when(kafkaMarketQuoteService.getQuote("AAPL")).thenReturn(
+            new KafkaMarketQuoteService.QuoteSnapshot(
+                "AAPL",
+                new BigDecimal("182.00"),
+                null,
+                "USD",
+                "kafka:market-data",
+                Instant.parse("2024-01-01T10:00:00Z")
+            )
         );
 
         DashboardResponse result = dashboardService.getDashboardSummaryForAuthorizedAccount("acc-ref");

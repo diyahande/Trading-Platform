@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class MarketOverviewService {
 
-    private final MarketQuoteService marketQuoteService;
+    private final KafkaMarketQuoteService kafkaMarketQuoteService;
 
     // Index symbol mappings
     private static final Map<String, String> INDEX_SYMBOLS = new LinkedHashMap<>();
@@ -35,8 +35,8 @@ public class MarketOverviewService {
     // Historical data for charting (last 100 quotes per index)
     private final Map<String, LinkedList<QuoteHistory>> indexHistory;
 
-    public MarketOverviewService(MarketQuoteService marketQuoteService) {
-        this.marketQuoteService = marketQuoteService;
+    public MarketOverviewService(KafkaMarketQuoteService kafkaMarketQuoteService) {
+        this.kafkaMarketQuoteService = kafkaMarketQuoteService;
         // Initialize historical data structures
         this.indexHistory = new ConcurrentHashMap<>();
         for (String indexKey : INDEX_SYMBOLS.keySet()) {
@@ -55,7 +55,7 @@ public class MarketOverviewService {
             String symbol = entry.getValue();
 
             try {
-                var quote = marketQuoteService.getQuote(symbol);
+                var quote = kafkaMarketQuoteService.getQuote(symbol);
 
                 // Calculate change
                 BigDecimal change = null;

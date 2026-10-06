@@ -2,6 +2,7 @@ package com.capstone.kafka;
 
 import com.capstone.service.StockPerformanceService;
 import com.capstone.service.TopMoversService;
+import com.capstone.service.KafkaMarketQuoteService;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +27,7 @@ public class MarketDataEventListener {
     private static final Logger logger = LoggerFactory.getLogger(MarketDataEventListener.class);
     private final TopMoversService topMoversService;
     private final StockPerformanceService stockPerformanceService;
+    private final KafkaMarketQuoteService kafkaMarketQuoteService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -56,6 +58,13 @@ public class MarketDataEventListener {
             if (payload == null || payload.getSymbol() == null || payload.getPrice() == null) {
                 return;
             }
+
+                kafkaMarketQuoteService.updateQuote(
+                    payload.getSymbol(),
+                    payload.getPrice(),
+                    payload.getPreviousClose(),
+                    payload.getCurrency()
+                );
 
             // Update services
             topMoversService.updateSymbolQuote(
@@ -178,6 +187,10 @@ public class MarketDataEventListener {
 
         public BigDecimal getPreviousClose() {
             return previousClose;
+        }
+
+        public String getCurrency() {
+            return currency;
         }
     }
 }

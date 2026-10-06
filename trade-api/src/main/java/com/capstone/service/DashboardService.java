@@ -8,6 +8,8 @@ import com.capstone.entity.Instrument;
 import com.capstone.exception.InstrumentNotFoundException;
 import com.capstone.exception.MarketDataUnavailableException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,10 +22,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DashboardService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DashboardService.class);
+
     private final AccountService accountService;
     private final InstrumentService instrumentService;
     private final FxConversionService fxConversionService;
-    private final MarketQuoteService marketQuoteService;
+    private final KafkaMarketQuoteService kafkaMarketQuoteService;
 
     public DashboardResponse getDashboardSummaryForAuthorizedAccount(String accountReference) {
         Account account = accountService.resolveAccountFromToken(accountReference);
@@ -43,14 +47,23 @@ public class DashboardService {
             Instrument instrument = instrumentService.getInstrumentBySymbol(position.getSymbol())
                     .orElseThrow(() -> new InstrumentNotFoundException(position.getSymbol()));
 
-            MarketQuoteService.QuoteSnapshot quote;
+            KafkaMarketQuoteService.QuoteSnapshot quote;
             try {
-                quote = marketQuoteService.getQuote(position.getSymbol());
+                quote = kafkaMarketQuoteService.getQuote(position.getSymbol());
             } catch (MarketDataUnavailableException ex) {
                 canComputePortfolioValue = false;
                 canComputeTodaysPnl = false;
                 break;
             }
+
+            logger.debug(
+                    "Dashboard valuation using cached quote: symbol={} source={} receivedAt={} price={} previousClose={}",
+                    quote.symbol(),
+                    quote.source(),
+                    quote.receivedAt(),
+                    quote.price(),
+                    quote.previousClose()
+            );
 
             BigDecimal quantity = BigDecimal.valueOf(position.getQuantity());
             BigDecimal positionCurrentValue = convertToAccountCurrency(
@@ -104,7 +117,15 @@ public class DashboardService {
                     .orElseThrow(() -> new InstrumentNotFoundException(position.getSymbol()));
 
             try {
-                MarketQuoteService.QuoteSnapshot quote = marketQuoteService.getQuote(position.getSymbol());
+                KafkaMarketQuoteService.QuoteSnapshot quote = kafkaMarketQuoteService.getQuote(position.getSymbol());
+
+                logger.debug(
+                    "Portfolio allocation using cached quote: symbol={} source={} receivedAt={} price={}",
+                    quote.symbol(),
+                    quote.source(),
+                    quote.receivedAt(),
+                    quote.price()
+                );
                 
                 BigDecimal quantity = BigDecimal.valueOf(position.getQuantity());
                 BigDecimal positionCurrentValue = convertToAccountCurrency(
