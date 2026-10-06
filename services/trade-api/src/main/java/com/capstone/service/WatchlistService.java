@@ -7,6 +7,8 @@ import com.capstone.entity.Watchlist;
 import com.capstone.exception.MarketDataUnavailableException;
 import com.capstone.mapper.WatchlistMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -17,10 +19,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WatchlistService {
 
+    private static final Logger logger = LoggerFactory.getLogger(WatchlistService.class);
+
     private final WatchlistMapper watchlistMapper;
     private final AccountService accountService;
     private final InstrumentService instrumentService;
-    private final MarketQuoteService marketQuoteService;
+    private final KafkaMarketQuoteService kafkaMarketQuoteService;
 
     public List<WatchlistItemResponse> getWatchlistForAuthorizedAccount(String accountReference) {
         // Get the account and extract userId
@@ -35,9 +39,19 @@ public class WatchlistService {
             try {
                 WatchlistItemResponse response = enrichWatchlistItem(item);
                 responses.add(response);
+            } catch (MarketDataUnavailableException e) {
+                logger.debug(
+                        "Watchlist quote missing in Kafka cache for watchlistId={}, returning item without market fields: {}",
+                        item.getWatchlistId(),
+                        e.getMessage()
+                );
+                responses.add(enrichWatchlistItemWithoutQuote(item));
             } catch (Exception e) {
-                // Skip items where instrument has unsupported asset class or market data unavailable
-                // Log if needed, but continue with other items
+                logger.warn(
+                        "Skipping watchlist item due to enrichment failure: watchlistId={} reason={}",
+                        item.getWatchlistId(),
+                        e.getMessage()
+                );
             }
         }
 
@@ -82,8 +96,8 @@ public class WatchlistService {
         Instrument instrument = instrumentService.getInstrumentById(watchlist.getInstrumentId())
                 .orElseThrow(() -> new IllegalArgumentException("Instrument not found"));
 
-        // Get current market quote
-        MarketQuoteService.QuoteSnapshot quote = marketQuoteService.getQuote(instrument.getSymbol());
+        // Get current market quote from Kafka-backed cache
+        KafkaMarketQuoteService.QuoteSnapshot quote = kafkaMarketQuoteService.getQuote(instrument.getSymbol());
 
         // Calculate price change
         BigDecimal change = quote.price().subtract(quote.previousClose());
@@ -99,6 +113,22 @@ public class WatchlistService {
                 quote.price(),
                 change,
                 changePercent,
+                watchlist.getCreatedAt()
+        );
+    }
+
+    private WatchlistItemResponse enrichWatchlistItemWithoutQuote(Watchlist watchlist) {
+        Instrument instrument = instrumentService.getInstrumentById(watchlist.getInstrumentId())
+                .orElseThrow(() -> new IllegalArgumentException("Instrument not found"));
+
+        return new WatchlistItemResponse(
+                watchlist.getWatchlistId(),
+                instrument.getSymbol(),
+                instrument.getDisplayName(),
+                instrument.getAssetClass().name(),
+                null,
+                null,
+                null,
                 watchlist.getCreatedAt()
         );
     }
