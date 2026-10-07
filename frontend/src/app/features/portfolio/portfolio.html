@@ -4,28 +4,52 @@
     <span>TradeX</span>
   </div>
 
-  <nav class="nav-links">
-    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen()"
+    aria-controls="portfolio-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="portfolio-nav" [class.open]="isNavMenuOpen()">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen.set(false)">
       <span>⌂</span>
       Dashboard
     </a>
-    <a routerLink="/orders" routerLinkActive="active" class="nav-item">
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
       <span>▤</span>
       Orders
     </a>
-    <a routerLink="/holdings" routerLinkActive="active" class="nav-item">
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
       <span>♧</span>
       Holdings
     </a>
-    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item">
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
       <span>◈</span>
       Portfolio
     </a>
-    <a routerLink="/blotter" routerLinkActive="active" class="nav-item">
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
       <span>☆</span>
       Blotter
     </a>
   </nav>
+
+  <button
+    type="button"
+    class="theme-toggle-nav"
+    [class.is-dark]="isDarkTheme()"
+    (click)="toggleTheme($event)"
+    role="switch"
+    [attr.aria-checked]="isDarkTheme()"
+    [attr.aria-label]="isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
+    [attr.title]="isDarkTheme() ? 'Light mode' : 'Dark mode'">
+    <span class="theme-toggle-track" aria-hidden="true">
+      <span class="theme-toggle-knob">{{ isDarkTheme() ? '☾' : '☀' }}</span>
+    </span>
+  </button>
 
   <div class="profile">
     <button

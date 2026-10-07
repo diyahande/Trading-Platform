@@ -4,29 +4,53 @@
         <span>TradeX</span>
     </div>
 
-    <nav class="nav-links">
-        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+    <button
+        class="nav-toggle"
+        type="button"
+        (click)="toggleNavMenu($event)"
+        [attr.aria-expanded]="isNavMenuOpen"
+        aria-controls="dashboard-nav"
+        aria-label="Toggle navigation menu">
+        <span aria-hidden="true">☰</span>
+    </button>
+
+    <nav class="nav-links" id="dashboard-nav" [class.open]="isNavMenuOpen">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen = false">
             <span>⌂</span>
             Dashboard
         </a>
-        <a routerLink="/orders" routerLinkActive="active" class="nav-item">
+        <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
             <span>▤</span>
             Orders
         </a>
 
-        <a routerLink="/holdings" routerLinkActive="active" class="nav-item">
+        <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
             <span>♧</span>
             Holdings
         </a>
-        <a routerLink="/portfolio" routerLinkActive="active" class="nav-item">
+        <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
             <span>◈</span>
             Portfolio
         </a>
-        <a routerLink="/blotter" routerLinkActive="active" class="nav-item">
+        <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
             <span>☆</span>
             Blotter
         </a>
     </nav>
+
+    <button
+        type="button"
+        class="theme-toggle-nav"
+        [class.is-dark]="isDarkTheme()"
+        (click)="toggleTheme($event)"
+        role="switch"
+        [attr.aria-checked]="isDarkTheme()"
+        [attr.aria-label]="isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
+        [attr.title]="isDarkTheme() ? 'Light mode' : 'Dark mode'">
+        <span class="theme-toggle-track" aria-hidden="true">
+            <span class="theme-toggle-knob">{{ isDarkTheme() ? '☾' : '☀' }}</span>
+        </span>
+    </button>
 
     <div class="profile">
         <button
@@ -96,7 +120,7 @@
                         <span class="stat">Avg: <strong [class.positive]="stockPerformance.statistics.averageChangePercent >= 0" [class.negative]="stockPerformance.statistics.averageChangePercent < 0">{{ stockPerformance.statistics.averageChangePercent | number:'1.2-2' }}%</strong></span>
                     </div>
 
-                    <div class="error" *ngIf="stockPerformanceError">
+                    <div class="error market-error" *ngIf="stockPerformanceError">
                         {{ stockPerformanceError }}
                     </div>
                 </div>
@@ -105,7 +129,6 @@
                     <div *ngFor="let stock of stockPerformance?.stocks" 
                          class="stock-tile"
                          (click)="onStockClick(stock.symbol)"
-                         style="cursor: pointer;"
                          [class.gainer]="stock.changePercent >= 0"
                          [class.loser]="stock.changePercent < 0">
                         <div class="stock-symbol">{{ stock.symbol }}</div>
@@ -124,7 +147,11 @@
             <div class="signal-modal-content" (click)="$event.stopPropagation()">
                 <button class="signal-modal-close" type="button" (click)="closeSignalCard()">✕</button>
                 <h2>{{ selectedStockSymbol }} - Trading Signal</h2>
-                <app-signal-card *ngIf="selectedStockSymbol" [symbol]="selectedStockSymbol"></app-signal-card>
+                <div *ngIf="signalFetchError" class="signal-fetch-error">{{ signalFetchError }}</div>
+                <app-signal-card
+                    *ngIf="selectedStockSymbol && !signalFetchError"
+                    [symbol]="selectedStockSymbol"
+                    [prefetchedSignal]="selectedSignalPayload"></app-signal-card>
             </div>
         </div>
 
@@ -141,11 +168,11 @@
                 <span>Change</span>
             </div>
 
-            <div *ngIf="watchlistError" class="watchlist-error" style="color: #ff9d9d; padding: 10px;">
+            <div *ngIf="watchlistError" class="watchlist-error">
                 {{ watchlistError }}
             </div>
 
-            <div *ngIf="!watchlistError && watchlist.length === 0" style="padding: 10px; text-align: center; color: #999;">
+            <div *ngIf="!watchlistError && watchlist.length === 0" class="watchlist-empty">
                 No watchlist items
             </div>
 
@@ -183,11 +210,11 @@
                 </button>
             </div>
 
-            <div *ngIf="topMoversError" style="color: #ff9d9d; padding: 10px;">
+            <div *ngIf="topMoversError" class="top-movers-error">
                 {{ topMoversError }}
             </div>
 
-            <div *ngIf="!topMoversError && getTopMovers().length === 0" style="padding: 10px; text-align: center; color: #999;">
+            <div *ngIf="!topMoversError && getTopMovers().length === 0" class="top-movers-empty">
                 No movers data available
             </div>
 
@@ -216,7 +243,7 @@
                 <h2>Portfolio Allocation</h2>
             </div>
 
-            <div *ngIf="portfolioAllocationError" style="color: #ff9d9d; padding: 10px; text-align: center;">
+            <div *ngIf="portfolioAllocationError" class="allocation-error">
                 {{ portfolioAllocationError }}
             </div>
 
@@ -279,7 +306,7 @@
 
             </div>
 
-            <div *ngIf="!portfolioAllocationError && !portfolioAllocation" style="padding: 20px; text-align: center; color: #999;">
+            <div *ngIf="!portfolioAllocationError && !portfolioAllocation" class="allocation-empty">
                 Loading portfolio allocation...
             </div>
 
@@ -292,11 +319,11 @@
                 <a href="#">View all</a>
             </div>
 
-            <div *ngIf="recentActivityError" style="color: #ff9d9d; padding: 10px;">
+            <div *ngIf="recentActivityError" class="activity-error">
                 {{ recentActivityError }}
             </div>
 
-            <div *ngIf="!recentActivityError && recentActivity.length === 0" style="padding: 10px; text-align: center; color: #999;">
+            <div *ngIf="!recentActivityError && recentActivity.length === 0" class="activity-empty">
                 No recent activity
             </div>
 

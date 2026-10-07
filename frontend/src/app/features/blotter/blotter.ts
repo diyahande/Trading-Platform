@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { OrderControllerService } from '../../generated/api-client/api/orderController.service';
@@ -25,7 +25,7 @@ const BLOTTER_ERROR_MESSAGES: Record<string, string> = {
 @Component({
   selector: 'app-blotter',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './blotter.html',
   styleUrl: './blotter.css',
 })
@@ -35,6 +35,8 @@ export class Blotter implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly workingMessage = signal<string | null>(null);
+  readonly isProfileMenuOpen = signal(false);
+  readonly isNavMenuOpen = signal(false);
 
   private pollTimerId: ReturnType<typeof setTimeout> | null = null;
   private pollAttempts = 0;
@@ -42,6 +44,8 @@ export class Blotter implements OnInit, OnDestroy {
   constructor(
     private readonly auth: Auth,
     private readonly orderApi: OrderControllerService,
+    private readonly router: Router,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
   ngOnInit(): void {
@@ -51,6 +55,59 @@ export class Blotter implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+  }
+
+  toggleNavMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isNavMenuOpen.set(!this.isNavMenuOpen());
+  }
+
+  toggleProfileMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isProfileMenuOpen.set(!this.isProfileMenuOpen());
+  }
+
+  viewProfile(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
+  }
+
+  signOut(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    this.auth.signOut();
+    void this.router.navigate(['/login']);
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isProfileMenuOpen() && !this.isNavMenuOpen()) {
+      return;
+    }
+
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen.set(false);
+      this.isNavMenuOpen.set(false);
+    }
   }
 
   async refreshNow(): Promise<void> {

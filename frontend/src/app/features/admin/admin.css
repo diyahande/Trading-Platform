@@ -1,15 +1,17 @@
 :host {
   display: block;
+  min-height: 100dvh;
+  background: var(--bg);
 }
 
 .admin-page {
   min-height: 100dvh;
-  padding: 32px 20px 40px;
+  padding: clamp(18px, 2.8vw, 32px);
   background:
-    radial-gradient(circle at 15% 20%, rgba(29, 113, 184, 0.2), transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.2), transparent 35%),
-    #09111a;
-  color: #e9f0f8;
+    radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 35%),
+    radial-gradient(circle at 90% 0%, color-mix(in srgb, #38bdf8 9%, transparent), transparent 26%),
+    var(--bg);
+  color: var(--text-primary);
 }
 
 .hero {
@@ -17,62 +19,53 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
-}
-
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 h1 {
   margin: 0;
-  font-size: 1.85rem;
+  font-size: clamp(1.4rem, 2.3vw, 1.9rem);
+  font-weight: 800;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .hero button {
-  border: 1px solid #2f465f;
-  color: #dce7f5;
-  background: #132235;
-  border-radius: 10px;
-  padding: 10px 14px;
+  border: 1px solid var(--button-secondary-border);
+  color: var(--button-secondary-text);
+  background: var(--button-secondary-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .hero button.logout {
-  border-color: rgba(248, 113, 113, 0.55);
-  background: rgba(248, 113, 113, 0.14);
-  color: #ffd0d0;
+  border-color: color-mix(in srgb, var(--negative) 45%, var(--border));
+  background: color-mix(in srgb, var(--negative) 14%, transparent);
+  color: var(--negative);
 }
 
 .status {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   padding: 10px 12px;
-  border-radius: 10px;
-}
-
-.status.ok {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.45);
-}
-
-.status.err {
-  background: rgba(239, 68, 68, 0.14);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
 }
 
 .empty {
-  margin-top: 24px;
-  color: #9bb1c7;
+  margin-top: 20px;
+  color: var(--text-secondary);
 }
 
 .card {
   margin-top: 14px;
-  border: 1px solid #203042;
-  background: rgba(9, 18, 29, 0.82);
-  border-radius: 14px;
   padding: 16px;
+  border-radius: var(--radius-md);
 }
 
 .row.title {
@@ -84,18 +77,30 @@ h1 {
 
 h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.08rem;
+  font-weight: 750;
+}
+
+.row.title span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 6px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 5px 14px;
   margin: 10px 0 12px;
+  color: var(--text-secondary);
 }
 
 .details p {
   margin: 0;
+  font-size: 0.88rem;
+}
+
+.details strong {
+  color: var(--text-primary);
 }
 
 .form-grid {
@@ -106,51 +111,56 @@ h2 {
 
 label {
   display: grid;
-  gap: 8px;
-  font-size: 0.92rem;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
 .wide {
   grid-column: 1 / -1;
 }
 
-input,
 textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 9px;
-  border: 1px solid #334e67;
-  background: #0d1a29;
-  color: #ecf4ff;
-  padding: 10px 12px;
+  resize: vertical;
+  min-height: 84px;
 }
 
 .actions {
-  margin-top: 14px;
+  margin-top: 12px;
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .actions button {
-  border: 0;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .actions .approve {
-  background: #21c57a;
-  color: #072312;
+  background: color-mix(in srgb, var(--positive) 92%, #ffffff);
+  color: #062213;
 }
 
 .actions .reject {
-  background: #f87171;
-  color: #3a0606;
+  background: color-mix(in srgb, var(--negative) 86%, #ffffff);
+  color: #250607;
+}
+
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 760px) {
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
   }
 }

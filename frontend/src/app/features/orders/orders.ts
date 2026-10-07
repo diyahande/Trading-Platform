@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, computed, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { Auth } from '../../core/services/auth';
@@ -37,7 +37,7 @@ type UiError = {
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive],
   templateUrl: './orders.html',
   styleUrls: ['./orders.css'],
 })
@@ -57,6 +57,8 @@ export class Orders implements OnDestroy {
   resultPopupMessage = signal('');
   resultPopupCode = signal<string | null>(null);
   resultPopupDetail = signal<string | null>(null);
+  isProfileMenuOpen = signal(false);
+  isNavMenuOpen = signal(false);
 
   quantityFieldError = signal<string | null>(null);
   priceFieldError = signal<string | null>(null);
@@ -74,8 +76,63 @@ export class Orders implements OnDestroy {
     private readonly orderApi: OrderControllerService,
     private readonly conversion: CurrencyConversion,
     private readonly toastr: ToastrService,
+    private readonly router: Router,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {
     this.accountId.set(this.readAccountIdFromToken());
+  }
+
+  toggleNavMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isNavMenuOpen.set(!this.isNavMenuOpen());
+  }
+
+  toggleProfileMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isProfileMenuOpen.set(!this.isProfileMenuOpen());
+  }
+
+  viewProfile(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
+  }
+
+  signOut(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    this.auth.signOut();
+    void this.router.navigate(['/login']);
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isProfileMenuOpen() && !this.isNavMenuOpen()) {
+      return;
+    }
+
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen.set(false);
+      this.isNavMenuOpen.set(false);
+    }
   }
 
   onSymbolInput(value: string): void {

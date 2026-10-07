@@ -1,5 +1,74 @@
+<header class="navbar">
+  <div class="logo">
+    <span class="logo-mark">X</span>
+    <span>TradeX</span>
+  </div>
+
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen()"
+    aria-controls="blotter-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="blotter-nav" [class.open]="isNavMenuOpen()">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>⌂</span>
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>▤</span>
+      Orders
+    </a>
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>♧</span>
+      Holdings
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>◈</span>
+      Portfolio
+    </a>
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>☆</span>
+      Blotter
+    </a>
+  </nav>
+
+  <button
+    type="button"
+    class="theme-toggle-nav"
+    [class.is-dark]="isDarkTheme()"
+    (click)="toggleTheme($event)"
+    role="switch"
+    [attr.aria-checked]="isDarkTheme()"
+    [attr.aria-label]="isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
+    [attr.title]="isDarkTheme() ? 'Light mode' : 'Dark mode'">
+    <span class="theme-toggle-track" aria-hidden="true">
+      <span class="theme-toggle-knob">{{ isDarkTheme() ? '☾' : '☀' }}</span>
+    </span>
+  </button>
+
+  <div class="profile">
+    <button
+      class="profile-trigger"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="isProfileMenuOpen()"
+      (click)="toggleProfileMenu($event)">
+      <div class="profile-icon" aria-hidden="true">&#128100;</div>
+    </button>
+
+    <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+      <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+    </div>
+  </div>
+</header>
+
 <section class="blotter" aria-label="Order blotter">
-  <header class="brand">Trade<span>X</span></header>
 
   <header class="blotter-header">
     <div>
@@ -12,7 +81,6 @@
       <button type="button" class="refresh" (click)="refreshNow()" [disabled]="loading()">
         {{ loading() ? 'Refreshing...' : 'Refresh' }}
       </button>
-      <a routerLink="/dashboard" class="action-button secondary">Back to Dashboard</a>
     </div>
   </header>
 

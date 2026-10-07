@@ -7,6 +7,7 @@ import { Auth } from '../../core/services/auth';
 import { AiChat } from '../../shared/components/ai-chat/ai-chat';
 import { ProfileService } from '../../generated/api-client/api/profile.service';
 import { SignalCardComponent } from './signal-card';
+import type { SignalResponse } from './signal-card';
 
 type DashboardSummary = {
   portfolioValue: number | null;
@@ -114,6 +115,7 @@ type StockPerformanceVisualization = {
 export class Dashboard implements OnDestroy {
   username = 'Trader';
   isProfileMenuOpen = false;
+  isNavMenuOpen = false;
   accountReference: string | null = null;
   summary: DashboardSummary | null = null;
   summaryError: string | null = null;
@@ -133,6 +135,8 @@ export class Dashboard implements OnDestroy {
   hoveredAssetValue: number | null = null;
   hoveredAssetValueInMoney: number | null = null;
   selectedStockSymbol: string | null = null;
+  selectedSignalPayload: SignalResponse | null = null;
+  signalFetchError: string | null = null;
   showSignalCard = false;
   private previousBodyOverflow = '';
 
@@ -162,8 +166,14 @@ export class Dashboard implements OnDestroy {
 
   signOut() {
     this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
     this.auth.signOut();
     void this.router.navigate(['/login']);
+  }
+
+  toggleNavMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.isNavMenuOpen = !this.isNavMenuOpen;
   }
 
   toggleProfileMenu(event: MouseEvent): void {
@@ -173,18 +183,35 @@ export class Dashboard implements OnDestroy {
 
   viewProfile(): void {
     this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
     void this.router.navigate(['/change-password']);
   }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.isProfileMenuOpen) {
+    if (!this.isProfileMenuOpen && !this.isNavMenuOpen) {
       return;
     }
 
     const target = event.target as Node | null;
     if (target && !this.elementRef.nativeElement.contains(target)) {
       this.isProfileMenuOpen = false;
+      this.isNavMenuOpen = false;
+    }
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
     }
   }
 
@@ -264,7 +291,6 @@ export class Dashboard implements OnDestroy {
       this.cdr.markForCheck();
     }
   }
-
   private async loadDashboardSummaryFallback(
     summary: DashboardSummary,
   ): Promise<{ portfolioValue: number | null; todaysPnl: number | null; availableCash: number | null } | null> {
@@ -282,29 +308,29 @@ export class Dashboard implements OnDestroy {
       return null;
     }
 
-    try {
-      const [portfolio, pnl] = await Promise.all([
-        firstValueFrom(this.http.get<PortfolioSummaryFallback>(`/api/v1/portfolio/${accountId}`)),
-        firstValueFrom(this.http.get<PnlResponseFallback>(`/api/v1/portfolio/${accountId}/pnl`)),
-      ]);
+    const [portfolioResult, pnlResult] = await Promise.allSettled([
+      firstValueFrom(this.http.get<PortfolioSummaryFallback>(`/api/v1/portfolio/${accountId}`)),
+      firstValueFrom(this.http.get<PnlResponseFallback>(`/api/v1/portfolio/${accountId}/pnl`)),
+    ]);
 
-      return {
-        portfolioValue: portfolio?.totalValue ?? null,
-        todaysPnl: pnl?.unrealisedPnl ?? null,
-        availableCash: portfolio?.cashBalance ?? null,
-      };
-    } catch {
+    const portfolioValue = portfolioResult.status === 'fulfilled' ? portfolioResult.value.totalValue ?? null : null;
+    const todaysPnl = pnlResult.status === 'fulfilled' ? pnlResult.value.unrealisedPnl ?? null : null;
+    const availableCash = portfolioResult.status === 'fulfilled' ? portfolioResult.value.cashBalance ?? null : null;
+
+    if (portfolioValue === null && todaysPnl === null && availableCash === null) {
       return null;
     }
+
+    return { portfolioValue, todaysPnl, availableCash };
   }
 
   private async loadCurrentUser(): Promise<void> {
     try {
       const user = await firstValueFrom(this.profileService.authControllerMe());
-      if (user?.username?.trim()) {
+      if (typeof user?.username === 'string' && user.username.trim()) {
         this.username = user.username.trim();
-        this.cdr.markForCheck();
       }
+      this.cdr.markForCheck();
     } catch {
       // Keep existing username fallback when profile endpoint is unavailable.
     }
@@ -544,9 +570,21 @@ export class Dashboard implements OnDestroy {
     return changePercent >= 0 ? 'positive' : 'negative';
   }
 
-  onStockClick(symbol: string): void {
+  async onStockClick(symbol: string): Promise<void> {
     this.lockBodyScroll();
     this.selectedStockSymbol = symbol;
+    this.selectedSignalPayload = null;
+    this.signalFetchError = null;
+    this.showSignalCard = false;
+
+    try {
+      this.selectedSignalPayload = await firstValueFrom(
+        this.http.get<SignalResponse>(`/api/v1/signals/${encodeURIComponent(symbol)}`)
+      );
+    } catch {
+      this.signalFetchError = 'Signal data is temporarily unavailable for this symbol.';
+    }
+
     this.showSignalCard = true;
     this.cdr.markForCheck();
   }
@@ -554,6 +592,8 @@ export class Dashboard implements OnDestroy {
   closeSignalCard(): void {
     this.showSignalCard = false;
     this.selectedStockSymbol = null;
+    this.selectedSignalPayload = null;
+    this.signalFetchError = null;
     this.unlockBodyScroll();
     this.cdr.markForCheck();
   }

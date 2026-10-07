@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
@@ -37,10 +37,12 @@ export class Holdings implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly isProfileMenuOpen = signal(false);
+  readonly isNavMenuOpen = signal(false);
 
   constructor(
     private readonly auth: Auth,
     private readonly accountApi: AccountControllerService,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
   ngOnInit(): void {
@@ -114,13 +116,45 @@ export class Holdings implements OnInit {
     this.isProfileMenuOpen.set(!this.isProfileMenuOpen());
   }
 
+  toggleNavMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isNavMenuOpen.set(!this.isNavMenuOpen());
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
+    }
+  }
+
   viewProfile(): void {
     this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
   }
 
   signOut(): void {
     this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
     this.auth.signOut();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen.set(false);
+      this.isNavMenuOpen.set(false);
+    }
   }
 
   formatMoney(value: number | null | undefined, symbol?: string): string {

@@ -15,7 +15,7 @@ interface SignalMetrics {
   percentile?: string;
 }
 
-interface SignalResponse {
+export interface SignalResponse {
   symbol: string;
   direction: string;           // "BUY", "SELL", "HOLD"
   strength: number;             // 0-100
@@ -46,6 +46,7 @@ interface SignalResponse {
 })
 export class SignalCardComponent implements OnInit, OnChanges, AfterViewChecked, OnDestroy {
   @Input() symbol!: string;
+  @Input() prefetchedSignal: SignalResponse | null = null;
   @ViewChild('priceChart') priceChartRef?: ElementRef<HTMLCanvasElement>;
 
   signal: SignalResponse | null = null;
@@ -58,6 +59,10 @@ export class SignalCardComponent implements OnInit, OnChanges, AfterViewChecked,
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
+    if (this.applyPrefetchedSignal()) {
+      return;
+    }
+
     if (this.symbol) {
       this.loadSignal();
     }
@@ -72,10 +77,35 @@ export class SignalCardComponent implements OnInit, OnChanges, AfterViewChecked,
     const nextSymbol = (symbolChange.currentValue ?? '').toString().trim();
     const previousSymbol = (symbolChange.previousValue ?? '').toString().trim();
     if (!nextSymbol || nextSymbol === previousSymbol) {
+      this.applyPrefetchedSignal();
+      return;
+    }
+
+    if (this.applyPrefetchedSignal()) {
       return;
     }
 
     this.loadSignal();
+  }
+
+  private applyPrefetchedSignal(): boolean {
+    if (!this.prefetchedSignal) {
+      return false;
+    }
+
+    const prefetchedSymbol = (this.prefetchedSignal.symbol ?? '').toUpperCase();
+    const currentSymbol = (this.symbol ?? '').toUpperCase();
+    if (!prefetchedSymbol || prefetchedSymbol !== currentSymbol) {
+      return false;
+    }
+
+    this.destroyChart();
+    this.signal = this.prefetchedSignal;
+    this.loading = false;
+    this.error = null;
+    this.chartReadyForSignal = false;
+    this.chartRenderedForSymbol = null;
+    return true;
   }
 
   ngAfterViewChecked(): void {
