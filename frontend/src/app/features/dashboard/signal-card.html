@@ -1,0 +1,95 @@
+<div class="signal-card" *ngIf="signal" [class]="getCardClass()">
+  <div class="signal-header">
+    <div class="signal-direction" [class]="getDirectionClass()">
+      <span class="direction-icon">{{ getDirectionIcon() }}</span>
+      <span class="direction-text">{{ signal.direction }}</span>
+    </div>
+    <div class="signal-strength">
+      <span class="strength-label">Strength:</span>
+      <span class="strength-value">{{ signal.strength }}%</span>
+    </div>
+  </div>
+
+  <div class="signal-section rationale">
+    <h3>Signal: {{ getSignalName() }}</h3>
+    <p>{{ signal.rationale }}</p>
+  </div>
+
+  <div class="signal-section metrics" *ngIf="signal.metrics as metrics">
+    <div class="metric-group">
+      <div class="metric">
+        <span class="metric-label">Current Price</span>
+        <span class="metric-value">${{ metrics.price | number:'1.2-2' }}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Change</span>
+        <span class="metric-value" [class]="metrics.priceChange >= 0 ? 'positive' : 'negative'">
+          {{ metrics.priceChange >= 0 ? '+' : '' }}{{ metrics.priceChange | number:'1.2-2' }}
+          ({{ metrics.priceChangePercent >= 0 ? '+' : '' }}{{ metrics.priceChangePercent | number:'1.2-2' }}%)
+        </span>
+      </div>
+    </div>
+
+    <div class="metric-group">
+      <div class="metric">
+        <span class="metric-label">MA20</span>
+        <span class="metric-value">${{ metrics.ma20 | number:'1.2-2' }}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">MA50</span>
+        <span class="metric-value">${{ metrics.ma50 | number:'1.2-2' }}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">RSI(14)</span>
+        <span class="metric-value">{{ metrics.rsi14 | number:'1.1-1' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="signal-section chart" *ngIf="hasPriceHistory()">
+    <div class="chart-header">
+      <h3>Price Trend (Last 90 Days)</h3>
+      <span class="chart-caption">Hover for exact close values</span>
+    </div>
+    <div class="chart-container">
+      <canvas #priceChart aria-label="90 day close price chart" role="img"></canvas>
+    </div>
+  </div>
+
+  <div class="signal-section metrics" *ngIf="!signal.metrics">
+    <p>Detailed metrics are unavailable for this symbol right now.</p>
+  </div>
+
+  <div class="signal-footer">
+    <div class="validity">
+      <span class="staleness-badge" [class]="'staleness-' + signal.staleness.toLowerCase()">
+        {{ signal.staleness }}
+      </span>
+      <span class="timestamp">Updated: {{ formatTime(signal.computedAt) }}</span>
+      <span class="expiry">Expires: {{ formatTime(signal.validUntil) }}</span>
+    </div>
+
+    <div class="methodology">
+      <small>
+        <strong>Methodology:</strong> {{ signal.methodology }}
+        <a href="/methodology" target="_blank" title="View methodology details">Info</a>
+      </small>
+    </div>
+
+    <div class="disclaimer">
+      <small>
+        <strong>Disclaimer:</strong> This is an algorithmically generated signal, not investment advice.
+        Always conduct your own research before trading.
+        <a href="/methodology" target="_blank">Learn more</a>
+      </small>
+    </div>
+  </div>
+</div>
+
+<div class="signal-error" *ngIf="error && !signal">
+  <p>{{ error }}</p>
+</div>
+
+<div class="signal-loading" *ngIf="loading">
+  <p>Loading signal...</p>
+</div>
