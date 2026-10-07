@@ -62,7 +62,7 @@ class DtoAndEnumSmokeTest {
     @Test
     void enums_exposeExpectedValues() {
         assertEquals(AccountStatus.ACTIVE, AccountStatus.valueOf("ACTIVE"));
-        assertEquals(AssetClass.CRYPTO, AssetClass.valueOf("CRYPTO"));
+        assertEquals(AssetClass.CRYPTO_PAIR, AssetClass.valueOf("CRYPTO_PAIR"));
         assertEquals(OrderSide.SELL, OrderSide.valueOf("SELL"));
         assertEquals(OrderStatus.CANCELLED, OrderStatus.valueOf("CANCELLED"));
         assertEquals(TransactionStatus.FAILED, TransactionStatus.valueOf("FAILED"));

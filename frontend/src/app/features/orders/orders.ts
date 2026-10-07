@@ -15,6 +15,7 @@ const SYMBOL_PLAIN_TICKER = /^[A-Z][A-Z0-9]{0,19}$/;
 const SYMBOL_SUFFIXED_TICKER = /^[A-Z][A-Z0-9]{0,12}\.[A-Z0-9]{1,6}$/;
 const SYMBOL_FX = /^FX:[A-Z]{6}$/;
 const SYMBOL_CRYPTO = /^X:[A-Z0-9]{2,15}$/;
+const SYMBOL_CRYPTO_DASH = /^[A-Z0-9]{2,15}-[A-Z]{3,6}$/;
 
 const ORDER_ERROR_MESSAGES: Record<string, string> = {
   'ACC-404': 'The account could not be found.',
@@ -217,7 +218,8 @@ export class Orders implements OnDestroy {
       SYMBOL_PLAIN_TICKER.test(symbol) ||
       SYMBOL_SUFFIXED_TICKER.test(symbol) ||
       SYMBOL_FX.test(symbol) ||
-      SYMBOL_CRYPTO.test(symbol)
+      SYMBOL_CRYPTO.test(symbol) ||
+      SYMBOL_CRYPTO_DASH.test(symbol)
     );
   }
 
@@ -247,6 +249,17 @@ export class Orders implements OnDestroy {
 
     if (SYMBOL_PLAIN_TICKER.test(symbol)) {
       return 'USD';
+    }
+
+    if (SYMBOL_CRYPTO_DASH.test(symbol)) {
+      const quote = symbol.split('-')[1];
+      if (quote === 'USD') {
+        return 'USD';
+      }
+      if (quote === 'INR') {
+        return 'INR';
+      }
+      return 'UNKNOWN';
     }
 
     return 'UNKNOWN';

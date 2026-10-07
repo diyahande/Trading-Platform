@@ -2,6 +2,7 @@ package com.capstone.enums;
 
 public enum AssetClass {
     EQUITY,
-    FOREX,
-    CRYPTO
+    ETF,
+    CURRENCY_PAIR,
+    CRYPTO_PAIR
 }
