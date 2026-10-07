@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { AiChat } from '../../shared/components/ai-chat/ai-chat';
 import { ProfileService } from '../../generated/api-client/api/profile.service';
+import { SignalCardComponent } from './signal-card';
 
 type DashboardSummary = {
   portfolioValue: number | null;
@@ -19,9 +20,9 @@ type WatchlistItem = {
   symbol: string;
   displayName: string;
   assetClass: string;
-  currentPrice: number;
-  change: number;
-  changePercent: number;
+  currentPrice: number | null;
+  change: number | null;
+  changePercent: number | null;
   addedAt: string;
 };
 
@@ -97,11 +98,11 @@ type StockPerformanceVisualization = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AiChat, RouterLink, RouterLinkActive],
+  imports: [CommonModule, AiChat, RouterLink, RouterLinkActive, SignalCardComponent],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })
-export class Dashboard {
+export class Dashboard implements OnDestroy {
   username = 'Trader';
   isProfileMenuOpen = false;
   accountReference: string | null = null;
@@ -122,6 +123,9 @@ export class Dashboard {
   hoveredAssetClass: string | null = null;
   hoveredAssetValue: number | null = null;
   hoveredAssetValueInMoney: number | null = null;
+  selectedStockSymbol: string | null = null;
+  showSignalCard = false;
+  private previousBodyOverflow = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -202,14 +206,27 @@ export class Dashboard {
     return '';
   }
 
-  formatChangePercent(changePercent: number): string {
+  formatChangePercent(changePercent: number | null | undefined): string {
+    if (typeof changePercent !== 'number' || Number.isNaN(changePercent)) {
+      return '—';
+    }
     const sign = changePercent >= 0 ? '▲' : '▼';
     const absValue = Math.abs(changePercent).toFixed(2);
     return `${sign} ${absValue}%`;
   }
 
-  changeClass(changePercent: number): string {
+  changeClass(changePercent: number | null | undefined): string {
+    if (typeof changePercent !== 'number' || Number.isNaN(changePercent)) {
+      return '';
+    }
     return changePercent >= 0 ? 'positive' : 'negative';
+  }
+
+  formatWatchlistPrice(price: number | null | undefined): string {
+    if (typeof price !== 'number' || Number.isNaN(price)) {
+      return '—';
+    }
+    return `$${price.toFixed(2)}`;
   }
 
   private async loadDashboard(): Promise<void> {
@@ -479,5 +496,35 @@ export class Dashboard {
 
   getTopMoverChangeClass(changePercent: number): string {
     return changePercent >= 0 ? 'positive' : 'negative';
+  }
+
+  onStockClick(symbol: string): void {
+    this.lockBodyScroll();
+    this.selectedStockSymbol = symbol;
+    this.showSignalCard = true;
+    this.cdr.markForCheck();
+  }
+
+  closeSignalCard(): void {
+    this.showSignalCard = false;
+    this.selectedStockSymbol = null;
+    this.unlockBodyScroll();
+    this.cdr.markForCheck();
+  }
+
+  ngOnDestroy(): void {
+    this.unlockBodyScroll();
+  }
+
+  private lockBodyScroll(): void {
+    if (!this.previousBodyOverflow) {
+      this.previousBodyOverflow = document.body.style.overflow;
+    }
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll(): void {
+    document.body.style.overflow = this.previousBodyOverflow;
+    this.previousBodyOverflow = '';
   }
 }

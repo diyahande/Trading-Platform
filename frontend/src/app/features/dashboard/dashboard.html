@@ -100,6 +100,8 @@
                 <div class="stock-grid">
                     <div *ngFor="let stock of stockPerformance?.stocks" 
                          class="stock-tile"
+                         (click)="onStockClick(stock.symbol)"
+                         style="cursor: pointer;"
                          [class.gainer]="stock.changePercent >= 0"
                          [class.loser]="stock.changePercent < 0">
                         <div class="stock-symbol">{{ stock.symbol }}</div>
@@ -110,6 +112,15 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- Signal Card Modal -->
+        <div class="signal-modal" *ngIf="showSignalCard" (click)="closeSignalCard()">
+            <div class="signal-modal-content" (click)="$event.stopPropagation()">
+                <button class="signal-modal-close" type="button" (click)="closeSignalCard()">✕</button>
+                <h2>{{ selectedStockSymbol }} - Trading Signal</h2>
+                <app-signal-card *ngIf="selectedStockSymbol" [symbol]="selectedStockSymbol"></app-signal-card>
             </div>
         </div>
 
@@ -139,7 +150,7 @@
                     <strong>{{ item.symbol }}</strong>
                     <small>{{ item.displayName }}</small>
                 </div>
-                <span>${{ item.currentPrice.toFixed(2) }}</span>
+                <span>{{ formatWatchlistPrice(item.currentPrice) }}</span>
                 <span [class]="changeClass(item.changePercent)">{{ formatChangePercent(item.changePercent) }}</span>
             </div>
 

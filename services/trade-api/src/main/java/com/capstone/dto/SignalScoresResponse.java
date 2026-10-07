@@ -1,0 +1,13 @@
+package com.capstone.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class SignalScoresResponse {
+    private Integer buy;
+    private Integer sell;
+}
