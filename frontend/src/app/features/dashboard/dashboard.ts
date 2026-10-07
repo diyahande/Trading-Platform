@@ -135,6 +135,7 @@ export class Dashboard implements OnDestroy {
   hoveredAssetValue: number | null = null;
   hoveredAssetValueInMoney: number | null = null;
   selectedStockSymbol: string | null = null;
+  selectedStockPrice: number | null = null;
   selectedSignalPayload: SignalResponse | null = null;
   signalFetchError: string | null = null;
   showSignalCard = false;
@@ -570,16 +571,17 @@ export class Dashboard implements OnDestroy {
     return changePercent >= 0 ? 'positive' : 'negative';
   }
 
-  async onStockClick(symbol: string): Promise<void> {
+  async onStockClick(stock: StockPerformance): Promise<void> {
     this.lockBodyScroll();
-    this.selectedStockSymbol = symbol;
+    this.selectedStockSymbol = stock.symbol;
+    this.selectedStockPrice = stock.price;
     this.selectedSignalPayload = null;
     this.signalFetchError = null;
     this.showSignalCard = false;
 
     try {
       this.selectedSignalPayload = await firstValueFrom(
-        this.http.get<SignalResponse>(`/api/v1/signals/${encodeURIComponent(symbol)}`)
+        this.http.get<SignalResponse>(`/api/v1/signals/${encodeURIComponent(stock.symbol)}`)
       );
     } catch {
       this.signalFetchError = 'Signal data is temporarily unavailable for this symbol.';
@@ -592,10 +594,30 @@ export class Dashboard implements OnDestroy {
   closeSignalCard(): void {
     this.showSignalCard = false;
     this.selectedStockSymbol = null;
+    this.selectedStockPrice = null;
     this.selectedSignalPayload = null;
     this.signalFetchError = null;
     this.unlockBodyScroll();
     this.cdr.markForCheck();
+  }
+
+  placeOrderFromSignal(side: 'BUY' | 'SELL'): void {
+    const symbol = this.selectedStockSymbol;
+    if (!symbol) {
+      return;
+    }
+
+    const queryParams: Record<string, string> = {
+      symbol,
+      side,
+    };
+
+    if (typeof this.selectedStockPrice === 'number' && Number.isFinite(this.selectedStockPrice) && this.selectedStockPrice > 0) {
+      queryParams['marketPrice'] = this.selectedStockPrice.toFixed(2);
+    }
+
+    this.closeSignalCard();
+    void this.router.navigate(['/orders'], { queryParams });
   }
 
   ngOnDestroy(): void {

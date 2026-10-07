@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 
 @Component
-// @EnableScheduling
+@EnableScheduling
 public class MarketDataPoller {
 
     private static final Logger logger =

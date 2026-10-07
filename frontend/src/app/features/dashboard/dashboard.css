@@ -576,6 +576,43 @@
   border-radius: var(--radius-sm);
 }
 
+.signal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.signal-action {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.signal-action.buy {
+  background: color-mix(in srgb, var(--positive) 18%, var(--surface));
+  color: var(--positive);
+  border-color: color-mix(in srgb, var(--positive) 42%, var(--border));
+}
+
+.signal-action.sell {
+  background: color-mix(in srgb, var(--negative) 18%, var(--surface));
+  color: var(--negative);
+  border-color: color-mix(in srgb, var(--negative) 42%, var(--border));
+}
+
+.signal-action:hover {
+  filter: brightness(1.03);
+}
+
+.signal-action:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 1280px) {
   .summary-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -679,6 +716,10 @@
 
   .signal-modal-content {
     padding: 18px;
+  }
+
+  .signal-actions {
+    grid-template-columns: 1fr;
   }
 }
 

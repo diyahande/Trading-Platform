@@ -206,6 +206,45 @@ h1 {
   margin-bottom: 16px;
 }
 
+.reference-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ref-field {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-secondary);
+  padding: 10px 12px;
+}
+
+.ref-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.ref-value {
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.ref-value-muted {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.order-hint {
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
 .view-blotter-btn {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
@@ -285,6 +324,30 @@ h1 {
   margin-top: 14px;
   display: flex;
   gap: 8px;
+}
+
+.actions .primary {
+  min-width: 220px;
+  min-height: 42px;
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #06140d;
+  font-size: 0.9rem;
+}
+
+.primary-label {
+  color: inherit;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.actions .primary:disabled {
+  opacity: 0.72;
+  color: #06140d;
 }
 
 .primary,
@@ -411,6 +474,10 @@ h1 {
   }
 
   .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reference-row {
     grid-template-columns: 1fr;
   }
 

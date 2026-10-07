@@ -128,7 +128,7 @@
                 <div class="stock-grid">
                     <div *ngFor="let stock of stockPerformance?.stocks" 
                          class="stock-tile"
-                         (click)="onStockClick(stock.symbol)"
+                         (click)="onStockClick(stock)"
                          [class.gainer]="stock.changePercent >= 0"
                          [class.loser]="stock.changePercent < 0">
                         <div class="stock-symbol">{{ stock.symbol }}</div>
@@ -152,6 +152,10 @@
                     *ngIf="selectedStockSymbol && !signalFetchError"
                     [symbol]="selectedStockSymbol"
                     [prefetchedSignal]="selectedSignalPayload"></app-signal-card>
+                <div class="signal-actions" *ngIf="selectedStockSymbol">
+                    <button type="button" class="signal-action buy" (click)="placeOrderFromSignal('BUY')">BUY</button>
+                    <button type="button" class="signal-action sell" (click)="placeOrderFromSignal('SELL')">SELL</button>
+                </div>
             </div>
         </div>
 

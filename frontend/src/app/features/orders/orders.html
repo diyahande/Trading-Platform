@@ -85,10 +85,23 @@
   <form class="ticket-card" (submit)="$event.preventDefault(); submit();">
     <div class="card-header">
       <div>
-        <h1>Trade<span>X</span> Orders</h1>
-        <p class="subtle">Create and place an order.</p>
+        <h1>{{ sideLabel() }} {{ symbol() || 'Instrument' }}</h1>
+        <p class="subtle">{{ instrumentDisplayName() || 'Create and place an order.' }}</p>
       </div>
     </div>
+
+    <section class="reference-row">
+      <div class="ref-field">
+        <span class="ref-label">Current Market Price</span>
+        <strong class="ref-value" [class.ref-value-muted]="!hasCurrentMarketPrice()">{{ getCurrentMarketPriceText() }}</strong>
+      </div>
+      <div class="ref-field">
+        <span class="ref-label">Order Type</span>
+        <strong class="ref-value">LIMIT</strong>
+      </div>
+    </section>
+
+    <p class="order-hint">{{ orderIntentHint() }}</p>
 
     <div class="grid">
       <div class="field">
@@ -117,29 +130,31 @@
       </div>
 
       <div class="field">
-        <label for="quantity">Quantity</label>
-        <input
-          id="quantity"
-          [ngModel]="quantity()"
-          (ngModelChange)="onQuantityInput($event)"
-          name="quantity"
-          inputmode="numeric"
-          placeholder="100"
-        />
-        <p class="field-error" *ngIf="quantityFieldError()">{{ quantityFieldError() }}</p>
-      </div>
-
-      <div class="field">
-        <label for="price">Price</label>
+        <label for="price">Limit Price</label>
         <input
           id="price"
           [ngModel]="price()"
           (ngModelChange)="onPriceInput($event)"
           name="price"
           inputmode="decimal"
-          placeholder="245.50"
+          placeholder="205.00"
         />
         <p class="field-error" *ngIf="priceFieldError()">{{ priceFieldError() }}</p>
+      </div>
+
+      <div class="field">
+        <label for="quantity">Quantity</label>
+        <input
+          id="quantity"
+          type="number"
+          min="1"
+          [ngModel]="quantity()"
+          (ngModelChange)="onQuantityInput($event)"
+          name="quantity"
+          inputmode="numeric"
+          placeholder="10"
+        />
+        <p class="field-error" *ngIf="quantityFieldError()">{{ quantityFieldError() }}</p>
       </div>
     </div>
 
@@ -153,8 +168,8 @@
     <p class="error" *ngIf="validationMessage()">{{ validationMessage() }}</p>
 
     <div class="actions">
-      <button type="submit" class="primary" [disabled]="submitting()">
-        {{ submitting() ? 'Placing order...' : 'Place Order' }}
+      <button type="submit" class="primary" [disabled]="isSubmitDisabled()" [attr.aria-label]="submitLabel() || 'PLACE ORDER'">
+        <span class="primary-label">{{ submitLabel() || 'PLACE ORDER' }}</span>
       </button>
     </div>
   </form>
