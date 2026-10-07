@@ -14,6 +14,15 @@ type DashboardSummary = {
   buyingPower: number;
 };
 
+type PortfolioSummaryFallback = {
+  cashBalance: number;
+  totalValue: number;
+};
+
+type PnlResponseFallback = {
+  unrealisedPnl: number;
+};
+
 type WatchlistItem = {
   watchlistId: number;
   symbol: string;
@@ -216,10 +225,14 @@ export class Dashboard {
     this.summaryError = null;
     try {
       const response = await firstValueFrom(this.http.get<DashboardSummary>('/api/dashboard'));
-      console.log('Dashboard response:', response);
-      console.log('availableCash type:', typeof response.availableCash, 'value:', response.availableCash);
-      console.log('buyingPower type:', typeof response.buyingPower, 'value:', response.buyingPower);
-      this.summary = response;
+      const fallback = await this.loadDashboardSummaryFallback(response);
+
+      this.summary = {
+        portfolioValue: response.portfolioValue ?? fallback?.portfolioValue ?? null,
+        todaysPnl: response.todaysPnl ?? fallback?.todaysPnl ?? null,
+        availableCash: response.availableCash ?? fallback?.availableCash ?? 0,
+        buyingPower: response.buyingPower ?? fallback?.availableCash ?? 0,
+      };
       this.cdr.markForCheck();
     } catch (error: any) {
       const status = typeof error?.status === 'number' ? error.status : null;
@@ -232,6 +245,39 @@ export class Dashboard {
       }
       this.summary = null;
       this.cdr.markForCheck();
+    }
+  }
+
+  private async loadDashboardSummaryFallback(
+    summary: DashboardSummary,
+  ): Promise<{ portfolioValue: number | null; todaysPnl: number | null; availableCash: number | null } | null> {
+    if (summary.portfolioValue !== null && summary.todaysPnl !== null) {
+      return null;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      return null;
+    }
+
+    const accountId = this.extractAccountIdFromToken(token);
+    if (!accountId) {
+      return null;
+    }
+
+    try {
+      const [portfolio, pnl] = await Promise.all([
+        firstValueFrom(this.http.get<PortfolioSummaryFallback>(`/api/v1/portfolio/${accountId}`)),
+        firstValueFrom(this.http.get<PnlResponseFallback>(`/api/v1/portfolio/${accountId}/pnl`)),
+      ]);
+
+      return {
+        portfolioValue: portfolio?.totalValue ?? null,
+        todaysPnl: pnl?.unrealisedPnl ?? null,
+        availableCash: portfolio?.cashBalance ?? null,
+      };
+    } catch {
+      return null;
     }
   }
 
