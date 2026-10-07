@@ -1,0 +1,175 @@
+<header class="navbar">
+  <div class="logo">
+    <span class="logo-mark">X</span>
+    <span>TradeX</span>
+  </div>
+
+  <nav class="nav-links">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+      <span>⌂</span>
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item">
+      <span>▤</span>
+      Orders
+    </a>
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item">
+      <span>♧</span>
+      Holdings
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item">
+      <span>◈</span>
+      Portfolio
+    </a>
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item">
+      <span>☆</span>
+      Blotter
+    </a>
+  </nav>
+
+  <div class="profile">
+    <button
+      class="profile-trigger"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="isProfileMenuOpen()"
+      (click)="toggleProfileMenu($event)">
+      <div class="profile-icon" aria-hidden="true">&#128100;</div>
+    </button>
+
+    <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+      <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="portfolio-page">
+  <section class="portfolio" aria-label="Portfolio valuation and profit and loss">
+    <header class="portfolio-header">
+      <div>
+        <h1>Portfolio and P&L</h1>
+        <p>Priced holdings, realised and unrealised profit and loss.</p>
+        <p class="account">Account: <strong>{{ accountId() || '--' }}</strong></p>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="refresh" (click)="refreshNow()" [disabled]="loading()">
+          {{ loading() ? 'Refreshing...' : 'Refresh' }}
+        </button>
+      </div>
+    </header>
+
+    <p class="error" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+
+    <section *ngIf="!errorMessage() && summary()" class="summary-grid" aria-label="Portfolio summary cards">
+      <article class="summary-card">
+        <span class="card-label">Cash Balance</span>
+        <strong>{{ formatMoney(summary()?.cashBalance, summary()?.baseCurrency || 'USD') }}</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="card-label">Market Value</span>
+        <strong>{{ formatMoney(summary()?.marketValue, summary()?.baseCurrency || 'USD') }}</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="card-label">Cost Basis</span>
+        <strong>{{ formatMoney(summary()?.costBasis, summary()?.baseCurrency || 'USD') }}</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="card-label">Unrealised P&L</span>
+        <strong [class]="toSignedMoneyClass(summary()?.unrealisedPnl)">
+          {{ formatMoney(summary()?.unrealisedPnl, summary()?.baseCurrency || 'USD') }}
+        </strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="card-label">Realised P&L</span>
+        <strong [class]="toSignedMoneyClass(summary()?.realisedPnl)">
+          {{ formatMoney(summary()?.realisedPnl, summary()?.baseCurrency || 'USD') }}
+        </strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="card-label">Total Value</span>
+        <strong>{{ formatMoney(summary()?.totalValue, summary()?.baseCurrency || 'USD') }}</strong>
+      </article>
+    </section>
+
+    <section *ngIf="!errorMessage() && summary()" class="meta-row">
+      <span>Positions: <strong>{{ summary()?.positionCount }}</strong></span>
+      <span>Unrealised %: <strong>{{ formatPercent(summary()?.unrealisedPnlPercent) }}</strong></span>
+      <span>Partial pricing: <strong>{{ summary()?.partial ? 'Yes' : 'No' }}</strong></span>
+      <span>As of: <strong>{{ summary()?.asOf | date: 'medium' }}</strong></span>
+    </section>
+
+    <section class="table-card" *ngIf="!errorMessage()" aria-label="Priced positions">
+      <h2>Priced Positions</h2>
+      <div class="table-wrap" *ngIf="positions().length > 0; else emptyPositions">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Qty</th>
+              <th>Avg Cost</th>
+              <th>Last</th>
+              <th>Market Value</th>
+              <th>Unrealised</th>
+              <th>Stale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of positions()">
+              <td class="symbol">{{ p.symbol }}</td>
+              <td>{{ p.quantity }}</td>
+              <td>{{ formatMoney(p.averageCost, p.currency || 'USD') }}</td>
+              <td>{{ formatMoney(p.lastPrice, p.currency || 'USD') }}</td>
+              <td>{{ formatMoney(p.marketValue, p.currency || 'USD') }}</td>
+              <td [class]="toSignedMoneyClass(p.unrealisedPnl)">
+                {{ formatMoney(p.unrealisedPnl, p.currency || 'USD') }}
+              </td>
+              <td>
+                <span class="pill" [class.stale]="p.stale">{{ p.stale ? 'Stale' : 'Live' }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #emptyPositions>
+        <p class="empty">No open positions.</p>
+      </ng-template>
+    </section>
+
+    <section class="table-card" *ngIf="!errorMessage() && pnl()" aria-label="Profit and loss breakdown">
+      <h2>Profit and Loss</h2>
+      <div class="pnl-headline">
+        <span>Realised: <strong [class]="toSignedMoneyClass(pnl()?.realisedPnl)">{{ formatMoney(pnl()?.realisedPnl, pnl()?.baseCurrency || 'USD') }}</strong></span>
+        <span>Unrealised: <strong [class]="toSignedMoneyClass(pnl()?.unrealisedPnl)">{{ formatMoney(pnl()?.unrealisedPnl, pnl()?.baseCurrency || 'USD') }}</strong></span>
+        <span>Total: <strong [class]="toSignedMoneyClass(pnl()?.totalPnl)">{{ formatMoney(pnl()?.totalPnl, pnl()?.baseCurrency || 'USD') }}</strong></span>
+      </div>
+
+      <div class="table-wrap" *ngIf="(pnl()?.bySymbol || []).length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Realised</th>
+              <th>Unrealised</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of pnl()?.bySymbol">
+              <td class="symbol">{{ s.symbol }}</td>
+              <td [class]="toSignedMoneyClass(s.realisedPnl)">{{ formatMoney(s.realisedPnl, pnl()?.baseCurrency || 'USD') }}</td>
+              <td [class]="toSignedMoneyClass(s.unrealisedPnl)">{{ formatMoney(s.unrealisedPnl, pnl()?.baseCurrency || 'USD') }}</td>
+              <td [class]="toSignedMoneyClass(s.totalPnl)">{{ formatMoney(s.totalPnl, pnl()?.baseCurrency || 'USD') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+</main>

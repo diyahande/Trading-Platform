@@ -37,7 +37,7 @@ public class MarketDataEventListener {
      */
     @KafkaListener(
             topics = "market-data",
-            groupId = "watchlist-service",
+            groupId = "watchlist-service-1",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void onMarketDataQuote(String message) {
