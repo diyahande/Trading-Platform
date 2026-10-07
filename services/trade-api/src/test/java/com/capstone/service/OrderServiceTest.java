@@ -48,6 +48,8 @@ class OrderServiceTest {
     private TransactionCommitHook transactionCommitHook;
     @Mock
     private FxConversionService fxConversionService;
+    @Mock
+    private AuthOrderNotificationClient authOrderNotificationClient;
 
     private OrderService orderService;
 
@@ -59,7 +61,8 @@ class OrderServiceTest {
                 instrumentService,
                 orderPlacedEventPublisher,
                 transactionCommitHook,
-                fxConversionService
+                fxConversionService,
+                authOrderNotificationClient
         );
     }
 

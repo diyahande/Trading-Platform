@@ -15,6 +15,7 @@ import com.capstone.kafka.OrderPlacedEventPublisher;
 import com.capstone.kafka.TransactionCommitHook;
 import com.capstone.mapper.OrderMapper;
 import com.capstone.service.AccountService;
+import com.capstone.service.AuthOrderNotificationClient;
 import com.capstone.service.InstrumentService;
 import com.capstone.service.OrderService;
 import com.capstone.service.FxConversionService;
@@ -63,6 +64,7 @@ class OrderPlacementCharacterisationTest {
         OrderPlacedEventPublisher orderPlacedEventPublisher = mock(OrderPlacedEventPublisher.class);
         TransactionCommitHook transactionCommitHook = mock(TransactionCommitHook.class);
         FxConversionService fxConversionService = mock(FxConversionService.class);
+        AuthOrderNotificationClient authOrderNotificationClient = mock(AuthOrderNotificationClient.class);
 
         OrderService orderService = new OrderService(
                 orderMapper,
@@ -70,7 +72,8 @@ class OrderPlacementCharacterisationTest {
                 instrumentService,
                 orderPlacedEventPublisher,
                 transactionCommitHook,
-                fxConversionService
+                fxConversionService,
+                authOrderNotificationClient
         );
         OrderController controller = new OrderController(orderService);
 
