@@ -39,7 +39,7 @@
           <td>{{ order.symbol || '--' }}</td>
           <td>{{ order.side || '--' }}</td>
           <td>{{ formatQuantity(order.quantity) }}</td>
-          <td>{{ formatPrice(order.executedPrice) }}</td>
+          <td>{{ formatPrice(order.executedPrice, order.symbol) }}</td>
           <td>
             <span class="badge" [ngClass]="statusClass(order)">{{ statusText(order) }}</span>
           </td>

@@ -2,6 +2,7 @@ package com.capstone.executor.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -16,13 +17,15 @@ import java.nio.charset.StandardCharsets;
 @Service
 public class FxConversionService {
 
-    private static final String FRANKFURTER_BASE_URL = "https://api.frankfurter.dev/v2/rates";
-
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final String frankfurterBaseUrl;
 
-    public FxConversionService(ObjectMapper objectMapper) {
+    public FxConversionService(
+            ObjectMapper objectMapper,
+            @Value("${FRANKFURTER_BASE_URL}") String frankfurterBaseUrl) {
         this.objectMapper = objectMapper;
+        this.frankfurterBaseUrl = frankfurterBaseUrl;
         this.httpClient = HttpClient.newHttpClient();
     }
 
@@ -47,7 +50,7 @@ public class FxConversionService {
 
     private BigDecimal fetchRate(String baseCurrency, String quoteCurrency) {
         try {
-            String endpoint = FRANKFURTER_BASE_URL + "?base=" + URLEncoder.encode(baseCurrency, StandardCharsets.UTF_8);
+            String endpoint = frankfurterBaseUrl + "?base=" + URLEncoder.encode(baseCurrency, StandardCharsets.UTF_8);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .GET()
