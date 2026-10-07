@@ -73,8 +73,8 @@
           <tr *ngFor="let holding of holdings()">
             <td class="symbol">{{ holding.symbol || '--' }}</td>
             <td class="quantity">{{ formatNumber(holding.quantity) }}</td>
-            <td class="price">{{ formatMoney(holding.averageCost) }}</td>
-            <td class="value">{{ formatMoney(holding.totalValue) }}</td>
+            <td class="price">{{ formatMoney(holding.averageCost, holding.symbol) }}</td>
+            <td class="value">{{ formatMoney(holding.totalValue, holding.symbol) }}</td>
           </tr>
         </tbody>
       </table>

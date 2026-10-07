@@ -8,6 +8,10 @@ import { OrderHistoryEntry } from '../../generated/api-client/model/orderHistory
 
 type BlotterStatus = 'NEW' | 'FILLED' | 'REJECTED' | 'CANCELLED' | 'UNKNOWN';
 
+const SYMBOL_SUFFIXED_TICKER = /^[A-Z][A-Z0-9]{0,12}\.[A-Z0-9]{1,6}$/;
+const SYMBOL_FX = /^FX:[A-Z]{6}$/;
+const SYMBOL_PLAIN_TICKER = /^[A-Z][A-Z0-9]{0,19}$/;
+
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 10;
 
@@ -125,14 +129,22 @@ export class Blotter implements OnInit, OnDestroy {
     }).format(date);
   }
 
-  formatPrice(value: number | undefined): string {
+  formatPrice(value: number | undefined, symbol?: string): string {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
       return '--';
     }
 
+    const currency = this.inferDisplayCurrency(symbol);
+    if (!currency) {
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+    }
+
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -324,5 +336,37 @@ export class Blotter implements OnInit, OnDestroy {
     } catch {
       return null;
     }
+  }
+
+  private inferDisplayCurrency(symbol: string | null | undefined): 'USD' | 'INR' | null {
+    const normalized = symbol?.trim().toUpperCase() ?? '';
+    if (!normalized) {
+      return 'USD';
+    }
+
+    if (SYMBOL_SUFFIXED_TICKER.test(normalized)) {
+      if (normalized.endsWith('.NS') || normalized.endsWith('.BO')) {
+        return 'INR';
+      }
+      return null;
+    }
+
+    if (SYMBOL_FX.test(normalized)) {
+      const pair = normalized.slice(3);
+      const quote = pair.slice(3);
+      if (quote === 'USD') {
+        return 'USD';
+      }
+      if (quote === 'INR') {
+        return 'INR';
+      }
+      return null;
+    }
+
+    if (SYMBOL_PLAIN_TICKER.test(normalized)) {
+      return 'USD';
+    }
+
+    return null;
   }
 }
