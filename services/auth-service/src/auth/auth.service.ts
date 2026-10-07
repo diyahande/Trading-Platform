@@ -37,6 +37,8 @@ import type { RejectSignupRequestDto } from './dto/reject-signup-request.dto';
 import type { RejectSignupRequestResponseDto } from './dto/reject-signup-request-response.dto';
 import type { RefreshRequestDto } from './dto/refresh-request.dto';
 import type { RegisterRequestDto } from './dto/register-request.dto';
+import type { OrderPlacedNotificationRequestDto } from './dto/order-placed-notification-request.dto';
+import type { OrderPlacedNotificationResponseDto } from './dto/order-placed-notification-response.dto';
 import type { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import type { TokenResponseDto } from './dto/token-response.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
@@ -423,6 +425,56 @@ export class AuthService {
     }
 
     return this.toUserResponse(user);
+  }
+
+  async sendOrderPlacedNotification(
+    request: OrderPlacedNotificationRequestDto,
+  ): Promise<OrderPlacedNotificationResponseDto> {
+    const user = await this.authRepository.findUserByAccountId(request.accountReference);
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: 'AUTH-404',
+        message: 'User not found for account reference',
+      });
+    }
+
+    let emailSent = true;
+    try {
+      await this.emailService.sendOrderPlacedConfirmationEmail(user.username, {
+        orderId: request.orderId,
+        accountReference: request.accountReference,
+        symbol: request.symbol,
+        side: request.side,
+        quantity: request.quantity,
+        limitPrice: request.limitPrice,
+        currency: request.currency,
+        status: request.status,
+        createdOn: request.createdOn,
+      });
+    } catch (error) {
+      emailSent = false;
+      this.logger.error('Order placement email failed', {
+        event: 'auth.order_notification.email_failed',
+        accountReference: request.accountReference,
+        orderId: request.orderId,
+        error,
+      });
+    }
+
+    this.logger.log('Order placement notification processed', {
+      event: 'auth.order_notification.processed',
+      accountReference: request.accountReference,
+      orderId: request.orderId,
+      recipient: user.username,
+      emailSent,
+    });
+
+    return {
+      orderId: request.orderId,
+      accountReference: request.accountReference,
+      recipient: user.username,
+      emailSent,
+    };
   }
 
   private async issueTokenPair(user: AuthUserRecord): Promise<TokenResponseDto> {

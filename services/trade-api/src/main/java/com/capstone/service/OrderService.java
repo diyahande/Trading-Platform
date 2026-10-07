@@ -42,13 +42,19 @@ public class OrderService {
     private final OrderPlacedEventPublisher orderPlacedEventPublisher;
     private final TransactionCommitHook transactionCommitHook;
     private final FxConversionService fxConversionService;
+    private final AuthOrderNotificationClient authOrderNotificationClient;
 
  
     @Transactional
     public OrderResponse placeOrderForAuthorizedAccount(PlaceOrderRequest request, String accountKey) {
-        accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
+        Account account = accountService.verifyAuthorizedAccount(request.getAccountId(), accountKey);
         Order order = placeOrder(request, request.getIdempotencyKey());
-        return mapOrderToResponse(order, request.getSymbol());
+        OrderResponse response = mapOrderToResponse(order, request.getSymbol());
+
+        // Best-effort notification. Order placement remains successful even if notification fails.
+        authOrderNotificationClient.notifyOrderPlaced(account, order, request.getSymbol());
+
+        return response;
     }
 
 

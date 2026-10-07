@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnDestroy, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 import { Auth } from '../../core/services/auth';
 import { OrderControllerService } from '../../generated/api-client/api/orderController.service';
 import { PlaceOrderRequest } from '../../generated/api-client/model/placeOrderRequest';
@@ -39,7 +40,7 @@ type UiError = {
   templateUrl: './orders.html',
   styleUrls: ['./orders.css'],
 })
-export class Orders {
+export class Orders implements OnDestroy {
   accountId = signal('');
   symbol = signal('');
   side = signal<PlaceOrderRequest.SideEnum>(PlaceOrderRequest.SideEnum.Buy);
@@ -71,6 +72,7 @@ export class Orders {
     private readonly auth: Auth,
     private readonly orderApi: OrderControllerService,
     private readonly conversion: CurrencyConversion,
+    private readonly toastr: ToastrService,
   ) {
     this.accountId.set(this.readAccountIdFromToken());
   }
@@ -138,6 +140,10 @@ export class Orders {
       this.resultPopupCode.set(returnedStatus);
       this.resultPopupDetail.set(backendMessage || null);
       this.resultPopupOpen.set(true);
+      this.toastr.success(
+        'A confirmation email will be sent to your registered address.',
+        'Order placed successfully',
+      );
     } catch (error: any) {
       const mappedError = await this.mapErrorToMessage(error);
       this.apiError.set(mappedError);
@@ -146,6 +152,7 @@ export class Orders {
       this.resultPopupCode.set(mappedError.code);
       this.resultPopupDetail.set(mappedError.detail);
       this.resultPopupOpen.set(true);
+      this.toastr.error(mappedError.message, 'Order failed');
     } finally {
       this.submitting.set(false);
     }
@@ -433,5 +440,12 @@ export class Orders {
     }
 
     return null;
+  }
+
+  ngOnDestroy(): void {
+    if (this.conversionDebounceId) {
+      clearTimeout(this.conversionDebounceId);
+      this.conversionDebounceId = null;
+    }
   }
 }

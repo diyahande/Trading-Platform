@@ -63,4 +63,68 @@ export class EmailService {
       `,
     });
   }
+
+  async sendOrderPlacedConfirmationEmail(
+    email: string,
+    details: {
+      orderId: string;
+      accountReference: string;
+      symbol: string;
+      side: 'BUY' | 'SELL';
+      quantity: number;
+      limitPrice: number;
+      currency: string;
+      status: 'NEW';
+      createdOn: string;
+    },
+  ): Promise<void> {
+    const escapedSymbol = this.escapeHtml(details.symbol);
+    const escapedSide = this.escapeHtml(details.side);
+    const escapedStatus = this.escapeHtml(details.status);
+    const escapedAccountReference = this.escapeHtml(details.accountReference);
+    const escapedCurrency = this.escapeHtml(details.currency);
+    const escapedOrderId = this.escapeHtml(`ORD-${details.orderId}`);
+
+    const submittedAt = new Date(details.createdOn);
+    const submittedAtDisplay = Number.isNaN(submittedAt.getTime())
+      ? this.escapeHtml(details.createdOn)
+      : submittedAt.toUTCString();
+
+    const limitPriceDisplay = `${details.limitPrice.toFixed(2)} ${escapedCurrency}`;
+
+    await this.transporter.sendMail({
+      from: `"Trading Platform" <${process.env.MAIL_FROM}>`,
+      to: email,
+      subject: `TradeX Order Confirmation - ${escapedOrderId}`,
+      html: `
+        <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.5; color: #1f2937;">
+          <h2 style="margin-bottom: 8px;">Order Submitted Successfully</h2>
+          <p style="margin-top: 0;">Your order has been accepted by TradeX and queued for execution.</p>
+
+          <table style="border-collapse: collapse; width: 100%; max-width: 560px; margin-top: 16px;">
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Order ID</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${escapedOrderId}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Account Reference</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${escapedAccountReference}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Symbol</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${escapedSymbol}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Side</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${escapedSide}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Quantity</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${details.quantity}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Limit Price</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${limitPriceDisplay}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Status</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${escapedStatus}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Submitted At (UTC)</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${submittedAtDisplay}</td></tr>
+          </table>
+
+          <p style="margin-top: 16px;">You can monitor this order from the TradeX order blotter.</p>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This is an automated notification from TradeX. Please do not reply to this email.</p>
+        </div>
+      `,
+    });
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 }

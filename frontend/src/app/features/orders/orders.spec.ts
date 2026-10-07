@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
+import { ToastrService } from 'ngx-toastr';
 
 import { Orders } from './orders';
 import { Auth } from '../../core/services/auth';
@@ -20,6 +21,11 @@ describe('Orders', () => {
     quoteTotalToUsd: vi.fn(),
   };
 
+  const toastrSpy = {
+    success: vi.fn(),
+    error: vi.fn(),
+  };
+
   const authStub = {
     token: makeJwt({ accountId: '1' }),
   };
@@ -27,6 +33,8 @@ describe('Orders', () => {
   beforeEach(async () => {
     orderApiSpy.placeOrder.mockReset();
     conversionSpy.quoteTotalToUsd.mockReset();
+    toastrSpy.success.mockReset();
+    toastrSpy.error.mockReset();
 
     await TestBed.configureTestingModule({
       imports: [Orders, RouterTestingModule.withRoutes([])],
@@ -34,6 +42,7 @@ describe('Orders', () => {
         { provide: Auth, useValue: authStub },
         { provide: OrderControllerService, useValue: orderApiSpy },
         { provide: CurrencyConversion, useValue: conversionSpy },
+        { provide: ToastrService, useValue: toastrSpy },
       ],
     }).compileComponents();
 
