@@ -54,7 +54,7 @@ run_sql_files() {
 
     local found=false
 
-    for file in "$directory"/*.sql; do
+    for file in "postgresql/$directory"/*.sql; do
         if [ ! -f "$file" ]; then
             continue
         fi

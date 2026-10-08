@@ -94,7 +94,7 @@
 }
 
 .profile {
-  margin-left: 8px;
+  margin-left: auto;
   position: relative;
 }
 
@@ -294,9 +294,7 @@
     justify-content: center;
   }
 
-  .profile {
-    margin-left: 0;
-  }
+
 
   .nav-links {
     width: 100%;

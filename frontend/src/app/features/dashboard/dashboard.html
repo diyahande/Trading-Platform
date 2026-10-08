@@ -42,19 +42,6 @@
         </a>
     </nav>
 
-    <button
-        type="button"
-        class="theme-toggle-nav"
-        [class.is-dark]="isDarkTheme()"
-        (click)="toggleTheme($event)"
-        role="switch"
-        [attr.aria-checked]="isDarkTheme()"
-        [attr.aria-label]="isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
-        [attr.title]="isDarkTheme() ? 'Light mode' : 'Dark mode'">
-        <span class="theme-toggle-track" aria-hidden="true">
-            <span class="theme-toggle-knob">{{ isDarkTheme() ? '☾' : '☀' }}</span>
-        </span>
-    </button>
 
     <div class="profile">
         <button
@@ -67,6 +54,7 @@
         </button>
 
         <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+            <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
             <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
             <button type="button" role="menuitem" (click)="signOut()">Logout</button>
         </div>
@@ -88,26 +76,26 @@
             <div class="summary-cards">
 
                 <div class="summary-card">
-                    <span class="card-label">Portfolio Value</span>
-                    <strong>{{ formatMoney(summary?.portfolioValue) }}</strong>
+                    <span class="card-label">Portfolio Value{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong>{{ formatMoneyWithPreference(summary?.portfolioValue) }}</strong>
                     <span class="card-change">—</span>
                 </div>
 
                 <div class="summary-card">
-                    <span class="card-label">Today's P&L</span>
-                    <strong [class]="pnlClass()">{{ formatMoney(summary?.todaysPnl) }}</strong>
+                    <span class="card-label">Today's P&L{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong [class]="pnlClass()">{{ formatMoneyWithPreference(summary?.todaysPnl) }}</strong>
                     <span class="card-change">—</span>
                 </div>
 
                 <div class="summary-card">
-                    <span class="card-label">Available Cash</span>
-                    <strong>{{ formatMoney(summary?.availableCash) }}</strong>
+                    <span class="card-label">Available Cash{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong>{{ formatMoneyWithPreference(summary?.availableCash) }}</strong>
                     <span class="card-change">—</span>
                 </div>
 
                 <div class="summary-card">
-                    <span class="card-label">Buying Power</span>
-                    <strong>{{ formatMoney(summary?.buyingPower) }}</strong>
+                    <span class="card-label">Buying Power{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong>{{ formatMoneyWithPreference(summary?.buyingPower) }}</strong>
                     <span class="card-change">—</span>
                 </div>
 

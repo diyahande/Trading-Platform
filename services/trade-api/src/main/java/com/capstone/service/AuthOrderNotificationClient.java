@@ -3,10 +3,10 @@ package com.capstone.service;
 import com.capstone.entity.Account;
 import com.capstone.entity.Order;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.math.RoundingMode;
@@ -19,12 +19,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class AuthOrderNotificationClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthOrderNotificationClient.class);
 
     private final ObjectMapper objectMapper;
+    private final CustomerPreferenceService customerPreferenceService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Value("${auth.notifications.base-url:http://localhost:3000}")
@@ -36,7 +36,25 @@ public class AuthOrderNotificationClient {
     @Value("${auth.notifications.internal-token:}")
     private String internalToken;
 
+    public AuthOrderNotificationClient(
+            ObjectMapper objectMapper,
+            @Lazy CustomerPreferenceService customerPreferenceService) {
+        this.objectMapper = objectMapper;
+        this.customerPreferenceService = customerPreferenceService;
+    }
+
     public void notifyOrderPlaced(Account account, Order order, String symbol) {
+        // Check user's email notification preference — skip if disabled
+        boolean emailEnabled = customerPreferenceService.isEmailNotificationsEnabled(account.getAccountReference());
+        if (!emailEnabled) {
+            logger.info(
+                    "Order notification skipped: email notifications disabled by user preference for accountReference={} orderId={}",
+                    account.getAccountReference(),
+                    order.getOrderId()
+            );
+            return;
+        }
+
         if (authServiceBaseUrl == null || authServiceBaseUrl.isBlank()) {
             logger.warn("Order notification skipped: auth.notifications.base-url is not configured");
             return;

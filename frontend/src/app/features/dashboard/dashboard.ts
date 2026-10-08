@@ -146,6 +146,8 @@ export class Dashboard implements OnDestroy {
   signalFetchError: string | null = null;
   showSignalCard = false;
   private previousBodyOverflow = '';
+  preferredCurrency = 'USD';
+  fxRate = 1; // rate from USD to preferredCurrency
 
   constructor(
     private route: ActivatedRoute,
@@ -169,6 +171,7 @@ export class Dashboard implements OnDestroy {
     void this.loadPortfolioAllocation();
     void this.loadStockPerformance();
     void this.loadTopMovers();
+    void this.loadPreferences();
   }
 
   signOut() {
@@ -192,6 +195,12 @@ export class Dashboard implements OnDestroy {
     this.isProfileMenuOpen = false;
     this.isNavMenuOpen = false;
     void this.router.navigate(['/change-password']);
+  }
+
+  viewPreferences(): void {
+    this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
+    void this.router.navigate(['/preferences']);
   }
 
   @HostListener('document:click', ['$event'])
@@ -240,6 +249,19 @@ export class Dashboard implements OnDestroy {
       return `${this.firstName ?? ''} ${this.lastName ?? ''}`.trim();
     }
     return this.username;
+  }
+
+  formatMoneyWithPreference(value: number | null | undefined): string {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return '—';
+    }
+    const converted = value * this.fxRate;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: this.preferredCurrency,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    }).format(converted);
   }
 
   pnlClass(): string {
@@ -735,5 +757,35 @@ export class Dashboard implements OnDestroy {
   private unlockBodyScroll(): void {
     document.body.style.overflow = this.previousBodyOverflow;
     this.previousBodyOverflow = '';
+  }
+
+  private async loadPreferences(): Promise<void> {
+    try {
+      const prefs = await firstValueFrom(
+        this.http.get<{ theme: string; currency: string; emailNotificationsEnabled: boolean }>('/api/v1/preferences')
+      );
+      if (prefs.currency && prefs.currency !== 'USD') {
+        this.preferredCurrency = prefs.currency;
+        // Fetch FX rate USD -> preferredCurrency
+        const fxResp = await firstValueFrom(
+          this.http.get<{ from: string; to: string; rate: number }>(
+            `/api/v1/preferences/fx-rate?from=USD&to=${prefs.currency}`
+          )
+        );
+        this.fxRate = fxResp.rate;
+      } else {
+        this.preferredCurrency = 'USD';
+        this.fxRate = 1;
+      }
+      // Apply persisted theme from DB on page load
+      if (prefs.theme) {
+        const normalized = prefs.theme === 'DARK' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', normalized);
+        try { localStorage.setItem('tradex-theme', normalized); } catch { /* ignore */ }
+      }
+      this.cdr.markForCheck();
+    } catch {
+      // Keep defaults on error — do not disrupt dashboard loading
+    }
   }
 }
