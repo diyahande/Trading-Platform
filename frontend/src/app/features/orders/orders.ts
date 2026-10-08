@@ -316,13 +316,11 @@ export class Orders implements OnDestroy {
     }
 
     const quantityError = this.validateQuantityField(this.quantity());
-    this.quantityFieldError.set(quantityError);
     if (quantityError) {
       return quantityError;
     }
 
     const priceError = this.validatePriceField(this.price());
-    this.priceFieldError.set(priceError);
     if (priceError) {
       return priceError;
     }
