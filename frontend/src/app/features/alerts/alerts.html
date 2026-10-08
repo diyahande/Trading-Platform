@@ -66,6 +66,7 @@
     </button>
 
     <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
       <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
       <button type="button" role="menuitem" (click)="signOut()">Logout</button>
     </div>

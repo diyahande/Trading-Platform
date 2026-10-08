@@ -70,6 +70,12 @@ export class Alerts {
     void this.router.navigate(['/change-password']);
   }
 
+  viewPreferences(): void {
+    this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
+    void this.router.navigate(['/preferences']);
+  }
+
   signOut(): void {
     this.isProfileMenuOpen = false;
     this.isNavMenuOpen = false;
