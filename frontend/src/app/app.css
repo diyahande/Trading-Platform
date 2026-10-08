@@ -1,0 +1,43 @@
+:host {
+	display: block;
+	min-height: 100dvh;
+	background: var(--bg);
+	color: var(--text-primary);
+	font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.app-shell {
+	min-height: 100dvh;
+	display: flex;
+	flex-direction: column;
+}
+
+.route-content {
+	flex: 1;
+	padding-bottom: 2.4rem;
+}
+
+.global-footer {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 0.45rem 1rem;
+	text-align: center;
+	color: var(--footer-text);
+	background: var(--footer-bg);
+	border-top: 1px solid var(--footer-border);
+	backdrop-filter: blur(10px);
+	z-index: 1100;
+}
+
+.global-footer small {
+	font-size: 0.74rem;
+	letter-spacing: 0.04em;
+}
+
+@media (max-width: 980px) {
+	.global-footer {
+		padding: 0.4rem 0.75rem;
+	}
+}

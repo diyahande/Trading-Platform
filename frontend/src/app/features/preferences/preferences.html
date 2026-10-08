@@ -1,0 +1,108 @@
+<div class="preferences-page">
+
+  <div class="preferences">
+
+    <!-- Header -->
+    <div class="preferences-header">
+      <div class="header-top">
+        <a routerLink="/dashboard" class="back-link">&larr; Back to Dashboard</a>
+      </div>
+      <h1>Preferences</h1>
+      <p>Manage your display and notification preferences.</p>
+    </div>
+
+    <!-- Error message -->
+    <div class="error" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Success message -->
+    <div class="success" *ngIf="successMessage">
+      {{ successMessage }}
+    </div>
+
+    <!-- Preferences Card -->
+    <div class="preferences-card">
+
+      <!-- Currency -->
+      <div class="preference-row">
+
+        <div class="preference-info">
+          <h2>Display Currency</h2>
+          <p>Choose the currency for displaying Portfolio Value and Available Cash on the dashboard.</p>
+        </div>
+
+        <div class="preference-control">
+          <select
+            id="currency"
+            [value]="selectedCurrency"
+            (change)="onCurrencyChange($event)"
+          >
+            <option value="USD">USD &mdash; US Dollar</option>
+            <option value="INR">INR &mdash; Indian Rupee</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Theme -->
+      <div class="preference-row">
+
+        <div class="preference-info">
+          <h2>Theme</h2>
+          <p>Choose the appearance of the application. Preview applies immediately.</p>
+        </div>
+
+        <div class="preference-control">
+          <select
+            id="theme"
+            [value]="selectedTheme"
+            (change)="onThemeChange($event)"
+          >
+            <option value="LIGHT">&#9728; Light</option>
+            <option value="DARK">&#9790; Dark</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Email Notifications -->
+      <div class="preference-row">
+
+        <div class="preference-info">
+          <h2>Email Notifications</h2>
+          <p>Receive an email confirmation when an order is placed.</p>
+        </div>
+
+        <div class="preference-control">
+
+          <label class="toggle">
+            <input
+              type="checkbox"
+              [checked]="emailNotificationsEnabled"
+              (change)="onEmailNotificationsChange($event)"
+            />
+
+            <span class="slider"></span>
+          </label>
+
+        </div>
+
+      </div>
+
+      <!-- Save Button -->
+      <div class="preferences-actions">
+        <button
+          type="button"
+          [disabled]="isSaving"
+          (click)="savePreferences()"
+        >
+          {{ isSaving ? 'Saving...' : 'Save Preferences' }}
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

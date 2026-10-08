@@ -1,0 +1,369 @@
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-mark">X</span>
+        <span>TradeX</span>
+    </div>
+
+    <button
+        class="nav-toggle"
+        type="button"
+        (click)="toggleNavMenu($event)"
+        [attr.aria-expanded]="isNavMenuOpen"
+        aria-controls="dashboard-nav"
+        aria-label="Toggle navigation menu">
+        <span aria-hidden="true">☰</span>
+    </button>
+
+    <nav class="nav-links" id="dashboard-nav" [class.open]="isNavMenuOpen">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>⌂</span>
+            Dashboard
+        </a>
+        <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>▤</span>
+            Orders
+        </a>
+
+        <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>♧</span>
+            Holdings
+        </a>
+        <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>◈</span>
+            Portfolio
+        </a>
+        <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>☆</span>
+            Blotter
+        </a>
+        <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>⚑</span>
+            Alerts
+        </a>
+    </nav>
+
+
+    <div class="profile">
+        <button
+            class="profile-trigger"
+            type="button"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="isProfileMenuOpen"
+            (click)="toggleProfileMenu($event)">
+            <div class="profile-icon" aria-hidden="true">&#128100;</div>
+        </button>
+
+        <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+            <button type="button" role="menuitem" (click)="viewProfile()">Profile</button>
+            <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
+            <button type="button" role="menuitem" (click)="viewChangePassword()">Change Password</button>
+            <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+        </div>
+    </div>
+</header>
+
+<main class="dashboard">
+
+    <section class="welcome">
+        <h1>Hello, {{ getFullName() }}</h1>
+        <p>Here's what's happening in the markets today.</p>
+        <p class="summary-error" [hidden]="!summaryError">{{ summaryError }}</p>
+    </section>
+
+    <section class="top-section">
+
+        <div class="summary-area">
+
+            <div class="summary-cards">
+
+                <div class="summary-card">
+                    <span class="card-label">Portfolio Value{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong>{{ formatMoneyWithPreference(summary?.portfolioValue) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Today's P&L{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong [class]="pnlClass()">{{ formatMoneyWithPreference(summary?.todaysPnl) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Available Cash{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong>{{ formatMoneyWithPreference(summary?.availableCash) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+                <div class="summary-card">
+                    <span class="card-label">Buying Power{{ preferredCurrency !== 'USD' ? ' (' + preferredCurrency + ')' : '' }}</span>
+                    <strong>{{ formatMoneyWithPreference(summary?.buyingPower) }}</strong>
+                    <span class="card-change">—</span>
+                </div>
+
+            </div>
+
+            <div class="market-card">
+
+                <div class="market-header">
+                    <h2>Market Performance</h2>
+
+                    <div class="market-stats" *ngIf="stockPerformance">
+                        <span class="stat">Gainers: <strong class="positive">{{ stockPerformance.statistics.gainers }}</strong></span>
+                        <span class="stat">Losers: <strong class="negative">{{ stockPerformance.statistics.losers }}</strong></span>
+                        <span class="stat">Avg: <strong [class.positive]="stockPerformance.statistics.averageChangePercent >= 0" [class.negative]="stockPerformance.statistics.averageChangePercent < 0">{{ stockPerformance.statistics.averageChangePercent | number:'1.2-2' }}%</strong></span>
+                    </div>
+
+                    <div class="error market-error" *ngIf="stockPerformanceError">
+                        {{ stockPerformanceError }}
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <div *ngFor="let stock of stockPerformance?.stocks" 
+                         class="stock-tile"
+                         (click)="onStockClick(stock)"
+                         [class.gainer]="stock.changePercent >= 0"
+                         [class.loser]="stock.changePercent < 0">
+                        <div class="stock-symbol">{{ stock.symbol }}</div>
+                        <div class="stock-price">{{ formatPriceBySymbol(stock.price, stock.symbol) }}</div>
+                        <div class="stock-change" [class]="stock.changePercent >= 0 ? 'positive' : 'negative'">
+                            {{ stock.changePercent >= 0 ? '▲' : '▼' }} {{ (stock.changePercent < 0 ? -stock.changePercent : stock.changePercent) | number:'1.2-2' }}%
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Signal Card Modal -->
+        <div class="signal-modal" *ngIf="showSignalCard" (click)="closeSignalCard()">
+            <div class="signal-modal-content" (click)="$event.stopPropagation()">
+                <button class="signal-modal-close" type="button" (click)="closeSignalCard()">✕</button>
+                <h2>{{ selectedStockSymbol }} - Trading Signal</h2>
+                <div *ngIf="signalFetchError" class="signal-fetch-error">{{ signalFetchError }}</div>
+                <app-signal-card
+                    *ngIf="selectedStockSymbol && !signalFetchError"
+                    [symbol]="selectedStockSymbol"
+                    [prefetchedSignal]="selectedSignalPayload"></app-signal-card>
+                <div class="signal-actions" *ngIf="selectedStockSymbol">
+                    <button type="button" class="signal-action buy" (click)="placeOrderFromSignal('BUY')">BUY</button>
+                    <button type="button" class="signal-action sell" (click)="placeOrderFromSignal('SELL')">SELL</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="watchlist card">
+
+            <div class="section-header">
+                <h2>Watchlist</h2>
+                <a routerLink="/alerts">Manage alerts</a>
+            </div>
+
+            <div class="watchlist-controls">
+                <input
+                    type="text"
+                    [value]="newWatchlistSymbol"
+                    (input)="newWatchlistSymbol = $any($event.target).value"
+                    (keyup.enter)="addToWatchlist()"
+                    maxlength="20"
+                    placeholder="Symbol (e.g. INFY.NS)" />
+                <button type="button" (click)="addToWatchlist()" [disabled]="watchlistSubmitting">
+                    {{ watchlistSubmitting ? 'Adding...' : 'Add' }}
+                </button>
+            </div>
+
+            <div class="watchlist-heading">
+                <span>Symbol</span>
+                <span>Last Price</span>
+                <span>Change</span>
+            </div>
+
+            <div *ngIf="watchlistError" class="watchlist-error">
+                {{ watchlistError }}
+            </div>
+
+            <div *ngIf="watchlistActionError" class="watchlist-error">
+                {{ watchlistActionError }}
+            </div>
+
+            <div *ngIf="!watchlistError && watchlist.length === 0" class="watchlist-empty">
+                No watchlist items
+            </div>
+
+            <ng-container *ngFor="let item of watchlist">
+                <div class="stock-row">
+                    <div class="watchlist-item-main">
+                        <div>
+                            <strong>{{ item.symbol }}</strong>
+                            <small>{{ item.displayName }}</small>
+                        </div>
+                        <button
+                            type="button"
+                            class="watchlist-remove"
+                            (click)="removeFromWatchlist(item.watchlistId)"
+                            [disabled]="removingWatchlistId === item.watchlistId">
+                            {{ removingWatchlistId === item.watchlistId ? '...' : 'Remove' }}
+                        </button>
+                    </div>
+                    <span>{{ formatWatchlistPrice(item.currentPrice, item.symbol) }}</span>
+                    <span [class]="changeClass(item.changePercent)">{{ formatChangePercent(item.changePercent) }}</span>
+                </div>
+            </ng-container>
+
+        </div>
+
+    </section>
+
+    <section class="bottom-section">
+
+        <div class="movers card">
+
+            <div class="section-header">
+                <h2>Top Movers</h2>
+            </div>
+
+            <div class="mover-tabs">
+                <button 
+                    [class.selected]="topMoversTab === 'gainers'"
+                    (click)="selectTopMoversTab('gainers')">
+                    Gainers
+                </button>
+                <button 
+                    [class.selected]="topMoversTab === 'losers'"
+                    (click)="selectTopMoversTab('losers')">
+                    Losers
+                </button>
+            </div>
+
+            <div *ngIf="topMoversError" class="top-movers-error">
+                {{ topMoversError }}
+            </div>
+
+            <div *ngIf="!topMoversError && getTopMovers().length === 0" class="top-movers-empty">
+                No movers data available
+            </div>
+
+            <div class="movers-heading">
+                <span>Symbol</span>
+                <span>Last Price</span>
+                <span>Change</span>
+            </div>
+
+            <div *ngFor="let mover of getTopMovers()" class="mover-row">
+                <div>
+                    <strong>{{ mover.symbol }}</strong>
+                    <small>{{ mover.displayName }}</small>
+                </div>
+                <span>{{ formatPriceBySymbol(mover.price, mover.symbol) }}</span>
+                <span [ngClass]="getTopMoverChangeClass(mover.changePercent)">
+                    {{ mover.changePercent >= 0 ? '▲' : '▼' }} {{ (mover.changePercent < 0 ? -mover.changePercent : mover.changePercent) | number:'1.2-2' }}%
+                </span>
+            </div>
+
+        </div>
+
+        <div class="allocation card">
+
+            <div class="section-header">
+                <h2>Portfolio Allocation</h2>
+            </div>
+
+            <div *ngIf="portfolioAllocationError" class="allocation-error">
+                {{ portfolioAllocationError }}
+            </div>
+
+            <div *ngIf="!portfolioAllocationError && portfolioAllocation" class="allocation-content">
+
+                <div class="donut" [style.background]="getDonutGradient()">
+                    <div class="donut-center">
+                        <div *ngIf="hoveredAssetClass" class="donut-hover">
+                            <span>{{ hoveredAssetValueInMoney | currency:'USD':'symbol':'1.0-2' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="allocation-legend">
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['EQUITY']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('EQUITY')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot stocks"></span>
+                        <span>Stocks</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['EQUITY'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['ETF']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('ETF')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot etfs"></span>
+                        <span>ETFs</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['ETF'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CRYPTO']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('CRYPTO')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot crypto"></span>
+                        <span>Crypto</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CRYPTO'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['CASH']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('CASH')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot cash"></span>
+                        <span>Cash</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['CASH'] }}%</strong>
+                    </div>
+
+                    <div *ngIf="portfolioAllocation?.allocationByAssetClass?.['FOREX']"
+                         class="legend-item"
+                         (mouseenter)="onAssetHover('FOREX')"
+                         (mouseleave)="onAssetLeave()">
+                        <span class="legend-dot forex"></span>
+                        <span>Forex</span>
+                        <strong>{{ portfolioAllocation?.allocationByAssetClass?.['FOREX'] }}%</strong>
+                    </div>
+                </div>
+
+            </div>
+
+            <div *ngIf="!portfolioAllocationError && !portfolioAllocation" class="allocation-empty">
+                Loading portfolio allocation...
+            </div>
+
+        </div>
+
+        <div class="activity card">
+
+            <div class="section-header">
+                <h2>Recent Activity</h2>
+                <a href="#">View all</a>
+            </div>
+
+            <div *ngIf="recentActivityError" class="activity-error">
+                {{ recentActivityError }}
+            </div>
+
+            <div *ngIf="!recentActivityError && recentActivity.length === 0" class="activity-empty">
+                No recent activity
+            </div>
+
+            <div *ngFor="let activity of recentActivity" class="activity-row">
+                <div [class]="'activity-icon ' + getActivityIcon(activity)">{{ getActivityIconSymbol(activity) }}</div>
+                <div>
+                    <strong>{{ getActivityDescription(activity) }}</strong>
+                    <small>{{ getRelativeTime(activity.createdOn) }}</small>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+<app-ai-chat />

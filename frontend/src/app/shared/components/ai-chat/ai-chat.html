@@ -1,0 +1,55 @@
+<button type="button" class="chat-launcher" (click)="toggleOpen()" aria-label="Open AI chat">
+  <span class="chat-launcher-icon">✦</span>
+  <span class="chat-launcher-label">AI Chat</span>
+</button>
+
+<section class="chat-window" *ngIf="isOpen" [class.expanded]="isExpanded">
+  <header class="chat-header">
+    <h3>AI Assistant</h3>
+    <div class="header-actions">
+      <button
+        type="button"
+        class="expand-button"
+        (click)="toggleExpanded()"
+        [attr.aria-label]="isExpanded ? 'Collapse AI chat' : 'Expand AI chat'"
+        [title]="isExpanded ? 'Collapse' : 'Expand'"
+      >
+        {{ isExpanded ? '⟷' : '⟷' }}
+      </button>
+      <button type="button" class="close-button" (click)="toggleOpen()" aria-label="Close AI chat">×</button>
+    </div>
+  </header>
+
+  <div class="chat-body" *ngIf="messages.length > 0; else emptyState">
+    <div
+      *ngFor="let message of messages; trackBy: trackByMessage"
+      class="message"
+      [class.user]="message.role === 'user'"
+      [class.assistant]="message.role === 'assistant'"
+    >
+      <p [innerHTML]="formatMessageContent(message.content)"></p>
+    </div>
+  </div>
+
+  <ng-template #emptyState>
+    <div class="empty-state">
+      Ask anything and I will help.
+    </div>
+  </ng-template>
+
+  <p class="chat-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <form class="chat-form" (ngSubmit)="send()">
+    <input
+      type="text"
+      [(ngModel)]="draft"
+      name="chatInput"
+      maxlength="1000"
+      autocomplete="off"
+      placeholder="Type your message"
+    />
+    <button type="submit" class="send-button" [disabled]="isSending || !draft.trim()" [attr.aria-label]="isSending ? 'Sending message' : 'Send message'" [title]="isSending ? 'Sending...' : 'Send'">
+      {{ isSending ? '...' : '➤' }}
+    </button>
+  </form>
+</section>
