@@ -1,0 +1,335 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 8% -12%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%),
+    var(--bg);
+  color: var(--text-primary);
+}
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 64px;
+  padding: 0 clamp(14px, 3vw, 40px);
+  border-bottom: 1px solid var(--navbar-border);
+  background: var(--navbar-bg);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  min-width: 155px;
+}
+
+.logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.04rem;
+  color: var(--button-primary-text);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #ffffff));
+}
+
+.nav-toggle {
+  display: none;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.nav-item {
+  position: relative;
+  height: 100%;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.nav-item.active {
+  color: var(--text-primary);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.theme-toggle-nav {
+  margin-left: auto;
+}
+
+.profile {
+  margin-left: auto;
+  position: relative;
+}
+
+.profile-trigger {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.profile-menu button {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  padding: 11px 12px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.alerts-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: clamp(18px, 2.5vw, 30px);
+}
+
+.alerts-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.alerts-head h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+}
+
+.alerts-head p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+}
+
+.alert-card {
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.alert-card-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.alert-card-head p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.alert-create-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 120px auto;
+  gap: 8px;
+}
+
+.alert-create-row input,
+.alert-create-row select {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.84rem;
+}
+
+.alert-add,
+.alert-remove {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alert-add {
+  background: color-mix(in srgb, var(--accent) 13%, var(--surface-secondary));
+  color: var(--text-primary);
+}
+
+.alert-remove {
+  background: transparent;
+  color: var(--negative);
+}
+
+.alert-add:disabled,
+.alert-remove:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.watchlist-alert-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.watchlist-alert-row strong {
+  font-size: 0.9rem;
+}
+
+.watchlist-alert-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.watchlist-alert-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+}
+
+.alert-status-active {
+  color: var(--positive);
+}
+
+.alert-status-triggered {
+  color: var(--accent);
+}
+
+.alert-status-deactivated {
+  color: var(--text-muted);
+}
+
+.alert-status-failed {
+  color: var(--negative);
+}
+
+.watchlist-error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--negative) 30%, var(--border));
+  color: var(--negative);
+  background: color-mix(in srgb, var(--negative) 10%, transparent);
+  font-size: 0.88rem;
+}
+
+.empty-state {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 720px) {
+  .navbar {
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-top: 11px;
+    padding-bottom: 11px;
+    gap: 10px;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+
+
+  .nav-links {
+    width: 100%;
+    order: 4;
+    display: none;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    height: auto;
+    gap: 4px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  .nav-item {
+    height: 42px;
+    border-radius: 9px;
+    justify-content: flex-start;
+  }
+
+  .nav-item.active {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+
+  .alerts-head {
+    flex-direction: column;
+  }
+
+  .alert-create-row,
+  .watchlist-alert-row {
+    grid-template-columns: 1fr;
+  }
+}

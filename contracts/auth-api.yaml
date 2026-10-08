@@ -395,6 +395,19 @@ components:
           items:
             $ref: '#/components/schemas/Role'
           example: [CUSTOMER]
+        firstName:
+          type: string
+          example: Priya
+        lastName:
+          type: string
+          example: Menon
+        phone:
+          type: string
+          example: '+919900001234'
+        dob:
+          type: string
+          format: date
+          example: '1996-06-15'
         createdOn:
           type: string
           format: date-time

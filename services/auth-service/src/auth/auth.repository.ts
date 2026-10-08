@@ -29,9 +29,13 @@ export class AuthRepository implements OnModuleDestroy {
 
   async findUserByUsername(username: string): Promise<AuthUserRecord | null> {
     const result = await this.pool.query<UserRow>(
-      `SELECT id, username, password_hash, account_reference, roles, created_on
-       FROM auth_users
-       WHERE username = $1`,
+      `SELECT au.id, au.username, au.password_hash, au.account_reference, au.roles, au.created_on,
+             asr.first_name, asr.last_name, asr.phone, asr.dob
+       FROM auth_users au
+       LEFT JOIN auth_signup_requests asr
+         ON asr.approved_auth_user_id = au.id
+        AND asr.status = 'APPROVED'
+       WHERE au.username = $1`,
       [username],
     );
 
@@ -40,9 +44,13 @@ export class AuthRepository implements OnModuleDestroy {
 
   async findUserById(id: string): Promise<AuthUserRecord | null> {
     const result = await this.pool.query<UserRow>(
-      `SELECT id, username, password_hash, account_reference, roles, created_on
-       FROM auth_users
-       WHERE id = $1`,
+      `SELECT au.id, au.username, au.password_hash, au.account_reference, au.roles, au.created_on,
+             asr.first_name, asr.last_name, asr.phone, asr.dob
+       FROM auth_users au
+       LEFT JOIN auth_signup_requests asr
+         ON asr.approved_auth_user_id = au.id
+        AND asr.status = 'APPROVED'
+       WHERE au.id = $1`,
       [id],
     );
 
@@ -51,9 +59,13 @@ export class AuthRepository implements OnModuleDestroy {
 
   async findUserByAccountId(accountId: string): Promise<AuthUserRecord | null> {
     const result = await this.pool.query<UserRow>(
-      `SELECT id, username, password_hash, account_reference, roles, created_on
-       FROM auth_users
-       WHERE account_reference = $1`,
+      `SELECT au.id, au.username, au.password_hash, au.account_reference, au.roles, au.created_on,
+             asr.first_name, asr.last_name, asr.phone, asr.dob
+       FROM auth_users au
+       LEFT JOIN auth_signup_requests asr
+         ON asr.approved_auth_user_id = au.id
+        AND asr.status = 'APPROVED'
+       WHERE au.account_reference = $1`,
       [accountId],
     );
 
@@ -300,6 +312,10 @@ export class AuthRepository implements OnModuleDestroy {
       passwordHash: row.password_hash,
       accountId: row.account_reference,
       roles: row.roles,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      phone: row.phone,
+      dob: row.dob,
       createdOn: row.created_on,
     };
   }
@@ -336,6 +352,10 @@ interface UserRow {
   account_reference: string;
   roles: Role[];
   created_on: Date;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  dob?: Date;
 }
 
 interface RefreshRow {

@@ -4,23 +4,41 @@
         <span>TradeX</span>
     </div>
 
-    <nav class="nav-links">
-        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen()"
+    aria-controls="holdings-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="holdings-nav" [class.open]="isNavMenuOpen()">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen.set(false)">
             <span>⌂</span>
             Dashboard
         </a>
-        <a routerLink="/orders" routerLinkActive="active" class="nav-item">
+        <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
             <span>▤</span>
             Orders
         </a>
 
-        <a routerLink="/holdings" routerLinkActive="active" class="nav-item">
+        <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
             <span>♧</span>
             Holdings
         </a>
-        <a routerLink="/blotter" routerLinkActive="active" class="nav-item">
+        <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+          <span>◈</span>
+          Portfolio
+        </a>
+        <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
             <span>☆</span>
             Blotter
+        </a>
+        <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+          <span>⚑</span>
+          Alerts
         </a>
     </nav>
 
@@ -35,7 +53,9 @@
         </button>
 
         <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
-            <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+            <button type="button" role="menuitem" (click)="viewProfile()">Profile</button>
+            <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
+            <button type="button" role="menuitem" (click)="viewChangePassword()">Change Password</button>
             <button type="button" role="menuitem" (click)="signOut()">Logout</button>
         </div>
     </div>
@@ -73,8 +93,8 @@
           <tr *ngFor="let holding of holdings()">
             <td class="symbol">{{ holding.symbol || '--' }}</td>
             <td class="quantity">{{ formatNumber(holding.quantity) }}</td>
-            <td class="price">{{ formatMoney(holding.averageCost) }}</td>
-            <td class="value">{{ formatMoney(holding.totalValue) }}</td>
+            <td class="price">{{ formatMoney(holding.averageCost, holding.symbol) }}</td>
+            <td class="value">{{ formatMoney(holding.totalValue, holding.symbol) }}</td>
           </tr>
         </tbody>
       </table>

@@ -17,6 +17,10 @@ export interface AuthUserRecord {
   passwordHash: string;
   accountId: string;
   roles: Role[];
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  dob?: Date;
   createdOn: Date;
 }
 

@@ -1,12 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, ElementRef, HostListener, OnDestroy, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 import { Auth } from '../../core/services/auth';
 import { OrderControllerService } from '../../generated/api-client/api/orderController.service';
 import { PlaceOrderRequest } from '../../generated/api-client/model/placeOrderRequest';
 import { CurrencyConversion, QuoteToUsdEstimate } from '../../core/services/currency-conversion';
+import { AccountControllerService } from '../../generated/api-client/api/accountController.service';
+import { PositionResponse } from '../../generated/api-client/model/positionResponse';
 
 type TradeCurrency = 'USD' | 'INR' | 'UNKNOWN';
 
@@ -14,6 +18,7 @@ const SYMBOL_PLAIN_TICKER = /^[A-Z][A-Z0-9]{0,19}$/;
 const SYMBOL_SUFFIXED_TICKER = /^[A-Z][A-Z0-9]{0,12}\.[A-Z0-9]{1,6}$/;
 const SYMBOL_FX = /^FX:[A-Z]{6}$/;
 const SYMBOL_CRYPTO = /^X:[A-Z0-9]{2,15}$/;
+const SYMBOL_CRYPTO_DASH = /^[A-Z0-9]{2,15}-[A-Z]{3,6}$/;
 
 const ORDER_ERROR_MESSAGES: Record<string, string> = {
   'ACC-404': 'The account could not be found.',
@@ -32,19 +37,40 @@ type UiError = {
   detail: string | null;
 };
 
+type SignalQuoteResponse = {
+  metrics?: {
+    price?: number;
+  } | null;
+};
+
+type MarketPerformanceVisualizationResponse = {
+  stocks?: Array<{
+    symbol: string;
+    price: number;
+  }>;
+};
+
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive],
   templateUrl: './orders.html',
   styleUrls: ['./orders.css'],
 })
-export class Orders {
+export class Orders implements OnDestroy {
+  private static readonly DEFAULT_MAX_QUANTITY = 100;
+
   accountId = signal('');
   symbol = signal('');
   side = signal<PlaceOrderRequest.SideEnum>(PlaceOrderRequest.SideEnum.Buy);
-  quantity = signal('');
+  quantity = signal(1);
   price = signal('');
+  marketPrice = signal<number | null>(null);
+  instrumentDisplayName = signal<string | null>(null);
+  availableCash = signal<number | null>(null);
+  availableHoldingQuantity = signal<number | null>(null);
+  positionLoading = signal(false);
+  balanceLoading = signal(false);
 
   submitting = signal(false);
   validationMessage = signal<string | null>(null);
@@ -55,6 +81,8 @@ export class Orders {
   resultPopupMessage = signal('');
   resultPopupCode = signal<string | null>(null);
   resultPopupDetail = signal<string | null>(null);
+  isProfileMenuOpen = signal(false);
+  isNavMenuOpen = signal(false);
 
   quantityFieldError = signal<string | null>(null);
   priceFieldError = signal<string | null>(null);
@@ -64,27 +92,120 @@ export class Orders {
   usdEstimate = signal<QuoteToUsdEstimate | null>(null);
 
   readonly tradeCurrency = computed<TradeCurrency>(() => this.inferTradeCurrency(this.symbol().trim().toUpperCase()));
+  readonly sideLabel = computed(() => this.side() === PlaceOrderRequest.SideEnum.Buy ? 'BUY' : 'SELL');
+  readonly submitLabel = computed(() =>
+    this.submitting()
+      ? 'Placing order...'
+      : `PLACE ${this.side() === PlaceOrderRequest.SideEnum.Buy ? 'BUY' : 'SELL'} ORDER`
+  );
+  readonly orderIntentHint = computed(() =>
+    this.side() === PlaceOrderRequest.SideEnum.Buy
+      ? 'Buy orders attempt to execute at the limit price or better.'
+      : 'Sell orders attempt to execute at the limit price or better for you as the seller.'
+  );
+  readonly isSubmitDisabled = computed(() => this.submitting() || !!this.validateOrder());
 
   private conversionDebounceId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly auth: Auth,
     private readonly orderApi: OrderControllerService,
+    private readonly http: HttpClient,
+    private readonly accountApi: AccountControllerService,
     private readonly conversion: CurrencyConversion,
+    private readonly toastr: ToastrService,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {
     this.accountId.set(this.readAccountIdFromToken());
+    this.applyRoutePrefill();
+    void this.loadPositionForSymbol();
+    void this.loadBalance();
+    void this.loadMarketPriceFromSignal();
+  }
+
+  toggleNavMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isNavMenuOpen.set(!this.isNavMenuOpen());
+  }
+
+  toggleProfileMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isProfileMenuOpen.set(!this.isProfileMenuOpen());
+  }
+
+  viewProfile(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/profile']);
+  }
+
+  viewPreferences(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/preferences']);
+  }
+
+  viewChangePassword(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
+  }
+
+  signOut(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    this.auth.signOut();
+    void this.router.navigate(['/login']);
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isProfileMenuOpen() && !this.isNavMenuOpen()) {
+      return;
+    }
+
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen.set(false);
+      this.isNavMenuOpen.set(false);
+    }
   }
 
   onSymbolInput(value: string): void {
     this.clearUiMessages();
-    this.symbol.set(value.toUpperCase());
+    this.symbol.set(value.toUpperCase().trim());
+    this.marketPrice.set(null);
+    this.instrumentDisplayName.set(null);
+    this.availableHoldingQuantity.set(null);
+    void this.loadPositionForSymbol();
+    void this.loadMarketPriceFromSignal();
     this.scheduleUsdEstimateRefresh();
   }
 
-  onQuantityInput(value: string): void {
+  onQuantityInput(value: string | number | null | undefined): void {
     this.clearUiMessages();
-    this.quantity.set(value);
-    this.quantityFieldError.set(this.validateQuantityField(value));
+    const parsed = this.parseQuantity(value);
+    this.quantity.set(parsed);
+    this.quantityFieldError.set(this.validateQuantityField(parsed));
     this.scheduleUsdEstimateRefresh();
   }
 
@@ -98,6 +219,7 @@ export class Orders {
   onSideInput(value: PlaceOrderRequest.SideEnum): void {
     this.clearUiMessages();
     this.side.set(value);
+    this.quantityFieldError.set(this.validateQuantityField(this.quantity()));
   }
 
   async submit(): Promise<void> {
@@ -113,7 +235,7 @@ export class Orders {
 
     const accountId = this.accountId().trim();
     const symbol = this.symbol().trim().toUpperCase();
-    const quantity = Number(this.quantity());
+    const quantity = this.quantity();
     const price = Number(this.price());
 
     this.submitting.set(true);
@@ -138,6 +260,30 @@ export class Orders {
       this.resultPopupCode.set(returnedStatus);
       this.resultPopupDetail.set(backendMessage || null);
       this.resultPopupOpen.set(true);
+
+      let emailEnabled = true;
+      try {
+        const prefs = await firstValueFrom(
+          this.http.get<{ emailNotificationsEnabled?: boolean }>('/api/v1/preferences')
+        );
+        if (prefs?.emailNotificationsEnabled !== undefined) {
+          emailEnabled = prefs.emailNotificationsEnabled;
+        }
+      } catch (err) {
+        // silently fallback to true if preferences fetch fails
+      }
+
+      if (emailEnabled) {
+        this.toastr.success(
+          'A confirmation email will be sent to your registered address.',
+          'Order placed successfully',
+        );
+      } else {
+        this.toastr.success(
+          'Your order has been recorded.',
+          'Order placed successfully',
+        );
+      }
     } catch (error: any) {
       const mappedError = await this.mapErrorToMessage(error);
       this.apiError.set(mappedError);
@@ -146,6 +292,7 @@ export class Orders {
       this.resultPopupCode.set(mappedError.code);
       this.resultPopupDetail.set(mappedError.detail);
       this.resultPopupOpen.set(true);
+      this.toastr.error(mappedError.message, 'Order failed');
     } finally {
       this.submitting.set(false);
     }
@@ -164,12 +311,25 @@ export class Orders {
     }).format(value);
   }
 
+  getCurrentMarketPriceText(): string {
+    const livePrice = this.marketPrice();
+    if (typeof livePrice === 'number' && Number.isFinite(livePrice) && livePrice > 0) {
+      return this.formatMoney(livePrice);
+    }
+    return 'Unavailable';
+  }
+
+  hasCurrentMarketPrice(): boolean {
+    const livePrice = this.marketPrice();
+    return typeof livePrice === 'number' && Number.isFinite(livePrice) && livePrice > 0;
+  }
+
   estimateVisible(): boolean {
     return this.tradeCurrency() !== 'USD' && this.tradeCurrency() !== 'UNKNOWN' && this.orderTotal() > 0;
   }
 
   orderTotal(): number {
-    const qty = Number(this.quantity());
+    const qty = this.quantity();
     const px = Number(this.price());
     if (!Number.isFinite(qty) || !Number.isFinite(px)) {
       return 0;
@@ -188,18 +348,173 @@ export class Orders {
     }
 
     const quantityError = this.validateQuantityField(this.quantity());
-    this.quantityFieldError.set(quantityError);
     if (quantityError) {
       return quantityError;
     }
 
     const priceError = this.validatePriceField(this.price());
-    this.priceFieldError.set(priceError);
     if (priceError) {
       return priceError;
     }
 
     return null;
+  }
+
+  private applyRoutePrefill(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const symbol = (params.get('symbol') ?? '').trim().toUpperCase();
+    const side = (params.get('side') ?? '').trim().toUpperCase();
+    const marketPriceRaw = (params.get('marketPrice') ?? '').trim();
+
+    if (this.isSupportedSymbolShape(symbol)) {
+      this.symbol.set(symbol);
+    }
+
+    if (side === PlaceOrderRequest.SideEnum.Buy || side === PlaceOrderRequest.SideEnum.Sell) {
+      this.side.set(side as PlaceOrderRequest.SideEnum);
+    }
+
+    const marketPrice = Number(marketPriceRaw);
+    if (Number.isFinite(marketPrice) && marketPrice > 0) {
+      const rounded = Number(marketPrice.toFixed(2));
+      this.marketPrice.set(rounded);
+      this.price.set(rounded.toFixed(2));
+    }
+  }
+
+  private async loadPositionForSymbol(): Promise<void> {
+    const accountRef = this.accountId().trim();
+    const symbol = this.symbol().trim().toUpperCase();
+    if (!accountRef || !symbol) {
+      this.availableHoldingQuantity.set(null);
+      this.instrumentDisplayName.set(null);
+      return;
+    }
+
+    this.positionLoading.set(true);
+    try {
+      const response = await firstValueFrom(this.accountApi.getPositions(accountRef));
+      const positions = this.normalizePositionsResponse(response);
+      const match = positions.find((position) =>
+        (position.symbol ?? '').trim().toUpperCase() === symbol
+      );
+
+      if (!match) {
+        // Treat missing symbol as unknown on the client side and let backend enforce SELL constraints.
+        this.availableHoldingQuantity.set(null);
+        this.instrumentDisplayName.set(null);
+      } else {
+        const quantity = Number(match.quantity ?? 0);
+        const holdingQty = Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : 0;
+        this.availableHoldingQuantity.set(holdingQty);
+        this.instrumentDisplayName.set(match.symbol ?? null);
+      }
+    } catch {
+      this.availableHoldingQuantity.set(null);
+      this.instrumentDisplayName.set(null);
+    } finally {
+      this.positionLoading.set(false);
+      this.quantityFieldError.set(this.validateQuantityField(this.quantity()));
+    }
+  }
+
+  private async loadBalance(): Promise<void> {
+    const accountRef = this.accountId().trim();
+    if (!accountRef) {
+      return;
+    }
+
+    this.balanceLoading.set(true);
+    try {
+      const response = await firstValueFrom(this.accountApi.getBalance(accountRef));
+      const cash = Number(response.cashBalance);
+      this.availableCash.set(Number.isFinite(cash) ? cash : null);
+    } catch {
+      this.availableCash.set(null);
+    } finally {
+      this.balanceLoading.set(false);
+      this.quantityFieldError.set(this.validateQuantityField(this.quantity()));
+    }
+  }
+
+  private async loadMarketPriceFromSignal(): Promise<void> {
+    const symbol = this.symbol().trim().toUpperCase();
+    if (!symbol) {
+      this.marketPrice.set(null);
+      return;
+    }
+
+    if (this.marketPrice() !== null) {
+      return;
+    }
+
+    try {
+      const signal = await firstValueFrom(
+        this.http.get<SignalQuoteResponse>(`/api/v1/signals/${encodeURIComponent(symbol)}`)
+      );
+      const signalPrice = Number(signal?.metrics?.price);
+      if (Number.isFinite(signalPrice) && signalPrice > 0) {
+        const rounded = Number(signalPrice.toFixed(2));
+        this.marketPrice.set(rounded);
+        if (!this.price().trim()) {
+          this.price.set(rounded.toFixed(2));
+        }
+        return;
+      }
+
+      await this.loadMarketPriceFromMarketPerformance(symbol);
+    } catch {
+      await this.loadMarketPriceFromMarketPerformance(symbol);
+    }
+  }
+
+  private async loadMarketPriceFromMarketPerformance(symbol: string): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<MarketPerformanceVisualizationResponse>('/api/market-performance/visualization')
+      );
+
+      const stock = (response?.stocks ?? []).find((item) =>
+        (item.symbol ?? '').toUpperCase() === symbol
+      );
+
+      const stockPrice = Number(stock?.price);
+      if (Number.isFinite(stockPrice) && stockPrice > 0) {
+        const rounded = Number(stockPrice.toFixed(2));
+        this.marketPrice.set(rounded);
+        if (!this.price().trim()) {
+          this.price.set(rounded.toFixed(2));
+        }
+      } else {
+        this.marketPrice.set(null);
+      }
+    } catch {
+      this.marketPrice.set(null);
+    }
+  }
+
+  private parseQuantity(value: string | number | null | undefined): number {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? Math.floor(value) : 0;
+    }
+
+    if (typeof value !== 'string') {
+      return 0;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return 0;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      return 0;
+    }
+    return Math.floor(parsed);
   }
 
   private isSupportedSymbolShape(symbol: string): boolean {
@@ -210,7 +525,8 @@ export class Orders {
       SYMBOL_PLAIN_TICKER.test(symbol) ||
       SYMBOL_SUFFIXED_TICKER.test(symbol) ||
       SYMBOL_FX.test(symbol) ||
-      SYMBOL_CRYPTO.test(symbol)
+      SYMBOL_CRYPTO.test(symbol) ||
+      SYMBOL_CRYPTO_DASH.test(symbol)
     );
   }
 
@@ -240,6 +556,17 @@ export class Orders {
 
     if (SYMBOL_PLAIN_TICKER.test(symbol)) {
       return 'USD';
+    }
+
+    if (SYMBOL_CRYPTO_DASH.test(symbol)) {
+      const quote = symbol.split('-')[1];
+      if (quote === 'USD') {
+        return 'USD';
+      }
+      if (quote === 'INR') {
+        return 'INR';
+      }
+      return 'UNKNOWN';
     }
 
     return 'UNKNOWN';
@@ -399,19 +726,63 @@ export class Orders {
     this.successMessage.set(null);
   }
 
-  private validateQuantityField(rawValue: string): string | null {
-    const quantityRaw = rawValue.trim();
-    if (!quantityRaw) {
-      return null;
+  private normalizePositionsResponse(response: unknown): PositionResponse[] {
+    if (!response) {
+      return [];
     }
 
-    if (!/^\d+$/.test(quantityRaw)) {
+    if (Array.isArray(response)) {
+      return response as PositionResponse[];
+    }
+
+    if (response instanceof Blob) {
+      return [];
+    }
+
+    if (typeof response === 'string') {
+      try {
+        const parsed = JSON.parse(response);
+        return this.normalizePositionsResponse(parsed);
+      } catch {
+        return [];
+      }
+    }
+
+    if (typeof response === 'object') {
+      const record = response as Record<string, unknown>;
+      const wrappedKeys = ['positions', 'items', 'data', 'content', 'results', 'payload', 'body'];
+      for (const key of wrappedKeys) {
+        const candidate = record[key];
+        if (Array.isArray(candidate)) {
+          return candidate as PositionResponse[];
+        }
+      }
+    }
+
+    return [];
+  }
+
+  private validateQuantityField(quantityValue: number): string | null {
+    if (!Number.isInteger(quantityValue) || quantityValue < 1) {
       return 'Quantity must be a whole number greater than zero.';
     }
 
-    const quantityValue = Number(quantityRaw);
-    if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
-      return 'Quantity must be a whole number greater than zero.';
+    if (this.side() === PlaceOrderRequest.SideEnum.Sell) {
+      const holdingQty = this.availableHoldingQuantity();
+      if (typeof holdingQty === 'number' && holdingQty > 0 && quantityValue > holdingQty) {
+        return `Quantity cannot exceed available holdings (${holdingQty}).`;
+      }
+    }
+
+    if (this.side() === PlaceOrderRequest.SideEnum.Buy) {
+      const cash = this.availableCash();
+      const px = Number(this.price());
+      if (typeof cash === 'number' && Number.isFinite(px) && px > 0) {
+        const total = Number((quantityValue * px).toFixed(2));
+        if (total > cash) {
+          return 'Quantity exceeds available cash for this limit price.';
+        }
+      }
     }
 
     return null;
@@ -433,5 +804,12 @@ export class Orders {
     }
 
     return null;
+  }
+
+  ngOnDestroy(): void {
+    if (this.conversionDebounceId) {
+      clearTimeout(this.conversionDebounceId);
+      this.conversionDebounceId = null;
+    }
   }
 }

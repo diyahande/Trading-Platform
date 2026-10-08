@@ -1,12 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { OrderControllerService } from '../../generated/api-client/api/orderController.service';
 import { OrderHistoryEntry } from '../../generated/api-client/model/orderHistoryEntry';
 
 type BlotterStatus = 'NEW' | 'FILLED' | 'REJECTED' | 'CANCELLED' | 'UNKNOWN';
+
+const SYMBOL_SUFFIXED_TICKER = /^[A-Z][A-Z0-9]{0,12}\.[A-Z0-9]{1,6}$/;
+const SYMBOL_FX = /^FX:[A-Z]{6}$/;
+const SYMBOL_PLAIN_TICKER = /^[A-Z][A-Z0-9]{0,19}$/;
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 10;
@@ -21,7 +25,7 @@ const BLOTTER_ERROR_MESSAGES: Record<string, string> = {
 @Component({
   selector: 'app-blotter',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './blotter.html',
   styleUrl: './blotter.css',
 })
@@ -31,6 +35,8 @@ export class Blotter implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly workingMessage = signal<string | null>(null);
+  readonly isProfileMenuOpen = signal(false);
+  readonly isNavMenuOpen = signal(false);
 
   private pollTimerId: ReturnType<typeof setTimeout> | null = null;
   private pollAttempts = 0;
@@ -38,6 +44,8 @@ export class Blotter implements OnInit, OnDestroy {
   constructor(
     private readonly auth: Auth,
     private readonly orderApi: OrderControllerService,
+    private readonly router: Router,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
   ngOnInit(): void {
@@ -47,6 +55,71 @@ export class Blotter implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+  }
+
+  toggleNavMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isNavMenuOpen.set(!this.isNavMenuOpen());
+  }
+
+  toggleProfileMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isProfileMenuOpen.set(!this.isProfileMenuOpen());
+  }
+
+  viewProfile(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/profile']);
+  }
+
+  viewPreferences(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/preferences']);
+  }
+
+  viewChangePassword(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
+  }
+
+  signOut(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    this.auth.signOut();
+    void this.router.navigate(['/login']);
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isProfileMenuOpen() && !this.isNavMenuOpen()) {
+      return;
+    }
+
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen.set(false);
+      this.isNavMenuOpen.set(false);
+    }
   }
 
   async refreshNow(): Promise<void> {
@@ -125,14 +198,22 @@ export class Blotter implements OnInit, OnDestroy {
     }).format(date);
   }
 
-  formatPrice(value: number | undefined): string {
+  formatPrice(value: number | undefined, symbol?: string): string {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
       return '--';
     }
 
+    const currency = this.inferDisplayCurrency(symbol);
+    if (!currency) {
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+    }
+
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -324,5 +405,37 @@ export class Blotter implements OnInit, OnDestroy {
     } catch {
       return null;
     }
+  }
+
+  private inferDisplayCurrency(symbol: string | null | undefined): 'USD' | 'INR' | null {
+    const normalized = symbol?.trim().toUpperCase() ?? '';
+    if (!normalized) {
+      return 'USD';
+    }
+
+    if (SYMBOL_SUFFIXED_TICKER.test(normalized)) {
+      if (normalized.endsWith('.NS') || normalized.endsWith('.BO')) {
+        return 'INR';
+      }
+      return null;
+    }
+
+    if (SYMBOL_FX.test(normalized)) {
+      const pair = normalized.slice(3);
+      const quote = pair.slice(3);
+      if (quote === 'USD') {
+        return 'USD';
+      }
+      if (quote === 'INR') {
+        return 'INR';
+      }
+      return null;
+    }
+
+    if (SYMBOL_PLAIN_TICKER.test(normalized)) {
+      return 'USD';
+    }
+
+    return null;
   }
 }

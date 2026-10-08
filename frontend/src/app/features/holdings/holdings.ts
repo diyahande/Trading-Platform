@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, ElementRef, HostListener, OnInit, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { AccountControllerService } from '../../generated/api-client/api/accountController.service';
@@ -13,6 +13,10 @@ type Holding = {
   averageCost?: number;
   totalValue?: number;
 };
+
+const SYMBOL_SUFFIXED_TICKER = /^[A-Z][A-Z0-9]{0,12}\.[A-Z0-9]{1,6}$/;
+const SYMBOL_FX = /^FX:[A-Z]{6}$/;
+const SYMBOL_PLAIN_TICKER = /^[A-Z][A-Z0-9]{0,19}$/;
 
 const HOLDINGS_ERROR_MESSAGES: Record<string, string> = {
   'ACC-404': 'The account could not be found.',
@@ -33,10 +37,13 @@ export class Holdings implements OnInit {
   readonly loading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly isProfileMenuOpen = signal(false);
+  readonly isNavMenuOpen = signal(false);
 
   constructor(
     private readonly auth: Auth,
     private readonly accountApi: AccountControllerService,
+    private readonly router: Router,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
   ngOnInit(): void {
@@ -110,22 +117,77 @@ export class Holdings implements OnInit {
     this.isProfileMenuOpen.set(!this.isProfileMenuOpen());
   }
 
+  toggleNavMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isNavMenuOpen.set(!this.isNavMenuOpen());
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
+    }
+  }
+
   viewProfile(): void {
     this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/profile']);
+  }
+
+  viewPreferences(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/preferences']);
+  }
+
+  viewChangePassword(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
   }
 
   signOut(): void {
     this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
     this.auth.signOut();
+    void this.router.navigate(['/login']);
   }
 
-  formatMoney(value: number | null | undefined): string {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.isProfileMenuOpen.set(false);
+      this.isNavMenuOpen.set(false);
+    }
+  }
+
+  formatMoney(value: number | null | undefined, symbol?: string): string {
     if (value === null || value === undefined) {
       return '—';
     }
+
+    const currency = this.inferDisplayCurrency(symbol);
+    if (!currency) {
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+    }
+
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -191,6 +253,38 @@ export class Holdings implements OnInit {
 
     const errorMsg = error?.error?.message || error?.message || 'Failed to load holdings. Please try again.';
     return errorMsg;
+  }
+
+  private inferDisplayCurrency(symbol: string | null | undefined): 'USD' | 'INR' | null {
+    const normalized = symbol?.trim().toUpperCase() ?? '';
+    if (!normalized) {
+      return 'USD';
+    }
+
+    if (SYMBOL_SUFFIXED_TICKER.test(normalized)) {
+      if (normalized.endsWith('.NS') || normalized.endsWith('.BO')) {
+        return 'INR';
+      }
+      return null;
+    }
+
+    if (SYMBOL_FX.test(normalized)) {
+      const pair = normalized.slice(3);
+      const quote = pair.slice(3);
+      if (quote === 'USD') {
+        return 'USD';
+      }
+      if (quote === 'INR') {
+        return 'INR';
+      }
+      return null;
+    }
+
+    if (SYMBOL_PLAIN_TICKER.test(normalized)) {
+      return 'USD';
+    }
+
+    return null;
   }
 
   private async normalizeHoldingsResponse(response: unknown): Promise<any[]> {

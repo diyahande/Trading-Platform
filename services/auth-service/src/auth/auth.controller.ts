@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, UnauthorizedException, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -23,12 +23,17 @@ import { RejectSignupRequestDto } from './dto/reject-signup-request.dto';
 import { RejectSignupRequestResponseDto } from './dto/reject-signup-request-response.dto';
 import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
+import { OrderPlacedNotificationRequestDto } from './dto/order-placed-notification-request.dto';
+import { OrderPlacedNotificationResponseDto } from './dto/order-placed-notification-response.dto';
+import { PriceAlertNotificationRequestDto } from './dto/price-alert-notification-request.dto';
+import { PriceAlertNotificationResponseDto } from './dto/price-alert-notification-response.dto';
 import { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginThrottleGuard } from './guards/login-throttle.guard';
 import type { AccessTokenClaims } from './types/auth.types';
+import { ERROR_UNAUTHORISED } from './auth.constants';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -154,5 +159,46 @@ export class AuthController {
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   me(@AuthUser() user: AccessTokenClaims): Promise<UserResponseDto> {
     return this.authService.me(user);
+  }
+
+  @Post('notifications/order-placed')
+  @HttpCode(202)
+  @ApiOperation({ summary: 'Send order placed email notification (internal service endpoint)' })
+  @ApiBody({ type: OrderPlacedNotificationRequestDto })
+  @ApiOkResponse({ type: OrderPlacedNotificationResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  notifyOrderPlaced(
+    @Body() request: OrderPlacedNotificationRequestDto,
+    @Headers('x-internal-token') internalToken?: string,
+  ): Promise<OrderPlacedNotificationResponseDto> {
+    this.assertInternalCall(internalToken);
+    return this.authService.sendOrderPlacedNotification(request);
+  }
+
+  @Post('notifications/price-alert')
+  @HttpCode(202)
+  @ApiOperation({ summary: 'Send price alert email notification (internal service endpoint)' })
+  @ApiBody({ type: PriceAlertNotificationRequestDto })
+  @ApiOkResponse({ type: PriceAlertNotificationResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  notifyPriceAlert(
+    @Body() request: PriceAlertNotificationRequestDto,
+    @Headers('x-internal-token') internalToken?: string,
+  ): Promise<PriceAlertNotificationResponseDto> {
+    this.assertInternalCall(internalToken);
+    return this.authService.sendPriceAlertNotification(request);
+  }
+
+  private assertInternalCall(internalToken?: string): void {
+    const configuredToken = process.env.INTERNAL_SERVICE_TOKEN?.trim();
+    if (!configuredToken) {
+      throw new UnauthorizedException(ERROR_UNAUTHORISED);
+    }
+
+    if (!internalToken || internalToken.trim() !== configuredToken) {
+      throw new UnauthorizedException(ERROR_UNAUTHORISED);
+    }
   }
 }

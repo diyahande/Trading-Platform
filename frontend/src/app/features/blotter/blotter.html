@@ -1,5 +1,66 @@
+<header class="navbar">
+  <div class="logo">
+    <span class="logo-mark">X</span>
+    <span>TradeX</span>
+  </div>
+
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen()"
+    aria-controls="blotter-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="blotter-nav" [class.open]="isNavMenuOpen()">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>⌂</span>
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>▤</span>
+      Orders
+    </a>
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>♧</span>
+      Holdings
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>◈</span>
+      Portfolio
+    </a>
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>☆</span>
+      Blotter
+    </a>
+    <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>⚑</span>
+      Alerts
+    </a>
+  </nav>
+
+  <div class="profile">
+    <button
+      class="profile-trigger"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="isProfileMenuOpen()"
+      (click)="toggleProfileMenu($event)">
+      <div class="profile-icon" aria-hidden="true">&#128100;</div>
+    </button>
+
+    <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewProfile()">Profile</button>
+      <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
+      <button type="button" role="menuitem" (click)="viewChangePassword()">Change Password</button>
+      <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+    </div>
+  </div>
+</header>
+
 <section class="blotter" aria-label="Order blotter">
-  <header class="brand">Trade<span>X</span></header>
 
   <header class="blotter-header">
     <div>
@@ -12,7 +73,6 @@
       <button type="button" class="refresh" (click)="refreshNow()" [disabled]="loading()">
         {{ loading() ? 'Refreshing...' : 'Refresh' }}
       </button>
-      <a routerLink="/dashboard" class="action-button secondary">Back to Dashboard</a>
     </div>
   </header>
 
@@ -39,7 +99,7 @@
           <td>{{ order.symbol || '--' }}</td>
           <td>{{ order.side || '--' }}</td>
           <td>{{ formatQuantity(order.quantity) }}</td>
-          <td>{{ formatPrice(order.executedPrice) }}</td>
+          <td>{{ formatPrice(order.executedPrice, order.symbol) }}</td>
           <td>
             <span class="badge" [ngClass]="statusClass(order)">{{ statusText(order) }}</span>
           </td>

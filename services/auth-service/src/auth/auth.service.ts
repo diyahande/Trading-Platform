@@ -37,6 +37,10 @@ import type { RejectSignupRequestDto } from './dto/reject-signup-request.dto';
 import type { RejectSignupRequestResponseDto } from './dto/reject-signup-request-response.dto';
 import type { RefreshRequestDto } from './dto/refresh-request.dto';
 import type { RegisterRequestDto } from './dto/register-request.dto';
+import type { OrderPlacedNotificationRequestDto } from './dto/order-placed-notification-request.dto';
+import type { OrderPlacedNotificationResponseDto } from './dto/order-placed-notification-response.dto';
+import type { PriceAlertNotificationRequestDto } from './dto/price-alert-notification-request.dto';
+import type { PriceAlertNotificationResponseDto } from './dto/price-alert-notification-response.dto';
 import type { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import type { TokenResponseDto } from './dto/token-response.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
@@ -425,6 +429,108 @@ export class AuthService {
     return this.toUserResponse(user);
   }
 
+  async sendOrderPlacedNotification(
+    request: OrderPlacedNotificationRequestDto,
+  ): Promise<OrderPlacedNotificationResponseDto> {
+    const user = await this.authRepository.findUserByAccountId(request.accountReference);
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: 'AUTH-404',
+        message: 'User not found for account reference',
+      });
+    }
+
+    let emailSent = true;
+    try {
+      await this.emailService.sendOrderPlacedConfirmationEmail(user.username, {
+        orderId: request.orderId,
+        accountReference: request.accountReference,
+        symbol: request.symbol,
+        side: request.side,
+        quantity: request.quantity,
+        limitPrice: request.limitPrice,
+        currency: request.currency,
+        status: request.status,
+        createdOn: request.createdOn,
+      });
+    } catch (error) {
+      emailSent = false;
+      this.logger.error('Order placement email failed', {
+        event: 'auth.order_notification.email_failed',
+        accountReference: request.accountReference,
+        orderId: request.orderId,
+        error,
+      });
+    }
+
+    this.logger.log('Order placement notification processed', {
+      event: 'auth.order_notification.processed',
+      accountReference: request.accountReference,
+      orderId: request.orderId,
+      recipient: user.username,
+      emailSent,
+    });
+
+    return {
+      orderId: request.orderId,
+      accountReference: request.accountReference,
+      recipient: user.username,
+      emailSent,
+    };
+  }
+
+  async sendPriceAlertNotification(
+    request: PriceAlertNotificationRequestDto,
+  ): Promise<PriceAlertNotificationResponseDto> {
+    const user = await this.authRepository.findUserByAccountId(request.accountReference);
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: 'AUTH-404',
+        message: 'User not found for account reference',
+      });
+    }
+
+    let emailSent = true;
+    try {
+      await this.emailService.sendPriceAlertEmail(user.username, {
+        alertId: request.alertId,
+        accountReference: request.accountReference,
+        symbol: request.symbol,
+        currentPrice: request.currentPrice,
+        threshold: request.threshold,
+        direction: request.direction,
+        triggeredAt: request.triggeredAt,
+      });
+    } catch (error) {
+      emailSent = false;
+      this.logger.error('Price alert email failed', {
+        event: 'auth.price_alert_notification.email_failed',
+        accountReference: request.accountReference,
+        alertId: request.alertId,
+        error,
+      });
+      throw new UnprocessableEntityException({
+        errorCode: 'AUTH-422',
+        message: 'Price alert email could not be delivered',
+      });
+    }
+
+    this.logger.log('Price alert notification processed', {
+      event: 'auth.price_alert_notification.processed',
+      accountReference: request.accountReference,
+      alertId: request.alertId,
+      recipient: user.username,
+      emailSent,
+    });
+
+    return {
+      alertId: request.alertId,
+      accountReference: request.accountReference,
+      recipient: user.username,
+      emailSent,
+    };
+  }
+
   private async issueTokenPair(user: AuthUserRecord): Promise<TokenResponseDto> {
     const refreshToken = randomBytes(32).toString('hex');
 
@@ -456,6 +562,10 @@ export class AuthService {
       username: user.username,
       accountId: user.accountId,
       roles: user.roles,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      dob: user.dob ? user.dob.toISOString().slice(0, 10) : undefined,
       createdOn: user.createdOn.toISOString(),
     };
   }

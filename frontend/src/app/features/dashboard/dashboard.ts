@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -6,6 +6,8 @@ import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { AiChat } from '../../shared/components/ai-chat/ai-chat';
 import { ProfileService } from '../../generated/api-client/api/profile.service';
+import { SignalCardComponent } from './signal-card';
+import type { SignalResponse } from './signal-card';
 
 type DashboardSummary = {
   portfolioValue: number | null;
@@ -14,14 +16,23 @@ type DashboardSummary = {
   buyingPower: number;
 };
 
+type PortfolioSummaryFallback = {
+  cashBalance: number;
+  totalValue: number;
+};
+
+type PnlResponseFallback = {
+  unrealisedPnl: number;
+};
+
 type WatchlistItem = {
   watchlistId: number;
   symbol: string;
   displayName: string;
   assetClass: string;
-  currentPrice: number;
-  change: number;
-  changePercent: number;
+  currentPrice: number | null;
+  change: number | null;
+  changePercent: number | null;
   addedAt: string;
 };
 
@@ -97,18 +108,25 @@ type StockPerformanceVisualization = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, AiChat, RouterLink, RouterLinkActive],
+  imports: [CommonModule, AiChat, RouterLink, RouterLinkActive, SignalCardComponent],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
 })
-export class Dashboard {
+export class Dashboard implements OnDestroy {
   username = 'Trader';
+  firstName: string | null = null;
+  lastName: string | null = null;
   isProfileMenuOpen = false;
+  isNavMenuOpen = false;
   accountReference: string | null = null;
   summary: DashboardSummary | null = null;
   summaryError: string | null = null;
   watchlist: WatchlistItem[] = [];
   watchlistError: string | null = null;
+  watchlistActionError: string | null = null;
+  newWatchlistSymbol = '';
+  watchlistSubmitting = false;
+  removingWatchlistId: number | null = null;
   recentActivity: RecentActivity[] = [];
   recentActivityError: string | null = null;
   portfolioAllocation: PortfolioAllocation | null = null;
@@ -122,6 +140,14 @@ export class Dashboard {
   hoveredAssetClass: string | null = null;
   hoveredAssetValue: number | null = null;
   hoveredAssetValueInMoney: number | null = null;
+  selectedStockSymbol: string | null = null;
+  selectedStockPrice: number | null = null;
+  selectedSignalPayload: SignalResponse | null = null;
+  signalFetchError: string | null = null;
+  showSignalCard = false;
+  private previousBodyOverflow = '';
+  preferredCurrency = 'USD';
+  fxRate = 1; // rate from USD to preferredCurrency
 
   constructor(
     private route: ActivatedRoute,
@@ -145,12 +171,19 @@ export class Dashboard {
     void this.loadPortfolioAllocation();
     void this.loadStockPerformance();
     void this.loadTopMovers();
+    void this.loadPreferences();
   }
 
   signOut() {
     this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
     this.auth.signOut();
     void this.router.navigate(['/login']);
+  }
+
+  toggleNavMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.isNavMenuOpen = !this.isNavMenuOpen;
   }
 
   toggleProfileMenu(event: MouseEvent): void {
@@ -160,18 +193,47 @@ export class Dashboard {
 
   viewProfile(): void {
     this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
+    void this.router.navigate(['/profile']);
+  }
+
+  viewPreferences(): void {
+    this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
+    void this.router.navigate(['/preferences']);
+  }
+
+  viewChangePassword(): void {
+    this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
     void this.router.navigate(['/change-password']);
   }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.isProfileMenuOpen) {
+    if (!this.isProfileMenuOpen && !this.isNavMenuOpen) {
       return;
     }
 
     const target = event.target as Node | null;
     if (target && !this.elementRef.nativeElement.contains(target)) {
       this.isProfileMenuOpen = false;
+      this.isNavMenuOpen = false;
+    }
+  }
+
+  isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  toggleTheme(event?: Event): void {
+    event?.stopPropagation();
+    const nextTheme = this.isDarkTheme() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('tradex-theme', nextTheme);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
     }
   }
 
@@ -188,6 +250,26 @@ export class Dashboard {
     }).format(value);
   }
 
+  getFullName(): string {
+    if (this.firstName || this.lastName) {
+      return `${this.firstName ?? ''} ${this.lastName ?? ''}`.trim();
+    }
+    return this.username;
+  }
+
+  formatMoneyWithPreference(value: number | null | undefined): string {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return '—';
+    }
+    const converted = value * this.fxRate;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: this.preferredCurrency,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    }).format(converted);
+  }
+
   pnlClass(): string {
     const pnl = this.summary?.todaysPnl;
     if (typeof pnl !== 'number') {
@@ -202,24 +284,123 @@ export class Dashboard {
     return '';
   }
 
-  formatChangePercent(changePercent: number): string {
+  formatChangePercent(changePercent: number | null | undefined): string {
+    if (typeof changePercent !== 'number' || Number.isNaN(changePercent)) {
+      return '—';
+    }
     const sign = changePercent >= 0 ? '▲' : '▼';
     const absValue = Math.abs(changePercent).toFixed(2);
     return `${sign} ${absValue}%`;
   }
 
-  changeClass(changePercent: number): string {
+  changeClass(changePercent: number | null | undefined): string {
+    if (typeof changePercent !== 'number' || Number.isNaN(changePercent)) {
+      return '';
+    }
     return changePercent >= 0 ? 'positive' : 'negative';
+  }
+
+  formatPriceBySymbol(price: number | null | undefined, symbol: string | null | undefined): string {
+    if (typeof price !== 'number' || Number.isNaN(price)) {
+      return '—';
+    }
+    const currency = this.resolveCurrencyForSymbol(symbol ?? '');
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    }).format(price);
+  }
+
+  formatWatchlistPrice(price: number | null | undefined, symbol: string): string {
+    return this.formatPriceBySymbol(price, symbol);
+  }
+
+  private resolveCurrencyForSymbol(symbol: string): string {
+    const normalized = symbol.trim().toUpperCase();
+    if (normalized.endsWith('.NS') || normalized.endsWith('.BO')) {
+      return 'INR';
+    }
+    return 'USD';
+  }
+
+  async addToWatchlist(): Promise<void> {
+    const symbol = this.newWatchlistSymbol.trim().toUpperCase();
+
+    if (!symbol) {
+      this.watchlistActionError = 'Enter a symbol to add.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.watchlistActionError = null;
+    this.watchlistSubmitting = true;
+    this.cdr.markForCheck();
+
+    try {
+      await firstValueFrom(this.http.post<void>('/api/v1/watchlist', {
+        symbol,
+        name: symbol,
+      }));
+
+      this.newWatchlistSymbol = '';
+      await this.loadWatchlist();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.watchlistActionError = 'Session expired. Please sign in again.';
+      } else if (status === 404) {
+        this.watchlistActionError = 'Symbol not found.';
+      } else if (status === 409) {
+        this.watchlistActionError = 'This symbol is already in your watchlist.';
+      } else if (status === 422) {
+        this.watchlistActionError = 'Invalid symbol.';
+      } else {
+        this.watchlistActionError = 'Could not add to watchlist.';
+      }
+      this.cdr.markForCheck();
+    } finally {
+      this.watchlistSubmitting = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async removeFromWatchlist(watchlistId: number): Promise<void> {
+    this.watchlistActionError = null;
+    this.removingWatchlistId = watchlistId;
+    this.cdr.markForCheck();
+
+    try {
+      await firstValueFrom(this.http.delete<void>(`/api/v1/watchlist/${watchlistId}`));
+      this.watchlist = this.watchlist.filter((item) => item.watchlistId !== watchlistId);
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.watchlistActionError = 'Session expired. Please sign in again.';
+      } else {
+        this.watchlistActionError = 'Could not remove watchlist item.';
+      }
+      this.cdr.markForCheck();
+    } finally {
+      this.removingWatchlistId = null;
+      this.cdr.markForCheck();
+    }
   }
 
   private async loadDashboard(): Promise<void> {
     this.summaryError = null;
     try {
       const response = await firstValueFrom(this.http.get<DashboardSummary>('/api/dashboard'));
-      console.log('Dashboard response:', response);
-      console.log('availableCash type:', typeof response.availableCash, 'value:', response.availableCash);
-      console.log('buyingPower type:', typeof response.buyingPower, 'value:', response.buyingPower);
-      this.summary = response;
+      const fallback = await this.loadDashboardSummaryFallback(response);
+
+      this.summary = {
+        portfolioValue: response.portfolioValue ?? fallback?.portfolioValue ?? null,
+        todaysPnl: response.todaysPnl ?? fallback?.todaysPnl ?? null,
+        availableCash: response.availableCash ?? fallback?.availableCash ?? 0,
+        buyingPower: response.buyingPower ?? fallback?.availableCash ?? 0,
+      };
       this.cdr.markForCheck();
     } catch (error: any) {
       const status = typeof error?.status === 'number' ? error.status : null;
@@ -234,14 +415,52 @@ export class Dashboard {
       this.cdr.markForCheck();
     }
   }
+  private async loadDashboardSummaryFallback(
+    summary: DashboardSummary,
+  ): Promise<{ portfolioValue: number | null; todaysPnl: number | null; availableCash: number | null } | null> {
+    if (summary.portfolioValue !== null && summary.todaysPnl !== null) {
+      return null;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      return null;
+    }
+
+    const accountId = this.extractAccountIdFromToken(token);
+    if (!accountId) {
+      return null;
+    }
+
+    const [portfolioResult, pnlResult] = await Promise.allSettled([
+      firstValueFrom(this.http.get<PortfolioSummaryFallback>(`/api/v1/portfolio/${accountId}`)),
+      firstValueFrom(this.http.get<PnlResponseFallback>(`/api/v1/portfolio/${accountId}/pnl`)),
+    ]);
+
+    const portfolioValue = portfolioResult.status === 'fulfilled' ? portfolioResult.value.totalValue ?? null : null;
+    const todaysPnl = pnlResult.status === 'fulfilled' ? pnlResult.value.unrealisedPnl ?? null : null;
+    const availableCash = portfolioResult.status === 'fulfilled' ? portfolioResult.value.cashBalance ?? null : null;
+
+    if (portfolioValue === null && todaysPnl === null && availableCash === null) {
+      return null;
+    }
+
+    return { portfolioValue, todaysPnl, availableCash };
+  }
 
   private async loadCurrentUser(): Promise<void> {
     try {
       const user = await firstValueFrom(this.profileService.authControllerMe());
-      if (user?.username?.trim()) {
+      if (typeof user?.username === 'string' && user.username.trim()) {
         this.username = user.username.trim();
-        this.cdr.markForCheck();
       }
+      if (typeof user?.firstName === 'string') {
+        this.firstName = user.firstName.trim();
+      }
+      if (typeof user?.lastName === 'string') {
+        this.lastName = user.lastName.trim();
+      }
+      this.cdr.markForCheck();
     } catch {
       // Keep existing username fallback when profile endpoint is unavailable.
     }
@@ -407,7 +626,10 @@ export class Dashboard {
     this.portfolioAllocationError = null;
     try {
       const response = await firstValueFrom(this.http.get<PortfolioAllocation>('/api/portfolio-allocation'));
-      this.portfolioAllocation = response;
+      this.portfolioAllocation = {
+        ...response,
+        allocationByAssetClass: this.normalizeAllocationByAssetClass(response.allocationByAssetClass ?? {}),
+      };
       this.cdr.markForCheck();
     } catch (error: any) {
       const status = typeof error?.status === 'number' ? error.status : null;
@@ -419,6 +641,21 @@ export class Dashboard {
       this.portfolioAllocation = null;
       this.cdr.markForCheck();
     }
+  }
+
+  private normalizeAllocationByAssetClass(allocation: { [key: string]: number }): { [key: string]: number } {
+    const normalized: { [key: string]: number } = {};
+    const keyAliases: { [key: string]: string } = {
+      CRYPTO_PAIR: 'CRYPTO',
+      CURRENCY_PAIR: 'FOREX',
+    };
+
+    for (const [rawKey, value] of Object.entries(allocation)) {
+      const normalizedKey = keyAliases[rawKey] ?? rawKey;
+      normalized[normalizedKey] = (normalized[normalizedKey] ?? 0) + value;
+    }
+
+    return normalized;
   }
 
   private async loadStockPerformance(): Promise<void> {
@@ -479,5 +716,100 @@ export class Dashboard {
 
   getTopMoverChangeClass(changePercent: number): string {
     return changePercent >= 0 ? 'positive' : 'negative';
+  }
+
+  async onStockClick(stock: StockPerformance): Promise<void> {
+    this.lockBodyScroll();
+    this.selectedStockSymbol = stock.symbol;
+    this.selectedStockPrice = stock.price;
+    this.selectedSignalPayload = null;
+    this.signalFetchError = null;
+    this.showSignalCard = false;
+
+    try {
+      this.selectedSignalPayload = await firstValueFrom(
+        this.http.get<SignalResponse>(`/api/v1/signals/${encodeURIComponent(stock.symbol)}`)
+      );
+    } catch {
+      this.signalFetchError = 'Signal data is temporarily unavailable for this symbol.';
+    }
+
+    this.showSignalCard = true;
+    this.cdr.markForCheck();
+  }
+
+  closeSignalCard(): void {
+    this.showSignalCard = false;
+    this.selectedStockSymbol = null;
+    this.selectedStockPrice = null;
+    this.selectedSignalPayload = null;
+    this.signalFetchError = null;
+    this.unlockBodyScroll();
+    this.cdr.markForCheck();
+  }
+
+  placeOrderFromSignal(side: 'BUY' | 'SELL'): void {
+    const symbol = this.selectedStockSymbol;
+    if (!symbol) {
+      return;
+    }
+
+    const queryParams: Record<string, string> = {
+      symbol,
+      side,
+    };
+
+    if (typeof this.selectedStockPrice === 'number' && Number.isFinite(this.selectedStockPrice) && this.selectedStockPrice > 0) {
+      queryParams['marketPrice'] = this.selectedStockPrice.toFixed(2);
+    }
+
+    this.closeSignalCard();
+    void this.router.navigate(['/orders'], { queryParams });
+  }
+
+  ngOnDestroy(): void {
+    this.unlockBodyScroll();
+  }
+
+  private lockBodyScroll(): void {
+    if (!this.previousBodyOverflow) {
+      this.previousBodyOverflow = document.body.style.overflow;
+    }
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll(): void {
+    document.body.style.overflow = this.previousBodyOverflow;
+    this.previousBodyOverflow = '';
+  }
+
+  private async loadPreferences(): Promise<void> {
+    try {
+      const prefs = await firstValueFrom(
+        this.http.get<{ theme: string; currency: string; emailNotificationsEnabled: boolean }>('/api/v1/preferences')
+      );
+      if (prefs.currency && prefs.currency !== 'USD') {
+        this.preferredCurrency = prefs.currency;
+        // Fetch FX rate USD -> preferredCurrency
+        const fxResp = await firstValueFrom(
+          this.http.get<{ from: string; to: string; rate: number }>(
+            `/api/v1/preferences/fx-rate?from=USD&to=${prefs.currency}`
+          )
+        );
+        this.fxRate = fxResp.rate;
+      } else {
+        this.preferredCurrency = 'USD';
+        this.fxRate = 1;
+      }
+      // Apply persisted theme from DB on page load
+      if (prefs.theme) {
+        const normalized = prefs.theme === 'DARK' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', normalized);
+        try { localStorage.setItem('tradex-theme', normalized); } catch { /* ignore */ }
+      }
+      this.cdr.markForCheck();
+    } catch {
+      // Keep defaults on error — do not disrupt dashboard loading
+    }
   }
 }

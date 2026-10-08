@@ -1,3 +1,65 @@
+<header class="navbar">
+  <div class="logo">
+    <span class="logo-mark">X</span>
+    <span>TradeX</span>
+  </div>
+
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen()"
+    aria-controls="orders-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="orders-nav" [class.open]="isNavMenuOpen()">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>⌂</span>
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>▤</span>
+      Orders
+    </a>
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>♧</span>
+      Holdings
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>◈</span>
+      Portfolio
+    </a>
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>☆</span>
+      Blotter
+    </a>
+    <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen.set(false)">
+      <span>⚑</span>
+      Alerts
+    </a>
+  </nav>
+
+  <div class="profile">
+    <button
+      class="profile-trigger"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="isProfileMenuOpen()"
+      (click)="toggleProfileMenu($event)">
+      <div class="profile-icon" aria-hidden="true">&#128100;</div>
+    </button>
+
+    <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewProfile()">Profile</button>
+      <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
+      <button type="button" role="menuitem" (click)="viewChangePassword()">Change Password</button>
+      <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+    </div>
+  </div>
+</header>
+
 <section class="ticket-panel" aria-label="TradeX orders">
   <div class="chart-bg" aria-hidden="true">
     <svg viewBox="0 0 900 560" preserveAspectRatio="none">
@@ -12,16 +74,26 @@
     </svg>
   </div>
 
-  <header class="brand">Trade<span>X</span></header>
-
   <form class="ticket-card" (submit)="$event.preventDefault(); submit();">
     <div class="card-header">
       <div>
-        <h1>Trade<span>X</span> Orders</h1>
-        <p class="subtle">Create and place an order.</p>
+        <h1>{{ sideLabel() }} {{ symbol() || 'Instrument' }}</h1>
+        <p class="subtle">{{ instrumentDisplayName() || 'Create and place an order.' }}</p>
       </div>
-      <a routerLink="/dashboard" class="view-blotter-btn">Back to Dashboard</a>
     </div>
+
+    <section class="reference-row">
+      <div class="ref-field">
+        <span class="ref-label">Current Market Price</span>
+        <strong class="ref-value" [class.ref-value-muted]="!hasCurrentMarketPrice()">{{ getCurrentMarketPriceText() }}</strong>
+      </div>
+      <div class="ref-field">
+        <span class="ref-label">Order Type</span>
+        <strong class="ref-value">LIMIT</strong>
+      </div>
+    </section>
+
+    <p class="order-hint">{{ orderIntentHint() }}</p>
 
     <div class="grid">
       <div class="field">
@@ -36,7 +108,7 @@
           [ngModel]="symbol()"
           (ngModelChange)="onSymbolInput($event)"
           name="symbol"
-          placeholder="AAPL, INFY.NS, FX:EURUSD"
+          placeholder="AAPL, INFY.NS, FX:EURUSD, BTC-USD"
         />
         <!-- <p class="field-hint">Examples: <strong>AAPL</strong> (US), <strong>INFY.NS</strong> (NSE), <strong>RELIANCE.BO</strong> (BSE), <strong>FX:EURUSD</strong> (FX pair), <strong>X:BTCUSD</strong> (crypto pair).</p> -->
       </div>
@@ -50,29 +122,31 @@
       </div>
 
       <div class="field">
-        <label for="quantity">Quantity</label>
-        <input
-          id="quantity"
-          [ngModel]="quantity()"
-          (ngModelChange)="onQuantityInput($event)"
-          name="quantity"
-          inputmode="numeric"
-          placeholder="100"
-        />
-        <p class="field-error" *ngIf="quantityFieldError()">{{ quantityFieldError() }}</p>
-      </div>
-
-      <div class="field">
-        <label for="price">Price</label>
+        <label for="price">Limit Price</label>
         <input
           id="price"
           [ngModel]="price()"
           (ngModelChange)="onPriceInput($event)"
           name="price"
           inputmode="decimal"
-          placeholder="245.50"
+          placeholder="205.00"
         />
         <p class="field-error" *ngIf="priceFieldError()">{{ priceFieldError() }}</p>
+      </div>
+
+      <div class="field">
+        <label for="quantity">Quantity</label>
+        <input
+          id="quantity"
+          type="number"
+          min="1"
+          [ngModel]="quantity()"
+          (ngModelChange)="onQuantityInput($event)"
+          name="quantity"
+          inputmode="numeric"
+          placeholder="10"
+        />
+        <p class="field-error" *ngIf="quantityFieldError()">{{ quantityFieldError() }}</p>
       </div>
     </div>
 
@@ -86,8 +160,8 @@
     <p class="error" *ngIf="validationMessage()">{{ validationMessage() }}</p>
 
     <div class="actions">
-      <button type="submit" class="primary" [disabled]="submitting()">
-        {{ submitting() ? 'Placing order...' : 'Place Order' }}
+      <button type="submit" class="primary" [disabled]="isSubmitDisabled()" [attr.aria-label]="submitLabel() || 'PLACE ORDER'">
+        <span class="primary-label">{{ submitLabel() || 'PLACE ORDER' }}</span>
       </button>
     </div>
   </form>
