@@ -189,7 +189,7 @@ export class Orders implements OnDestroy {
     this.scheduleUsdEstimateRefresh();
   }
 
-  onQuantityInput(value: string | number): void {
+  onQuantityInput(value: string | number | null | undefined): void {
     this.clearUiMessages();
     const parsed = this.parseQuantity(value);
     this.quantity.set(parsed);
@@ -364,11 +364,12 @@ export class Orders implements OnDestroy {
       const response = await firstValueFrom(this.accountApi.getPositions(accountRef));
       const positions = this.normalizePositionsResponse(response);
       const match = positions.find((position) =>
-        (position.symbol ?? '').toUpperCase() === symbol
+        (position.symbol ?? '').trim().toUpperCase() === symbol
       );
 
       if (!match) {
-        this.availableHoldingQuantity.set(0);
+        // Treat missing symbol as unknown on the client side and let backend enforce SELL constraints.
+        this.availableHoldingQuantity.set(null);
         this.instrumentDisplayName.set(null);
       } else {
         const quantity = Number(match.quantity ?? 0);
@@ -460,10 +461,19 @@ export class Orders implements OnDestroy {
     }
   }
 
-  private parseQuantity(value: string | number): number {
+  private parseQuantity(value: string | number | null | undefined): number {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+
     if (typeof value === 'number') {
       return Number.isFinite(value) ? Math.floor(value) : 0;
     }
+
+    if (typeof value !== 'string') {
+      return 0;
+    }
+
     const trimmed = value.trim();
     if (!trimmed) {
       return 0;
@@ -727,11 +737,8 @@ export class Orders implements OnDestroy {
 
     if (this.side() === PlaceOrderRequest.SideEnum.Sell) {
       const holdingQty = this.availableHoldingQuantity();
-      if (typeof holdingQty === 'number' && quantityValue > holdingQty) {
+      if (typeof holdingQty === 'number' && holdingQty > 0 && quantityValue > holdingQty) {
         return `Quantity cannot exceed available holdings (${holdingQty}).`;
-      }
-      if (typeof holdingQty === 'number' && holdingQty <= 0) {
-        return 'No holdings available to sell for this instrument.';
       }
     }
 
