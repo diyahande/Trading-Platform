@@ -114,6 +114,8 @@ type StockPerformanceVisualization = {
 })
 export class Dashboard implements OnDestroy {
   username = 'Trader';
+  firstName: string | null = null;
+  lastName: string | null = null;
   isProfileMenuOpen = false;
   isNavMenuOpen = false;
   accountReference: string | null = null;
@@ -229,6 +231,13 @@ export class Dashboard implements OnDestroy {
     }).format(value);
   }
 
+  getFullName(): string {
+    if (this.firstName || this.lastName) {
+      return `${this.firstName ?? ''} ${this.lastName ?? ''}`.trim();
+    }
+    return this.username;
+  }
+
   pnlClass(): string {
     const pnl = this.summary?.todaysPnl;
     if (typeof pnl !== 'number') {
@@ -330,6 +339,12 @@ export class Dashboard implements OnDestroy {
       const user = await firstValueFrom(this.profileService.authControllerMe());
       if (typeof user?.username === 'string' && user.username.trim()) {
         this.username = user.username.trim();
+      }
+      if (typeof user?.firstName === 'string') {
+        this.firstName = user.firstName.trim();
+      }
+      if (typeof user?.lastName === 'string') {
+        this.lastName = user.lastName.trim();
       }
       this.cdr.markForCheck();
     } catch {

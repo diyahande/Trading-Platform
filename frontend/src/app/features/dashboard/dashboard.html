@@ -72,7 +72,7 @@
 <main class="dashboard">
 
     <section class="welcome">
-        <h1>Hello,</h1>
+        <h1>Hello, {{ getFullName() }}</h1>
         <p>Here's what's happening in the markets today.</p>
         <p class="summary-error" [hidden]="!summaryError">{{ summaryError }}</p>
     </section>
