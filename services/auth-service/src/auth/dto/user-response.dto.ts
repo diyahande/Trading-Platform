@@ -13,6 +13,12 @@ export class UserResponseDto {
   @ApiProperty({ type: [String], enum: ['CUSTOMER', 'ADMIN'] })
   roles!: string[];
 
+  @ApiPropertyOptional()
+  firstName?: string;
+
+  @ApiPropertyOptional()
+  lastName?: string;
+
   @ApiPropertyOptional({ format: 'date-time' })
   createdOn?: string;
 }

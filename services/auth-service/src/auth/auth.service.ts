@@ -562,6 +562,8 @@ export class AuthService {
       username: user.username,
       accountId: user.accountId,
       roles: user.roles,
+      firstName: user.firstName,
+      lastName: user.lastName,
       createdOn: user.createdOn.toISOString(),
     };
   }
