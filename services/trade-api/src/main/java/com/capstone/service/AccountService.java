@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -106,6 +107,40 @@ public class AccountService {
         }
 
         return account;
+    }
+
+    public Account getLatestAccountByUserIdStrict(Long userId) {
+        Account account = accountMapper.findLatestAccountByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(-1L));
+
+        if (account.getStatus() != null) {
+            String statusName = account.getStatus().name();
+            if (!statusName.equalsIgnoreCase("ACTIVE")) {
+                throw new AccountNotActiveException(account.getAccountId(), account.getStatus());
+            }
+        }
+
+        return account;
+    }
+
+    public List<Account> getActiveAccountsByUserId(Long userId) {
+        List<Account> allAccounts = accountMapper.findAccountsByUserId(userId);
+        if (allAccounts == null || allAccounts.isEmpty()) {
+            throw new AccountNotFoundException(-1L);
+        }
+
+        List<Account> activeAccounts = new ArrayList<>();
+        for (Account account : allAccounts) {
+            if (account.getStatus() != null && "ACTIVE".equalsIgnoreCase(account.getStatus().name())) {
+                activeAccounts.add(account);
+            }
+        }
+
+        if (activeAccounts.isEmpty()) {
+            throw new AccountNotActiveException(allAccounts.get(0).getAccountId(), allAccounts.get(0).getStatus());
+        }
+
+        return activeAccounts;
     }
 
  
