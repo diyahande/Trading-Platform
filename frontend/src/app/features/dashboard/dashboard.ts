@@ -121,6 +121,10 @@ export class Dashboard implements OnDestroy {
   summaryError: string | null = null;
   watchlist: WatchlistItem[] = [];
   watchlistError: string | null = null;
+  watchlistActionError: string | null = null;
+  newWatchlistSymbol = '';
+  watchlistSubmitting = false;
+  removingWatchlistId: number | null = null;
   recentActivity: RecentActivity[] = [];
   recentActivityError: string | null = null;
   portfolioAllocation: PortfolioAllocation | null = null;
@@ -259,11 +263,93 @@ export class Dashboard implements OnDestroy {
     return changePercent >= 0 ? 'positive' : 'negative';
   }
 
-  formatWatchlistPrice(price: number | null | undefined): string {
+  formatPriceBySymbol(price: number | null | undefined, symbol: string | null | undefined): string {
     if (typeof price !== 'number' || Number.isNaN(price)) {
       return '—';
     }
-    return `$${price.toFixed(2)}`;
+    const currency = this.resolveCurrencyForSymbol(symbol ?? '');
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    }).format(price);
+  }
+
+  formatWatchlistPrice(price: number | null | undefined, symbol: string): string {
+    return this.formatPriceBySymbol(price, symbol);
+  }
+
+  private resolveCurrencyForSymbol(symbol: string): string {
+    const normalized = symbol.trim().toUpperCase();
+    if (normalized.endsWith('.NS') || normalized.endsWith('.BO')) {
+      return 'INR';
+    }
+    return 'USD';
+  }
+
+  async addToWatchlist(): Promise<void> {
+    const symbol = this.newWatchlistSymbol.trim().toUpperCase();
+
+    if (!symbol) {
+      this.watchlistActionError = 'Enter a symbol to add.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.watchlistActionError = null;
+    this.watchlistSubmitting = true;
+    this.cdr.markForCheck();
+
+    try {
+      await firstValueFrom(this.http.post<void>('/api/v1/watchlist', {
+        symbol,
+        name: symbol,
+      }));
+
+      this.newWatchlistSymbol = '';
+      await this.loadWatchlist();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.watchlistActionError = 'Session expired. Please sign in again.';
+      } else if (status === 404) {
+        this.watchlistActionError = 'Symbol not found.';
+      } else if (status === 409) {
+        this.watchlistActionError = 'This symbol is already in your watchlist.';
+      } else if (status === 422) {
+        this.watchlistActionError = 'Invalid symbol.';
+      } else {
+        this.watchlistActionError = 'Could not add to watchlist.';
+      }
+      this.cdr.markForCheck();
+    } finally {
+      this.watchlistSubmitting = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async removeFromWatchlist(watchlistId: number): Promise<void> {
+    this.watchlistActionError = null;
+    this.removingWatchlistId = watchlistId;
+    this.cdr.markForCheck();
+
+    try {
+      await firstValueFrom(this.http.delete<void>(`/api/v1/watchlist/${watchlistId}`));
+      this.watchlist = this.watchlist.filter((item) => item.watchlistId !== watchlistId);
+      this.cdr.markForCheck();
+    } catch (error: any) {
+      const status = typeof error?.status === 'number' ? error.status : null;
+      if (status === 401) {
+        this.watchlistActionError = 'Session expired. Please sign in again.';
+      } else {
+        this.watchlistActionError = 'Could not remove watchlist item.';
+      }
+      this.cdr.markForCheck();
+    } finally {
+      this.removingWatchlistId = null;
+      this.cdr.markForCheck();
+    }
   }
 
   private async loadDashboard(): Promise<void> {

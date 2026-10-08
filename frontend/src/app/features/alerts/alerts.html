@@ -1,0 +1,147 @@
+<header class="navbar">
+  <div class="logo">
+    <span class="logo-mark">X</span>
+    <span>TradeX</span>
+  </div>
+
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen"
+    aria-controls="alerts-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="alerts-nav" [class.open]="isNavMenuOpen">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>⌂</span>
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>▤</span>
+      Orders
+    </a>
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>♧</span>
+      Holdings
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>◈</span>
+      Portfolio
+    </a>
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>☆</span>
+      Blotter
+    </a>
+    <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>⚑</span>
+      Alerts
+    </a>
+  </nav>
+
+  <button
+    type="button"
+    class="theme-toggle-nav"
+    [class.is-dark]="isDarkTheme()"
+    (click)="toggleTheme($event)"
+    role="switch"
+    [attr.aria-checked]="isDarkTheme()"
+    [attr.aria-label]="isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
+    [attr.title]="isDarkTheme() ? 'Light mode' : 'Dark mode'">
+    <span class="theme-toggle-track" aria-hidden="true">
+      <span class="theme-toggle-knob">{{ isDarkTheme() ? '☾' : '☀' }}</span>
+    </span>
+  </button>
+
+  <div class="profile">
+    <button
+      class="profile-trigger"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="isProfileMenuOpen"
+      (click)="toggleProfileMenu($event)">
+      <div class="profile-icon" aria-hidden="true">&#128100;</div>
+    </button>
+
+    <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
+      <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="alerts-page">
+  <header class="alerts-head">
+    <div>
+      <h1>Price Alerts</h1>
+      <p>Set and manage threshold alerts by watchlist symbol.</p>
+    </div>
+  </header>
+
+  <div *ngIf="watchlistError" class="watchlist-error">{{ watchlistError }}</div>
+
+  <div *ngIf="!watchlistError && watchlist.length === 0" class="empty-state">
+    Add symbols to your watchlist first.
+  </div>
+
+  <section *ngFor="let item of watchlist" class="alert-card card">
+    <div class="alert-card-head">
+      <div>
+        <h2>{{ item.symbol }}</h2>
+        <p>{{ item.displayName }} · {{ formatWatchlistPrice(item.currentPrice, item.symbol) }}</p>
+      </div>
+    </div>
+
+    <div class="alert-create-row">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        [value]="newAlertThresholdByWatchlist[item.watchlistId]"
+        (input)="newAlertThresholdByWatchlist[item.watchlistId] = $any($event.target).value"
+        placeholder="Threshold" />
+
+      <select
+        [value]="newAlertDirectionByWatchlist[item.watchlistId]"
+        (change)="newAlertDirectionByWatchlist[item.watchlistId] = $any($event.target).value">
+        <option value="ABOVE">ABOVE</option>
+        <option value="BELOW">BELOW</option>
+      </select>
+
+      <button
+        type="button"
+        class="alert-add"
+        (click)="createAlert(item.watchlistId)"
+        [disabled]="creatingAlertForWatchlistId === item.watchlistId">
+        {{ creatingAlertForWatchlistId === item.watchlistId ? 'Creating...' : 'Create Alert' }}
+      </button>
+    </div>
+
+    <div *ngIf="alertsErrorByWatchlist[item.watchlistId]" class="watchlist-error">
+      {{ alertsErrorByWatchlist[item.watchlistId] }}
+    </div>
+
+    <div *ngIf="isAlertLoading(item.watchlistId)" class="empty-state">Loading alerts...</div>
+
+    <div *ngIf="!isAlertLoading(item.watchlistId) && getAlertsForWatchlist(item.watchlistId).length === 0" class="empty-state">
+      No alerts configured for this symbol.
+    </div>
+
+    <div *ngFor="let alert of getAlertsForWatchlist(item.watchlistId)" class="watchlist-alert-row">
+      <div>
+        <strong>{{ formatAlertSummary(alert) }}</strong>
+        <small>{{ formatAlertTime(alert) }}</small>
+      </div>
+      <span class="watchlist-alert-status" [ngClass]="alertStatusClass(alert.status)">{{ alert.status }}</span>
+      <button
+        type="button"
+        class="alert-remove"
+        (click)="deactivateAlert(alert.alertId, item.watchlistId)"
+        [disabled]="removingAlertId === alert.alertId || alert.status === 'DEACTIVATED'">
+        {{ removingAlertId === alert.alertId ? '...' : (alert.status === 'DEACTIVATED' ? 'Inactive' : 'Deactivate') }}
+      </button>
+    </div>
+  </section>
+</main>

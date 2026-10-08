@@ -74,6 +74,8 @@ public class GlobalExceptionHandler {
         return switch (errorCode) {
             case "ACC-404" -> HttpStatus.NOT_FOUND;
             case "ACC-403" -> HttpStatus.FORBIDDEN;
+            case "ALR-404" -> HttpStatus.NOT_FOUND;
+            case "ALR-409" -> HttpStatus.CONFLICT;
             case "INS-404" -> HttpStatus.NOT_FOUND;
             case "ORD-404" -> HttpStatus.NOT_FOUND;
             case "ORD-400" -> HttpStatus.BAD_REQUEST;
