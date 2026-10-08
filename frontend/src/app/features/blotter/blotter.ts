@@ -75,6 +75,12 @@ export class Blotter implements OnInit, OnDestroy {
     void this.router.navigate(['/change-password']);
   }
 
+  viewPreferences(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/preferences']);
+  }
+
   signOut(): void {
     this.isProfileMenuOpen.set(false);
     this.isNavMenuOpen.set(false);

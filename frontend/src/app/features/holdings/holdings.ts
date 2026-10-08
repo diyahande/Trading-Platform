@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, OnInit, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../core/services/auth';
 import { AccountControllerService } from '../../generated/api-client/api/accountController.service';
@@ -42,6 +42,7 @@ export class Holdings implements OnInit {
   constructor(
     private readonly auth: Auth,
     private readonly accountApi: AccountControllerService,
+    private readonly router: Router,
     private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
@@ -140,12 +141,20 @@ export class Holdings implements OnInit {
   viewProfile(): void {
     this.isProfileMenuOpen.set(false);
     this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
+  }
+
+  viewPreferences(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/preferences']);
   }
 
   signOut(): void {
     this.isProfileMenuOpen.set(false);
     this.isNavMenuOpen.set(false);
     this.auth.signOut();
+    void this.router.navigate(['/login']);
   }
 
   @HostListener('document:click', ['$event'])

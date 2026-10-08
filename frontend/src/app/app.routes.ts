@@ -10,6 +10,7 @@ import { Blotter } from './features/blotter/blotter';
 import { Holdings } from './features/holdings/holdings';
 import { Portfolio } from './features/portfolio/portfolio';
 import { Home, RootRedirect } from './features/home/home';
+import { Preferences } from './features/preferences/preferences';
 
 export const routes: Routes = [
 	{ path: '', component: RootRedirect, pathMatch: 'full' },
@@ -23,6 +24,7 @@ export const routes: Routes = [
 	{ path: 'blotter', component: Blotter, canActivate: [authGuard] },
 	{ path: 'holdings', component: Holdings, canActivate: [authGuard] },
 	{ path: 'portfolio', component: Portfolio, canActivate: [authGuard] },
+	{ path: 'preferences', component: Preferences, canActivate: [authGuard] },
 	{ path: '**', redirectTo: 'dashboard' },
 
 ];

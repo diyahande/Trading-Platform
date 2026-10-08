@@ -143,6 +143,12 @@ export class Orders implements OnDestroy {
     void this.router.navigate(['/change-password']);
   }
 
+  viewPreferences(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/preferences']);
+  }
+
   signOut(): void {
     this.isProfileMenuOpen.set(false);
     this.isNavMenuOpen.set(false);
@@ -248,10 +254,30 @@ export class Orders implements OnDestroy {
       this.resultPopupCode.set(returnedStatus);
       this.resultPopupDetail.set(backendMessage || null);
       this.resultPopupOpen.set(true);
-      this.toastr.success(
-        'A confirmation email will be sent to your registered address.',
-        'Order placed successfully',
-      );
+
+      let emailEnabled = true;
+      try {
+        const prefs = await firstValueFrom(
+          this.http.get<{ emailNotificationsEnabled?: boolean }>('/api/v1/preferences')
+        );
+        if (prefs?.emailNotificationsEnabled !== undefined) {
+          emailEnabled = prefs.emailNotificationsEnabled;
+        }
+      } catch (err) {
+        // silently fallback to true if preferences fetch fails
+      }
+
+      if (emailEnabled) {
+        this.toastr.success(
+          'A confirmation email will be sent to your registered address.',
+          'Order placed successfully',
+        );
+      } else {
+        this.toastr.success(
+          'Your order has been recorded.',
+          'Order placed successfully',
+        );
+      }
     } catch (error: any) {
       const mappedError = await this.mapErrorToMessage(error);
       this.apiError.set(mappedError);

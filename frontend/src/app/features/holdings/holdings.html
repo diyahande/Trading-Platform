@@ -38,20 +38,6 @@
         </a>
     </nav>
 
-    <button
-      type="button"
-      class="theme-toggle-nav"
-      [class.is-dark]="isDarkTheme()"
-      (click)="toggleTheme($event)"
-      role="switch"
-      [attr.aria-checked]="isDarkTheme()"
-      [attr.aria-label]="isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
-      [attr.title]="isDarkTheme() ? 'Light mode' : 'Dark mode'">
-      <span class="theme-toggle-track" aria-hidden="true">
-        <span class="theme-toggle-knob">{{ isDarkTheme() ? '☾' : '☀' }}</span>
-      </span>
-    </button>
-
     <div class="profile">
         <button
             class="profile-trigger"
@@ -63,6 +49,7 @@
         </button>
 
         <div class="profile-menu" *ngIf="isProfileMenuOpen()" role="menu" aria-label="Profile menu">
+            <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
             <button type="button" role="menuitem" (click)="viewProfile()">Change Password</button>
             <button type="button" role="menuitem" (click)="signOut()">Logout</button>
         </div>
