@@ -620,7 +620,10 @@ export class Dashboard implements OnDestroy {
     this.portfolioAllocationError = null;
     try {
       const response = await firstValueFrom(this.http.get<PortfolioAllocation>('/api/portfolio-allocation'));
-      this.portfolioAllocation = response;
+      this.portfolioAllocation = {
+        ...response,
+        allocationByAssetClass: this.normalizeAllocationByAssetClass(response.allocationByAssetClass ?? {}),
+      };
       this.cdr.markForCheck();
     } catch (error: any) {
       const status = typeof error?.status === 'number' ? error.status : null;
@@ -632,6 +635,21 @@ export class Dashboard implements OnDestroy {
       this.portfolioAllocation = null;
       this.cdr.markForCheck();
     }
+  }
+
+  private normalizeAllocationByAssetClass(allocation: { [key: string]: number }): { [key: string]: number } {
+    const normalized: { [key: string]: number } = {};
+    const keyAliases: { [key: string]: string } = {
+      CRYPTO_PAIR: 'CRYPTO',
+      CURRENCY_PAIR: 'FOREX',
+    };
+
+    for (const [rawKey, value] of Object.entries(allocation)) {
+      const normalizedKey = keyAliases[rawKey] ?? rawKey;
+      normalized[normalizedKey] = (normalized[normalizedKey] ?? 0) + value;
+    }
+
+    return normalized;
   }
 
   private async loadStockPerformance(): Promise<void> {
