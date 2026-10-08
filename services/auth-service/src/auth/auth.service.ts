@@ -39,6 +39,8 @@ import type { RefreshRequestDto } from './dto/refresh-request.dto';
 import type { RegisterRequestDto } from './dto/register-request.dto';
 import type { OrderPlacedNotificationRequestDto } from './dto/order-placed-notification-request.dto';
 import type { OrderPlacedNotificationResponseDto } from './dto/order-placed-notification-response.dto';
+import type { PriceAlertNotificationRequestDto } from './dto/price-alert-notification-request.dto';
+import type { PriceAlertNotificationResponseDto } from './dto/price-alert-notification-response.dto';
 import type { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import type { TokenResponseDto } from './dto/token-response.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
@@ -477,6 +479,58 @@ export class AuthService {
     };
   }
 
+  async sendPriceAlertNotification(
+    request: PriceAlertNotificationRequestDto,
+  ): Promise<PriceAlertNotificationResponseDto> {
+    const user = await this.authRepository.findUserByAccountId(request.accountReference);
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: 'AUTH-404',
+        message: 'User not found for account reference',
+      });
+    }
+
+    let emailSent = true;
+    try {
+      await this.emailService.sendPriceAlertEmail(user.username, {
+        alertId: request.alertId,
+        accountReference: request.accountReference,
+        symbol: request.symbol,
+        currentPrice: request.currentPrice,
+        threshold: request.threshold,
+        direction: request.direction,
+        triggeredAt: request.triggeredAt,
+      });
+    } catch (error) {
+      emailSent = false;
+      this.logger.error('Price alert email failed', {
+        event: 'auth.price_alert_notification.email_failed',
+        accountReference: request.accountReference,
+        alertId: request.alertId,
+        error,
+      });
+      throw new UnprocessableEntityException({
+        errorCode: 'AUTH-422',
+        message: 'Price alert email could not be delivered',
+      });
+    }
+
+    this.logger.log('Price alert notification processed', {
+      event: 'auth.price_alert_notification.processed',
+      accountReference: request.accountReference,
+      alertId: request.alertId,
+      recipient: user.username,
+      emailSent,
+    });
+
+    return {
+      alertId: request.alertId,
+      accountReference: request.accountReference,
+      recipient: user.username,
+      emailSent,
+    };
+  }
+
   private async issueTokenPair(user: AuthUserRecord): Promise<TokenResponseDto> {
     const refreshToken = randomBytes(32).toString('hex');
 
@@ -508,6 +562,8 @@ export class AuthService {
       username: user.username,
       accountId: user.accountId,
       roles: user.roles,
+      firstName: user.firstName,
+      lastName: user.lastName,
       createdOn: user.createdOn.toISOString(),
     };
   }

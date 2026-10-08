@@ -108,6 +108,47 @@ public interface AccountMapper {
             @Param("accountReference") String accountReference
     );
 
+    @Select("""
+            SELECT
+                account_id,
+                user_id,
+                account_reference,
+                holder_name,
+                currency,
+                cash_balance,
+                status,
+                version,
+                created_at
+            FROM accounts
+            WHERE user_id = #{userId}
+            ORDER BY created_at DESC
+            LIMIT 1
+            """)
+    @ResultMap("accountMap")
+    Optional<Account> findLatestAccountByUserId(
+            @Param("userId") Long userId
+    );
+
+    @Select("""
+            SELECT
+                account_id,
+                user_id,
+                account_reference,
+                holder_name,
+                currency,
+                cash_balance,
+                status,
+                version,
+                created_at
+            FROM accounts
+            WHERE user_id = #{userId}
+            ORDER BY created_at DESC
+            """)
+    @ResultMap("accountMap")
+    List<Account> findAccountsByUserId(
+            @Param("userId") Long userId
+    );
+
 
     @Update("""
             UPDATE accounts

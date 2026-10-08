@@ -1,6 +1,10 @@
 package com.capstone.controller;
 
 import com.capstone.dto.WatchlistItemResponse;
+import com.capstone.entity.Instrument;
+import com.capstone.exception.InvalidInputException;
+import com.capstone.exception.InstrumentNotFoundException;
+import com.capstone.service.InstrumentService;
 import com.capstone.service.WatchlistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +22,7 @@ import java.util.Map;
 public class WatchlistController {
 
     private final WatchlistService watchlistService;
+    private final InstrumentService instrumentService;
 
     @GetMapping
     public ResponseEntity<List<WatchlistItemResponse>> getWatchlist(Authentication authentication) {
@@ -32,8 +37,17 @@ public class WatchlistController {
             @RequestBody Map<String, Object> request) {
 
         String accountReference = extractAccountReference(authentication);
-        Long instrumentId = ((Number) request.get("instrumentId")).longValue();
-        String name = (String) request.get("name");
+        Long instrumentId = resolveInstrumentId(request);
+
+        String name = request.get("name") instanceof String value
+            ? value
+            : null;
+
+        if (name == null || name.isBlank()) {
+            name = request.get("symbol") instanceof String value
+                ? value.trim().toUpperCase()
+                : "Watchlist";
+        }
 
         watchlistService.addToWatchlist(accountReference, instrumentId, name);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -61,5 +75,23 @@ public class WatchlistController {
         }
 
         return accountReference;
+    }
+
+    private Long resolveInstrumentId(Map<String, Object> request) {
+        Object instrumentIdValue = request.get("instrumentId");
+        if (instrumentIdValue instanceof Number number) {
+            return number.longValue();
+        }
+
+        Object symbolValue = request.get("symbol");
+        if (!(symbolValue instanceof String symbol) || symbol.isBlank()) {
+            throw new InvalidInputException();
+        }
+
+        String normalizedSymbol = symbol.trim().toUpperCase();
+        Instrument instrument = instrumentService.getInstrumentBySymbol(normalizedSymbol)
+                .orElseThrow(() -> new InstrumentNotFoundException(normalizedSymbol));
+
+        return instrument.getInstrumentId();
     }
 }

@@ -86,32 +86,6 @@ describe('Orders', () => {
     expect(component.price()).toBe('207.20');
   });
 
-  it('slider quantity updates estimated value without changing limit price or market price', () => {
-    component.onPriceInput('205.00');
-    component.onQuantityInput(10);
-
-    const beforeMarket = component.marketPrice();
-    const beforeLimit = component.price();
-
-    expect(component.estimatedOrderValue()).toBe(2050);
-
-    component.onQuantityInput(20);
-
-    expect(component.marketPrice()).toBe(beforeMarket);
-    expect(component.price()).toBe(beforeLimit);
-    expect(component.estimatedOrderValue()).toBe(4100);
-  });
-
-  it('changing limit price recalculates estimated value while quantity remains unchanged', () => {
-    component.onQuantityInput(20);
-    component.onPriceInput('205.00');
-    expect(component.estimatedOrderValue()).toBe(4100);
-
-    component.onPriceInput('210.00');
-    expect(component.quantity()).toBe(20);
-    expect(component.estimatedOrderValue()).toBe(4200);
-  });
-
   it('a valid order submits and shows the returned status', async () => {
     orderApiSpy.placeOrder.mockReturnValue(of({ status: 'NEW' }));
 

@@ -25,6 +25,8 @@ import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
 import { OrderPlacedNotificationRequestDto } from './dto/order-placed-notification-request.dto';
 import { OrderPlacedNotificationResponseDto } from './dto/order-placed-notification-response.dto';
+import { PriceAlertNotificationRequestDto } from './dto/price-alert-notification-request.dto';
+import { PriceAlertNotificationResponseDto } from './dto/price-alert-notification-response.dto';
 import { SignupRequestResponseDto } from './dto/signup-request-response.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -172,6 +174,21 @@ export class AuthController {
   ): Promise<OrderPlacedNotificationResponseDto> {
     this.assertInternalCall(internalToken);
     return this.authService.sendOrderPlacedNotification(request);
+  }
+
+  @Post('notifications/price-alert')
+  @HttpCode(202)
+  @ApiOperation({ summary: 'Send price alert email notification (internal service endpoint)' })
+  @ApiBody({ type: PriceAlertNotificationRequestDto })
+  @ApiOkResponse({ type: PriceAlertNotificationResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  notifyPriceAlert(
+    @Body() request: PriceAlertNotificationRequestDto,
+    @Headers('x-internal-token') internalToken?: string,
+  ): Promise<PriceAlertNotificationResponseDto> {
+    this.assertInternalCall(internalToken);
+    return this.authService.sendPriceAlertNotification(request);
   }
 
   private assertInternalCall(internalToken?: string): void {

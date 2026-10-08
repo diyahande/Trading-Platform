@@ -36,6 +36,10 @@
             <span>☆</span>
             Blotter
         </a>
+        <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+            <span>⚑</span>
+            Alerts
+        </a>
     </nav>
 
 
@@ -60,7 +64,7 @@
 <main class="dashboard">
 
     <section class="welcome">
-        <h1>Hello,</h1>
+        <h1>Hello, {{ getFullName() }}</h1>
         <p>Here's what's happening in the markets today.</p>
         <p class="summary-error" [hidden]="!summaryError">{{ summaryError }}</p>
     </section>
@@ -120,7 +124,7 @@
                          [class.gainer]="stock.changePercent >= 0"
                          [class.loser]="stock.changePercent < 0">
                         <div class="stock-symbol">{{ stock.symbol }}</div>
-                        <div class="stock-price">${{ stock.price | number:'1.2-2' }}</div>
+                        <div class="stock-price">{{ formatPriceBySymbol(stock.price, stock.symbol) }}</div>
                         <div class="stock-change" [class]="stock.changePercent >= 0 ? 'positive' : 'negative'">
                             {{ stock.changePercent >= 0 ? '▲' : '▼' }} {{ (stock.changePercent < 0 ? -stock.changePercent : stock.changePercent) | number:'1.2-2' }}%
                         </div>
@@ -151,7 +155,20 @@
 
             <div class="section-header">
                 <h2>Watchlist</h2>
-                <a href="#">View all</a>
+                <a routerLink="/alerts">Manage alerts</a>
+            </div>
+
+            <div class="watchlist-controls">
+                <input
+                    type="text"
+                    [value]="newWatchlistSymbol"
+                    (input)="newWatchlistSymbol = $any($event.target).value"
+                    (keyup.enter)="addToWatchlist()"
+                    maxlength="20"
+                    placeholder="Symbol (e.g. INFY.NS)" />
+                <button type="button" (click)="addToWatchlist()" [disabled]="watchlistSubmitting">
+                    {{ watchlistSubmitting ? 'Adding...' : 'Add' }}
+                </button>
             </div>
 
             <div class="watchlist-heading">
@@ -164,18 +181,33 @@
                 {{ watchlistError }}
             </div>
 
+            <div *ngIf="watchlistActionError" class="watchlist-error">
+                {{ watchlistActionError }}
+            </div>
+
             <div *ngIf="!watchlistError && watchlist.length === 0" class="watchlist-empty">
                 No watchlist items
             </div>
 
-            <div *ngFor="let item of watchlist" class="stock-row">
-                <div>
-                    <strong>{{ item.symbol }}</strong>
-                    <small>{{ item.displayName }}</small>
+            <ng-container *ngFor="let item of watchlist">
+                <div class="stock-row">
+                    <div class="watchlist-item-main">
+                        <div>
+                            <strong>{{ item.symbol }}</strong>
+                            <small>{{ item.displayName }}</small>
+                        </div>
+                        <button
+                            type="button"
+                            class="watchlist-remove"
+                            (click)="removeFromWatchlist(item.watchlistId)"
+                            [disabled]="removingWatchlistId === item.watchlistId">
+                            {{ removingWatchlistId === item.watchlistId ? '...' : 'Remove' }}
+                        </button>
+                    </div>
+                    <span>{{ formatWatchlistPrice(item.currentPrice, item.symbol) }}</span>
+                    <span [class]="changeClass(item.changePercent)">{{ formatChangePercent(item.changePercent) }}</span>
                 </div>
-                <span>{{ formatWatchlistPrice(item.currentPrice) }}</span>
-                <span [class]="changeClass(item.changePercent)">{{ formatChangePercent(item.changePercent) }}</span>
-            </div>
+            </ng-container>
 
         </div>
 
@@ -221,7 +253,7 @@
                     <strong>{{ mover.symbol }}</strong>
                     <small>{{ mover.displayName }}</small>
                 </div>
-                <span>{{ mover.price | number:'1.2-2' }}</span>
+                <span>{{ formatPriceBySymbol(mover.price, mover.symbol) }}</span>
                 <span [ngClass]="getTopMoverChangeClass(mover.changePercent)">
                     {{ mover.changePercent >= 0 ? '▲' : '▼' }} {{ (mover.changePercent < 0 ? -mover.changePercent : mover.changePercent) | number:'1.2-2' }}%
                 </span>

@@ -3,6 +3,7 @@ package com.capstone.kafka;
 import com.capstone.service.StockPerformanceService;
 import com.capstone.service.TopMoversService;
 import com.capstone.service.KafkaMarketQuoteService;
+import com.capstone.watchlist.PriceAlertService;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
  * Consumes real-time market quotes and updates:
  * - TopMoversService for stock gainers/losers
  * - StockPerformanceService for market performance visualization
+ * - PriceAlertService for price alert evaluation (watchlist module)
  */
 @Component
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class MarketDataEventListener {
     private final TopMoversService topMoversService;
     private final StockPerformanceService stockPerformanceService;
     private final KafkaMarketQuoteService kafkaMarketQuoteService;
+    private final PriceAlertService priceAlertService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -37,7 +40,7 @@ public class MarketDataEventListener {
      */
     @KafkaListener(
             topics = "market-data",
-            groupId = "watchlist-service-1",
+            groupId = "watchlist-service",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void onMarketDataQuote(String message) {
@@ -83,6 +86,12 @@ public class MarketDataEventListener {
                         payload.getPreviousClose()
                 );
             }
+
+            // Evaluate price alerts for this symbol (watchlist module)
+            priceAlertService.evaluateAlertsForSymbol(
+                    payload.getSymbol(),
+                    payload.getPrice()
+            );
 
             logger.debug(
                     "Market data consumed: symbol={} price={} changePercent={}",
