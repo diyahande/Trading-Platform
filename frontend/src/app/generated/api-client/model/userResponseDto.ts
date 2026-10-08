@@ -16,6 +16,8 @@ export interface UserResponseDto {
     roles: Array<UserResponseDto.RolesEnum>;
     firstName?: string;
     lastName?: string;
+    phone?: string;
+    dob?: string;
     createdOn?: string;
 }
 export namespace UserResponseDto {
@@ -25,6 +27,4 @@ export namespace UserResponseDto {
     } as const;
     export type RolesEnum = typeof RolesEnum[keyof typeof RolesEnum];
 }
-
-
 

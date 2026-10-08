@@ -67,13 +67,19 @@ export class Alerts {
   viewProfile(): void {
     this.isProfileMenuOpen = false;
     this.isNavMenuOpen = false;
-    void this.router.navigate(['/change-password']);
+    void this.router.navigate(['/profile']);
   }
 
   viewPreferences(): void {
     this.isProfileMenuOpen = false;
     this.isNavMenuOpen = false;
     void this.router.navigate(['/preferences']);
+  }
+
+  viewChangePassword(): void {
+    this.isProfileMenuOpen = false;
+    this.isNavMenuOpen = false;
+    void this.router.navigate(['/change-password']);
   }
 
   signOut(): void {

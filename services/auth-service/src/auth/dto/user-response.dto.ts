@@ -19,6 +19,12 @@ export class UserResponseDto {
   @ApiPropertyOptional()
   lastName?: string;
 
+  @ApiPropertyOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ format: 'date' })
+  dob?: string;
+
   @ApiPropertyOptional({ format: 'date-time' })
   createdOn?: string;
 }

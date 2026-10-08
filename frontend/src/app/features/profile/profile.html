@@ -1,0 +1,120 @@
+<header class="navbar">
+  <div class="logo">
+    <span class="logo-mark">X</span>
+    <span>TradeX</span>
+  </div>
+
+  <button
+    class="nav-toggle"
+    type="button"
+    (click)="toggleNavMenu($event)"
+    [attr.aria-expanded]="isNavMenuOpen"
+    aria-controls="profile-nav"
+    aria-label="Toggle navigation menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <nav class="nav-links" id="profile-nav" [class.open]="isNavMenuOpen">
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>⌂</span>
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>▤</span>
+      Orders
+    </a>
+    <a routerLink="/holdings" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>♧</span>
+      Holdings
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>◈</span>
+      Portfolio
+    </a>
+    <a routerLink="/blotter" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>☆</span>
+      Blotter
+    </a>
+    <a routerLink="/alerts" routerLinkActive="active" class="nav-item" (click)="isNavMenuOpen = false">
+      <span>⚑</span>
+      Alerts
+    </a>
+  </nav>
+
+  <div class="profile">
+    <button
+      class="profile-trigger"
+      type="button"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="isProfileMenuOpen"
+      (click)="toggleProfileMenu($event)">
+      <div class="profile-icon" aria-hidden="true">&#128100;</div>
+    </button>
+
+    <div class="profile-menu" *ngIf="isProfileMenuOpen" role="menu" aria-label="Profile menu">
+      <button type="button" role="menuitem" (click)="viewProfile()">Profile</button>
+      <button type="button" role="menuitem" (click)="viewPreferences()">Preferences</button>
+      <button type="button" role="menuitem" (click)="viewChangePassword()">Change Password</button>
+      <button type="button" role="menuitem" (click)="signOut()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="profile-page">
+  <section class="profile-shell">
+    <header class="profile-header">
+      <p class="eyebrow">Account Center</p>
+      <h1>Your Profile</h1>
+      <p>Review your registered account details in one place.</p>
+    </header>
+
+    <div class="loading-card" *ngIf="isLoading">
+      Loading profile details...
+    </div>
+
+    <div class="error-card" *ngIf="!isLoading && errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <ng-container *ngIf="!isLoading && !errorMessage && user">
+      <section class="identity-card">
+        <div class="avatar">{{ initials }}</div>
+        <div>
+          <h2>{{ displayName }}</h2>
+          <p>{{ user.username }}</p>
+        </div>
+      </section>
+
+      <section class="details-grid">
+        <article class="detail-card">
+          <h3>First Name</h3>
+          <p>{{ formatValue(user.firstName) }}</p>
+        </article>
+        <article class="detail-card">
+          <h3>Last Name</h3>
+          <p>{{ formatValue(user.lastName) }}</p>
+        </article>
+        <article class="detail-card">
+          <h3>Phone</h3>
+          <p>{{ formatValue(user.phone) }}</p>
+        </article>
+        <article class="detail-card">
+          <h3>Date of Birth</h3>
+          <p>{{ formatDate(user.dob) }}</p>
+        </article>
+        <article class="detail-card">
+          <h3>Username</h3>
+          <p>{{ formatValue(user.username) }}</p>
+        </article>
+        <article class="detail-card">
+          <h3>Account ID</h3>
+          <p>{{ formatValue(user.accountId) }}</p>
+        </article>
+        <article class="detail-card">
+          <h3>Roles</h3>
+          <p>{{ formatRoles(user.roles) }}</p>
+        </article>
+      </section>
+    </ng-container>
+  </section>
+</main>

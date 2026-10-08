@@ -102,13 +102,19 @@ export class Portfolio implements OnInit {
   viewProfile(): void {
     this.isProfileMenuOpen.set(false);
     this.isNavMenuOpen.set(false);
-    void this.router.navigate(['/change-password']);
+    void this.router.navigate(['/profile']);
   }
 
   viewPreferences(): void {
     this.isProfileMenuOpen.set(false);
     this.isNavMenuOpen.set(false);
     void this.router.navigate(['/preferences']);
+  }
+
+  viewChangePassword(): void {
+    this.isProfileMenuOpen.set(false);
+    this.isNavMenuOpen.set(false);
+    void this.router.navigate(['/change-password']);
   }
 
   signOut(): void {

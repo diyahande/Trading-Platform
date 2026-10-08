@@ -391,6 +391,30 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('returns profile details on me when available', async () => {
+    authRepository.findUserByAccountId.mockResolvedValue({
+      ...userRecord,
+      firstName: 'Priya',
+      lastName: 'Menon',
+      phone: '+919900001234',
+      dob: new Date('1996-06-15T00:00:00.000Z'),
+    });
+
+    const response = await authService.me({
+      sub: userRecord.accountId,
+      accountId: userRecord.accountId,
+      roles: ['CUSTOMER'],
+      iat: 1,
+      exp: 2,
+      iss: 'auth-service',
+    });
+
+    expect(response.firstName).toBe('Priya');
+    expect(response.lastName).toBe('Menon');
+    expect(response.phone).toBe('+919900001234');
+    expect(response.dob).toBe('1996-06-15');
+  });
+
   it('change password rejects mismatched confirm password with validation error', async () => {
     await expect(
       authService.changePassword(

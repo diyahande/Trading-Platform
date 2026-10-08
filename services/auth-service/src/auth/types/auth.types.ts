@@ -19,6 +19,8 @@ export interface AuthUserRecord {
   roles: Role[];
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  dob?: Date;
   createdOn: Date;
 }
 

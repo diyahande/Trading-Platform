@@ -564,6 +564,8 @@ export class AuthService {
       roles: user.roles,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      dob: user.dob ? user.dob.toISOString().slice(0, 10) : undefined,
       createdOn: user.createdOn.toISOString(),
     };
   }
