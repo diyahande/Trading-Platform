@@ -35,7 +35,7 @@ public class AuthPriceAlertNotificationClient implements AlertNotificationPort {
     private final AccountService accountService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @Value("${auth.notifications.base-url:http://localhost:3000}")
+    @Value("${auth.notifications.base-url}")
     private String authServiceBaseUrl;
 
     @Value("${auth.notifications.price-alert-path:/auth/notifications/price-alert}")

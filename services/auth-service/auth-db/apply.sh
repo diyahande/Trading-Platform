@@ -4,11 +4,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Load auth-service .env if present.
-if [[ -f "$SCRIPT_DIR/../.env" ]]; then
+# Load the repo-root .env if present.
+ROOT_ENV_FILE="$SCRIPT_DIR/../../../.env"
+if [[ -f "$ROOT_ENV_FILE" ]]; then
   set -a
-  # shellcheck disable=SC1091
-  source "$SCRIPT_DIR/../.env"
+  # shellcheck disable=SC1090
+  source "$ROOT_ENV_FILE"
   set +a
 fi
 
@@ -18,7 +19,7 @@ else
   required_vars=(DB_USERNAME DB_PASSWORD)
   for var in "${required_vars[@]}"; do
     if [[ -z "${!var:-}" ]]; then
-      echo "Error: $var is not set. Set it in auth-service/.env or export it."
+      echo "Error: $var is not set. Set it in the repo-root .env or export it."
       exit 1
     fi
   done

@@ -3,3 +3,6 @@
 *.iml
 out/
 .vscode/
+# Environment: the real .env is secret; the template is tracked
+.env
+!.env.example

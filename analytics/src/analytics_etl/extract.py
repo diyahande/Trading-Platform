@@ -125,9 +125,17 @@ def extract_from_api(
             "FAUXNANCE_API_KEY is not set"
         )
 
+    base_url = os.getenv("FAUXNANCE_BASE_URL")
+
+    if not base_url:
+        raise ValueError(
+            "FAUXNANCE_BASE_URL is not set"
+        )
+
     #creating API client
     client = FauxnanceClient(
-        api_key=api_key
+        api_key=api_key,
+        base_url=base_url,
     )
 
     #get instrument info

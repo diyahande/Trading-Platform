@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, timeout } from 'rxjs';
+import { APP_ENV } from '../config/app-env.generated';
 
 export type AiChatRequest = {
   message: string;
@@ -17,7 +18,7 @@ export type AiChatResponse = {
 })
 export class AiChatService {
   // Keep AI service fully separate from trade/auth APIs.
-  private readonly endpoint = 'http://localhost:8088/api/chat';
+  private readonly endpoint = APP_ENV.aiChatUrl;
   private readonly requestTimeoutMs = 25_000;
 
   constructor(private http: HttpClient) {}

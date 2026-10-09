@@ -21,10 +21,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 
 @Configuration
 public class SecurityConfig {
+
+    // Comma-separated origins from the root .env (CORS_ALLOWED_ORIGINS)
+    @Value("${app.cors.allowed-origins}")
+    private List<String> corsAllowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -82,11 +87,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:4200",  // Angular frontend
-                "http://localhost:8083",  // Trade API (self-calls)
-                "http://localhost:3000"   // Auth service (for health checks)
-        ));
+        configuration.setAllowedOrigins(corsAllowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

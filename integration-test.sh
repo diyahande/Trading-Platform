@@ -29,11 +29,21 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Load the repo-root .env; exported values are inherited by the services started below.
+ROOT_ENV_FILE="$ROOT_DIR/.env"
+if [[ ! -f "$ROOT_ENV_FILE" ]]; then
+    echo "Error: $ROOT_ENV_FILE not found. Copy .env.example to .env and fill it in." >&2
+    exit 1
+fi
+set -a
+# shellcheck disable=SC1090
+source "$ROOT_ENV_FILE"
+set +a
+
 AUTH_DIR="$ROOT_DIR/auth-service"
 TRADE_API_DIR="$ROOT_DIR/trade-api"
 
-AUTH_URL="http://localhost:3000"
-TRADE_API_URL="http://localhost:8083"
+AUTH_URL="$AUTH_SERVICE_URL"
 
 AUTH_PID=""
 TRADE_API_PID=""
@@ -57,17 +67,17 @@ cleanup() {
     echo "Cleaning up test processes..."
     echo "=================================================="
     
-    # Kill any existing process on port 3000
+    # Kill any existing process on port $AUTH_SERVICE_PORT
     if command -v lsof &> /dev/null; then
-        PID_3000=$(lsof -t -i :3000 2>/dev/null || true)
+        PID_3000=$(lsof -t -i :$AUTH_SERVICE_PORT 2>/dev/null || true)
         if [[ -n "$PID_3000" ]]; then
             kill $PID_3000 2>/dev/null || true
         fi
     fi
     
-    # Kill any existing process on port 8083
+    # Kill any existing process on port $ORDER_SERVICE_PORT
     if command -v lsof &> /dev/null; then
-        PID_8083=$(lsof -t -i :8083 2>/dev/null || true)
+        PID_8083=$(lsof -t -i :$ORDER_SERVICE_PORT 2>/dev/null || true)
         if [[ -n "$PID_8083" ]]; then
             kill $PID_8083 2>/dev/null || true
         fi
@@ -140,16 +150,16 @@ echo "Test User     : $TEST_USERNAME"
 echo "Account ID    : $TEST_ACCOUNT_ID"
 echo "=================================================="
 
-# Kill any lingering processes on ports 3000 and 8083
-echo "Clearing any existing processes on ports 3000 and 8083..."
+# Kill any lingering processes on ports $AUTH_SERVICE_PORT and $ORDER_SERVICE_PORT
+echo "Clearing any existing processes on ports $AUTH_SERVICE_PORT and $ORDER_SERVICE_PORT..."
 if command -v lsof &> /dev/null; then
-    PID_3000=$(lsof -t -i :3000 2>/dev/null || true)
+    PID_3000=$(lsof -t -i :$AUTH_SERVICE_PORT 2>/dev/null || true)
     if [[ -n "$PID_3000" ]]; then
         kill $PID_3000 2>/dev/null || true
         sleep 1
     fi
     
-    PID_8083=$(lsof -t -i :8083 2>/dev/null || true)
+    PID_8083=$(lsof -t -i :$ORDER_SERVICE_PORT 2>/dev/null || true)
     if [[ -n "$PID_8083" ]]; then
         kill $PID_8083 2>/dev/null || true
         sleep 1
@@ -208,13 +218,6 @@ echo
 echo ">>> Starting Trade API..."
 (
     cd "$TRADE_API_DIR"
-    export SERVER_PORT=8083
-    export DB_URL="jdbc:postgresql://localhost:5432/capstone?currentSchema=stock_trading"
-    export DB_USERNAME="postgres"
-    export DB_PASSWORD="n3u3d4!"
-    export JWT_SECRET="mission-control-shared-secret-key-32-bytes-minimum"
-    export KAFKA_BOOTSTRAP_SERVERS="10.8.77.85:8085"
-    export KAFKA_ORDERS_TOPIC="orders"
     ./mvnw -q spring-boot:run -Dspring-boot.run.arguments="--server.servlet.session.persistent=false" 2>&1
 ) > "$TRADE_API_DIR/trade-api.log" 2>&1 &
 TRADE_API_PID=$!

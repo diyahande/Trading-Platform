@@ -98,10 +98,9 @@ src/
 
 ## Environment and E2E Notes
 
-Playwright config auto-loads environment values from:
+Playwright config auto-loads environment values from the repo-root `.env`.
 
-1. tests/e2e/.env (if present)
-2. .env (fallback)
+App URLs and the allowed CORS origins are not hardcoded. `scripts/generate-env.mjs` writes `src/app/core/config/app-env.generated.ts` from the repo-root `.env` before `start`, `build`, `watch` and `test` (run it by hand with `npm run generate:env`). That file is git-ignored.
 
 Typical E2E variables include:
 - E2E_BASE_URL

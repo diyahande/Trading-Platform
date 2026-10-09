@@ -22,7 +22,7 @@ python -m pip install --upgrade pip
 pip install -e ".[dev]"
 ```
 
-The ETL reads Postgres settings from environment variables. If not exported, it auto-loads values from `database/.env`.
+The ETL reads Postgres settings from environment variables. If not exported, it auto-loads them from the repo-root `.env`.
 
 
 

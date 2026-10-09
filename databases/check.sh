@@ -4,12 +4,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Load repository .env
+# Load the repo-root .env
 
-if [[ -f "$SCRIPT_DIR/.env" ]]; then
+ROOT_ENV_FILE="$SCRIPT_DIR/../.env"
+if [[ -f "$ROOT_ENV_FILE" ]]; then
     set -a
-    # shellcheck disable=SC1091
-    source "$SCRIPT_DIR/.env"
+    # shellcheck disable=SC1090
+    source "$ROOT_ENV_FILE"
     set +a
 fi
 

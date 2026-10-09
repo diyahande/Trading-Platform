@@ -6,6 +6,7 @@ import { provideToastr } from 'ngx-toastr';
 import { provideApi } from './generated/api-client/provide-api';
 import { AUTH_HEADER_POLICY, bearerTokenInterceptor } from './core/interceptors/bearer-token.interceptor';
 import { basePathInterceptor } from './core/interceptors/base-path.interceptor';
+import { APP_ENV } from './core/config/app-env.generated';
 
 import { routes } from './app.routes';
 
@@ -26,7 +27,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: AUTH_HEADER_POLICY,
       useValue: {
-        allowedOrigins: ['http://localhost:4200', 'http://localhost:3000', 'http://localhost:8082', 'http://localhost:8083'],
+        allowedOrigins: [...APP_ENV.allowedOrigins],
         unauthenticatedAuthPaths: [
           '/auth/login',
           '/auth/register',

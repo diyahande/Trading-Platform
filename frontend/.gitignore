@@ -51,3 +51,5 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 *.env
+# Generated from the repo-root .env by scripts/generate-env.mjs
+src/app/core/config/app-env.generated.ts

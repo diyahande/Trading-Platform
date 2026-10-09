@@ -27,7 +27,7 @@ public class AuthOrderNotificationClient {
     private final CustomerPreferenceService customerPreferenceService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @Value("${auth.notifications.base-url:http://localhost:3000}")
+    @Value("${auth.notifications.base-url}")
     private String authServiceBaseUrl;
 
     @Value("${auth.notifications.order-placed-path:/auth/notifications/order-placed}")

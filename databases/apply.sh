@@ -2,9 +2,13 @@
 
 set -e
 
+# Run from this folder: the SQL paths below are relative to it.
+cd "$(dirname "$0")"
+
 echo "Loading environment variables..."
 
-if [ -f ".env" ]; then
+ROOT_ENV_FILE="../.env"
+if [ -f "$ROOT_ENV_FILE" ]; then
     while IFS='=' read -r key value; do
         key="${key%$'\r'}"
         value="${value%$'\r'}"
@@ -16,7 +20,7 @@ if [ -f ".env" ]; then
         if [ -z "${!key+x}" ]; then
             export "$key=$value"
         fi
-    done < .env
+    done < "$ROOT_ENV_FILE"
 fi
 
 set -a

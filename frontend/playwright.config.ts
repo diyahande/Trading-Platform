@@ -4,11 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 function loadDotEnvFile(): void {
-  // Try E2E .env first, then root .env
-  let envPath = resolve(process.cwd(), 'tests/e2e/.env');
-  if (!existsSync(envPath)) {
-    envPath = resolve(process.cwd(), '.env');
-  }
+  // The repo-root .env is the only env file for the E2E suite.
+  const envPath = resolve(__dirname, '..', '.env');
   if (!existsSync(envPath)) {
     return;
   }

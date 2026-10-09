@@ -2,7 +2,7 @@ spring:
   application:
     name: executor
   server:
-    port: ${SERVER_PORT}
+    port: ${EXECUTOR_SERVICE_PORT}
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

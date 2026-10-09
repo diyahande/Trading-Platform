@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { APP_ENV } from '../config/app-env.generated';
 
 type FrankfurterRatesResponse = {
   amount?: number;
@@ -46,7 +47,7 @@ export class CurrencyConversion {
       };
     }
 
-    const endpoint = 'https://api.frankfurter.dev/v2/rates?base=USD';
+    const endpoint = APP_ENV.ratesUrl;
     const response = await firstValueFrom(this.http.get<FrankfurterApiResponse>(endpoint));
     const ratePerUsd = this.readRateFromResponse(response, currency);
 

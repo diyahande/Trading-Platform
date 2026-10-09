@@ -16,9 +16,7 @@ class FauxnanceClient:
     def __init__(
         self,
         api_key,
-        base_url=(
-            "https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1"
-        ),
+        base_url,
     ):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")

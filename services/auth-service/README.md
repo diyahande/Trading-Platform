@@ -68,10 +68,10 @@ This allows account vetting before credentials become active.
 
 ## Environment Variables
 
-Use auth-service/.env.example as the template.
+All values live in the repo-root `.env` (template: repo-root `.env.example`).
 
 Required core values:
-- PORT
+- AUTH_SERVICE_PORT
 - JWT_SECRET
 - JWT_ISSUER
 - DATABASE_URL

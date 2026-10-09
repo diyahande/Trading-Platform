@@ -1,44 +1,46 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { APP_ENV } from '../config/app-env.generated';
+
+const TRADE_PATH_PREFIXES = [
+  '/api/v1',
+  '/api/dashboard',
+  '/api/portfolio-allocation',
+  '/api/market-overview',
+  '/api/market-performance',
+  '/api/top-movers',
+];
+
+/** Backend base URL that serves the given path, or undefined when no backend owns it. */
+function baseUrlForPath(path: string): string | undefined {
+  if (path.startsWith('/auth')) return APP_ENV.authApiUrl;
+  if (TRADE_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return APP_ENV.tradeApiUrl;
+  return undefined;
+}
 
 /**
  * Routes API requests to the correct backend service based on the endpoint path.
- * 
- * - Auth endpoints (/auth/*) → http://localhost:3000 (auth-service)
- * - Trade endpoints (/api/v1/*, /api/dashboard, /api/portfolio-allocation, /api/market-overview, /api/market-performance, /api/top-movers) → http://localhost:8083 (trade-api)
+ *
+ * - Auth endpoints (/auth/*) → AUTH_SERVICE_URL (auth-service)
+ * - Trade endpoints (/api/v1/*, /api/dashboard, /api/portfolio-allocation, /api/market-overview, /api/market-performance, /api/top-movers) → TRADE_API_URL (trade-api)
  */
 export const basePathInterceptor: HttpInterceptorFn = (req, next) => {
-  // Only modify relative URLs or localhost URLs
-  if (req.url.startsWith('/') || req.url.includes('localhost')) {
-    let modifiedUrl = req.url;
+  let modifiedUrl = req.url;
 
-    // If it's a relative URL, construct the full URL with the appropriate base path
-    if (req.url.startsWith('/')) {
-      if (req.url.startsWith('/auth')) {
-        // Auth endpoints go to auth-service on port 3000
-        modifiedUrl = `http://localhost:3000${req.url}`;
-      } else if (req.url.startsWith('/api/v1') || req.url.startsWith('/api/dashboard') || req.url.startsWith('/api/portfolio-allocation') || req.url.startsWith('/api/market-overview') || req.url.startsWith('/api/market-performance') || req.url.startsWith('/api/top-movers')) {
-        // Trade endpoints go to trade-api on port 8083
-        modifiedUrl = `http://localhost:8083${req.url}`;
-      }
-    } else if (req.url.startsWith('http://localhost:3000')) {
-      // Already routed to auth-service, keep as is
-      modifiedUrl = req.url;
-    } else if (req.url.startsWith('http://localhost:8082') || req.url.startsWith('http://localhost:8083')) {
-      // Already routed to trade-api, keep as is
-      modifiedUrl = req.url;
-    } else {
-      // For other localhost URLs, parse and route appropriately
-      const urlObj = new URL(req.url);
-      if (urlObj.pathname.startsWith('/auth')) {
-        modifiedUrl = `http://localhost:3000${urlObj.pathname}${urlObj.search}`;
-      } else if (urlObj.pathname.startsWith('/api/v1') || urlObj.pathname.startsWith('/api/dashboard') || urlObj.pathname.startsWith('/api/portfolio-allocation') || urlObj.pathname.startsWith('/api/market-overview') || urlObj.pathname.startsWith('/api/market-performance') || urlObj.pathname.startsWith('/api/top-movers')) {
-        modifiedUrl = `http://localhost:8083${urlObj.pathname}${urlObj.search}`;
-      }
-    }
+  if (req.url.startsWith('/')) {
+    // Relative URL: prefix with the owning backend
+    const base = baseUrlForPath(req.url);
+    if (base) modifiedUrl = `${base}${req.url}`;
+  } else if (req.url.startsWith(APP_ENV.authApiUrl) || req.url.startsWith(APP_ENV.tradeApiUrl)) {
+    // Already routed to a backend, keep as is
+  } else if (req.url.includes('localhost')) {
+    // Other local URLs: re-route by path
+    const urlObj = new URL(req.url);
+    const base = baseUrlForPath(urlObj.pathname);
+    if (base) modifiedUrl = `${base}${urlObj.pathname}${urlObj.search}`;
+  }
 
-    if (modifiedUrl !== req.url) {
-      req = req.clone({ url: modifiedUrl });
-    }
+  if (modifiedUrl !== req.url) {
+    req = req.clone({ url: modifiedUrl });
   }
 
   return next(req);

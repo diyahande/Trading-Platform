@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { APP_ENV } from '../config/app-env.generated';
 
 export type SignupRequestStatus = 'NEW' | 'APPROVED' | 'REJECTED';
 
@@ -26,7 +27,7 @@ export interface SignupRequest {
   providedIn: 'root',
 })
 export class SignupRequests {
-  private readonly baseUrl = 'http://localhost:3000/auth';
+  private readonly baseUrl = `${APP_ENV.authApiUrl}/auth`;
 
   constructor(private readonly http: HttpClient) {}
 

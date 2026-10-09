@@ -1,21 +1,21 @@
 frontend:
   host: http://localhost
-  port: 4200
+  port: ${FRONTEND_PORT}
 services:
     auth:
         host: http://localhost
-        port: 3000
+        port: ${AUTH_SERVICE_PORT}
     order:
         host: http://localhost
-        port: 8081
+        port: ${ORDER_SERVICE_PORT}
     executor:
         host: http://localhost
-        port: 8082
+        port: ${EXECUTOR_SERVICE_PORT}
 database:
     host: http://localhost
-    port: 5432
-    name: capstone
-    user: postgres
+    port: ${PGPORT}
+    name: ${POSTGRES_DB}
+    user: ${PGUSER}
 kafka:
     host: http://localhost
-    port: 9092
+    port: ${KAFKA_PORT}

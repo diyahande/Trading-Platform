@@ -9,6 +9,13 @@ import os
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
+def _required(name: str) -> str:
+	value = os.getenv(name)
+	if not value:
+		raise RuntimeError(f"{name} is not set. Add it to the repo-root .env.")
+	return value
+
+
 def _load_env_file(path: Path) -> None:
 	if not path.exists():
 		return
@@ -46,18 +53,17 @@ class Settings:
 
 	@classmethod
 	def from_env(cls) -> "Settings":
-		# Load repo-level env first, then database env as fallback.
+		# The repo-root .env is the only env file; real environment variables win.
 		_load_env_file(PROJECT_ROOT / ".env")
-		_load_env_file(PROJECT_ROOT / "database" / ".env")
 
 		batch_default = datetime.now(timezone.utc).strftime("batch_%Y%m%dT%H%M%SZ")
 
 		return cls(
-			postgres_db=os.getenv("POSTGRES_DB", "banking_db"),
-			postgres_host=os.getenv("PGHOST", "localhost"),
-			postgres_port=int(os.getenv("PGPORT", "5432")),
-			postgres_user=os.getenv("PGUSER", "postgres"),
-			postgres_password=os.getenv("PGPASSWORD", "postgres"),
+			postgres_db=_required("POSTGRES_DB"),
+			postgres_host=_required("PGHOST"),
+			postgres_port=int(_required("PGPORT")),
+			postgres_user=_required("PGUSER"),
+			postgres_password=_required("PGPASSWORD"),
 			analytics_db_path=Path(
 				os.getenv(
 					"ANALYTICS_DUCKDB_PATH",

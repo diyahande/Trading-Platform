@@ -38,14 +38,15 @@ async function bootstrap() {
     jsonDocumentUrl: '/docs/json',
   });
 
-  // enable CORS for local frontend during development
+  // enable CORS for the frontend origin configured in the root .env
   app.enableCors({
-    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+    origin: process.env.FRONTEND_ORIGIN,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Number(undefined) is NaN, so a missing AUTH_SERVICE_PORT fails loudly
+  await app.listen(Number(process.env.AUTH_SERVICE_PORT));
 }
 void bootstrap();

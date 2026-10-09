@@ -68,7 +68,7 @@ pip install -e ".[dev]"
 
 ### 4. Configure environment variables
 
-Create a `.env` file in the `analytics/` directory:
+Copy the repo-root `.env.example` to `.env` and set `FAUXNANCE_API_KEY` (and the other values it lists). All services, scripts and tests read this one root file.
 
 ```env
 FAUXNANCE_API_KEY=your_api_key_here
@@ -189,7 +189,7 @@ Stores cleaned candle data such as:
 ## Troubleshooting
 
 ### `FAUXNANCE_API_KEY is not set`
-Make sure your `.env` file contains a valid API key.
+Make sure the repo-root `.env` file contains a valid API key.
 
 ### `Schema file not found`
 Check that this file exists:
