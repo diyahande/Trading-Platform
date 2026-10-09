@@ -17,54 +17,12 @@ The Trade API provides:
 - Java 21+
 - Maven 3.8+
 - PostgreSQL 12+
-- Kafka (bootstrap server: `10.8.78.68:8085`)
+- Kafka
 - Authentication Stub (for JWT token generation)
 
-## Configuration
-
-All configuration is managed through environment variables. Set these before running:
-
-### Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SERVER_PORT` | Spring Boot server port | `8083` |
-| `DB_URL` | PostgreSQL connection URL | `jdbc:postgresql://localhost:5432/stock_trading_db` |
-| `DB_USERNAME` | Database username | `postgres` |
-| `DB_PASSWORD` | Database password | `n3u3d4!` |
-| `JWT_SECRET` | JWT secret key (min 32 bytes) | `mission-control-shared-secret-key-32-bytes-minimum` |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers | `10.8.78.68:8085` |
-| `KAFKA_ORDERS_TOPIC` | Orders topic name | `orders` |
 
 ## Running the Service
 
-### Using PowerShell
-
-```powershell
-cd trade-api
-$env:SERVER_PORT='8083'; `
-$env:DB_URL='jdbc:postgresql://localhost:5432/stock_trading_db'; `
-$env:DB_USERNAME='postgres'; `
-$env:DB_PASSWORD='n3u3d4!'; `
-$env:JWT_SECRET='mission-control-shared-secret-key-32-bytes-minimum'; `
-$env:KAFKA_BOOTSTRAP_SERVERS='10.8.78.68:8085'; `
-$env:KAFKA_ORDERS_TOPIC='orders'; `
-mvn spring-boot:run
-```
-
-### Using Bash
-
-```bash
-cd trade-api
-export SERVER_PORT='8083'
-export DB_URL='jdbc:postgresql://localhost:5432/stock_trading_db'
-export DB_USERNAME='postgres'
-export DB_PASSWORD='n3u3d4!'
-export JWT_SECRET='mission-control-shared-secret-key-32-bytes-minimum'
-export KAFKA_BOOTSTRAP_SERVERS='10.8.78.68:8085'
-export KAFKA_ORDERS_TOPIC='orders'
-mvn spring-boot:run
-```
 
 ## API Endpoints
 

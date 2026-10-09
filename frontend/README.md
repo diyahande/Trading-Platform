@@ -41,7 +41,6 @@ npm ci
 npm start
 ```
 
-Default URL: http://localhost:4200
 
 ## Build
 
@@ -63,20 +62,11 @@ E2E tests:
 npx playwright test
 ```
 
-## Important Runtime Dependencies
-
-The frontend expects these backend services during local development:
-
-- Auth Service: http://localhost:3000
-- Trade API: http://localhost:8083
-- AI Backend: http://localhost:8088
 
 ## Unique Implementation Details
 
 ### 1) Smart API Routing via Interceptor
 Relative API calls are routed to the correct backend:
-- /auth/* -> auth-service (3000)
-- /api/* and dashboard/market endpoints -> trade-api (8083)
 
 This keeps feature code clean and avoids hardcoding service hosts in every API call.
 
@@ -137,7 +127,6 @@ Do not commit real credentials in shared environments.
 - Clear Angular cache: npx ng cache clean
 
 ### Login works but data panels fail
-- Confirm trade-api is running on 8083
 - Check browser network tab for /api/* requests
 
 ### Admin screens unavailable

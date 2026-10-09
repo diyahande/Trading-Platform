@@ -32,9 +32,6 @@ Base path: /auth
 - POST /change-password
 - GET /me
 
-Interactive API docs:
-- http://localhost:3000/docs
-- OpenAPI JSON: http://localhost:3000/docs/json
 
 ## Security Highlights
 
@@ -92,7 +89,7 @@ Email integration:
 - MAIL_FROM
 
 Frontend CORS origin (optional):
-- FRONTEND_ORIGIN (default http://localhost:4200)
+- FRONTEND_ORIGIN
 
 ## Database Setup
 
@@ -149,11 +146,9 @@ npm run lint
 The Dockerfile uses a multi-stage Node 20 Alpine build:
 - Builder stage compiles TypeScript
 - Runner stage installs production deps only
-- Service exposes port 3000
 
 ## Important Notes for Integrations
 
-- Frontend expects auth-service on port 3000 in local dev.
 - Trade API and frontend rely on JWT role/account claims from this service.
 - Changing token claim names or auth error shapes can break cross-service flows.
 

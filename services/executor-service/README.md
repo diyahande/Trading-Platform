@@ -18,27 +18,10 @@ The Executor service is responsible for:
 - Java 21+
 - Maven 3.8+
 - PostgreSQL 12+
-- Kafka (bootstrap server: `10.8.78.68:8085`)
+- Kafka 
 - Network access to Fauxnance API
 
-## Configuration
 
-All configuration is managed through environment variables. Set these before running:
-
-### Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SERVER_PORT` | Spring Boot server port | `8084` |
-| `DB_URL` | PostgreSQL connection URL | `jdbc:postgresql://localhost:5432/stock_trading_db` |
-| `DB_USERNAME` | Database username | `postgres` |
-| `DB_PASSWORD` | Database password | `n3u3d4!` |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers | `10.8.78.68:8085` |
-| `FAUXNANCE_BASE_URL` | Fauxnance API base URL | `https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1` |
-| `FAUXNANCE_API_KEY` | Fauxnance API key | `fnx_dev_w94amk7F63WTtF8RTkdEESXffMagvsC0` |
-| `FAUXNANCE_MAX_RETRIES` | Quote fetch retry attempts | `3` |
-| `FAUXNANCE_RETRY_DELAY_MS` | Delay between retries (ms) | `100` |
-| `POLL_INTERVAL_SECONDS` | Market data poll interval | `60` |
 
 ## Running the Service
 
@@ -52,22 +35,6 @@ set +a
 mvn spring-boot:run
 ```
 
-### Using PowerShell
-
-```powershell
-cd executor
-$env:SERVER_PORT='8084'; `
-$env:DB_URL='jdbc:postgresql://localhost:5432/stock_trading_db'; `
-$env:DB_USERNAME='postgres'; `
-$env:DB_PASSWORD='n3u3d4!'; `
-$env:KAFKA_BOOTSTRAP_SERVERS='10.8.78.68:8085'; `
-$env:FAUXNANCE_BASE_URL='https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1'; `
-$env:FAUXNANCE_API_KEY='fnx_dev_w94amk7F63WTtF8RTkdEESXffMagvsC0'; `
-$env:FAUXNANCE_MAX_RETRIES='3'; `
-$env:FAUXNANCE_RETRY_DELAY_MS='100'; `
-$env:POLL_INTERVAL_SECONDS='60'; `
-mvn spring-boot:run
-```
 
 ## Key Features
 

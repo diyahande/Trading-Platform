@@ -24,21 +24,7 @@ pip install -e ".[dev]"
 
 The ETL reads Postgres settings from environment variables. If not exported, it auto-loads values from `database/.env`.
 
-Required variables:
 
-- `POSTGRES_DB`
-- `PGHOST`
-- `PGPORT`
-- `PGUSER`
-- `PGPASSWORD`
-
-Optional variables:
-
-- `ANALYTICS_DUCKDB_PATH` (default: `etl/analytics.duckdb`)
-- `ANALYTICS_SCHEMA_PATH` (default: `analytics/contracts/analytics_schema.sql`)
-- `ETL_WATERMARK_PATH` (default: `etl/.state/fact_trades.watermark`)
-- `ETL_DEAD_LETTER_PATH` (default: `etl/dead_letter/fact_trades.jsonl`)
-- `ETL_BATCH_ID` (default: generated UTC batch id)
 
 ## Pipeline Commands (run any stage independently)
 
