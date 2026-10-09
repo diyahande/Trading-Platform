@@ -1,0 +1,21 @@
+frontend:
+  host: http://localhost
+  port: 4200
+services:
+    auth:
+        host: http://localhost
+        port: 3000
+    order:
+        host: http://localhost
+        port: 8081
+    executor:
+        host: http://localhost
+        port: 8082
+database:
+    host: http://localhost
+    port: 5432
+    name: capstone
+    user: postgres
+kafka:
+    host: http://localhost
+    port: 9092
